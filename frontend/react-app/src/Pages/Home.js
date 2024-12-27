@@ -29,6 +29,21 @@ const Dashboard = () => {
         url: "#",
         icon: Files,
       },
+      {
+        title: "Analytics",
+        url: "#",
+        icon: Files,
+      },
+      {
+        title: "Import to Tally",
+        url: "#",
+        icon: Files,
+      },
+      {
+        title: "Eligibility",
+        url: "#",
+        icon: Files,
+      },
     ]
 
   const handleOnNavigate = (selectedNav) => {

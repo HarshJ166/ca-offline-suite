@@ -23,7 +23,42 @@ const IndividualDashboard = () => {
       url: "#",
       icon: null,
     },
+    {
+      title:"EOD",
+      url: "#",
+      icon: null,
+    },
+    {
+      title:"Suspense",
+      url: "#",
+      icon: null,
+    },
+    {
+      title:"Cash",
+      url: "#",
+      icon: null,
+    },    {
+      title:"Debitors",
+      url: "#",
+      icon: null,
+    },    
+    {
+      title:"Creditors",
+      url: "#",
+      icon: null,
+    },
+    {
+      title:"EMI",
+      url: "#",
+      icon: null,
+    },
+    {
+      title:"Investments",
+      url: "#",
+      icon: null,
+    }
   ];
+  console.log('IndividualDashboard');
 
   return (
     <>
@@ -34,6 +69,7 @@ const IndividualDashboard = () => {
             <main className="flex-1">
               {activeTab === 'Summary' && <Summary />} 
               {activeTab === 'Transactions' && <Transactions />}
+
             </main>
           </div>
         </ScrollArea>
