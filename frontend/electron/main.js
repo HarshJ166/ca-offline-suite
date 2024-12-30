@@ -1,7 +1,6 @@
 const { app, BrowserWindow ,protocol} = require('electron');
 const path = require('path');
 
-
 // Instead of electron-is-dev, we'll use this simple check
 const isDev = process.env.NODE_ENV === 'development' 
 console.log('process.env.NODE_ENV', process.env.NODE_ENV);
@@ -16,6 +15,7 @@ function createProtocol() {
       }
     });
   }
+
 
 function createWindow() {
     const win = new BrowserWindow({
@@ -32,12 +32,6 @@ function createWindow() {
 
     });
 
-    // // Load the React app
-    // win.loadURL(
-    //     isDev
-    //         ? 'http://localhost:3000'
-    //         : `file://${path.join(__dirname, '../react-app/build/index.html')}`
-    // );
     if (isDev) {
         win.loadURL('http://localhost:3000');
     } else {

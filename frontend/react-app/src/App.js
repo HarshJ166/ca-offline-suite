@@ -9,10 +9,10 @@ import ElectronIntro from './components/ElectronIntro';
 import { useState } from 'react';
 import { SidebarProvider } from './components/ui/sidebar';
 import {ScrollArea} from './components/ui/scroll-area';
+import { Hash } from 'lucide-react';
 
 function App() {
-    const [showIntro, setShowIntro] = useState(true);
-    
+    const [showIntro, setShowIntro] = useState(true);  
     console.log('isDev', process.env.NODE_ENV);
   
   return (
