@@ -5,6 +5,7 @@ import { cn } from "../lib/utils";
 import { ScrollArea } from "../components/ui/scroll-area";
 import Sidebar from '../components/Sidebar';
 import MainDashboard from '../components/MainDashboardComponents/MainDashboard';
+import Analytics from '../components/MainDashboardComponents/Analytics';
 import {BreadcrumbDynamic}  from '../components/BreadCrumb';
 
 const Dashboard = () => {
@@ -49,8 +50,8 @@ const Dashboard = () => {
 
   return (
     <>
-      <div className={cn("h-full w-full flex h-screen bg-background")}>
 
+      <div className={cn("h-full w-full flex h-screen bg-background")}>
         <Sidebar navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab}/>
         <ScrollArea className="w-full">
         <BreadcrumbDynamic/>
@@ -58,6 +59,7 @@ const Dashboard = () => {
             <main className="flex-1">
               {activeTab === 'Dashboard' && <MainDashboard />} 
               {activeTab === 'Generate Report' && <ReportGenerator />}
+              {activeTab === 'Analytics' && <Analytics />}
             </main>
           </div>
         </ScrollArea>
