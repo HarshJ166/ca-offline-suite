@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { cn } from "../lib/utils";
-import { ScrollArea } from "../components/ui/scroll-area";
-import Sidebar from "../components/Sidebar";
-import AccountNumNameManager from "../components/CaseDashboardComponents/AccountNumNameManager";
-import IndividualTable from "../components/CaseDashboardComponents/IndividualTable";
-import Summary from "../components/IndividualDashboardComponents/Summary";
-import Transactions from "../components/IndividualDashboardComponents/Transactions";
+import { ScrollArea } from "../components/ui/scroll-area"
+import Sidebar from '../components/Sidebar';
+import AccountNumNameManager from '../components/CaseDashboardComponents/AccountNumNameManager';
+import IndividualTable from '../components/CaseDashboardComponents/IndividualTable';
+import Summary from '../components/IndividualDashboardComponents/Summary';
+import Transactions from '../components/IndividualDashboardComponents/Transactions';
 import Cash from "../components/IndividualDashboardComponents/Cash";
 import Suspense from "../components/IndividualDashboardComponents/Suspense";
 import { useBreadcrumb } from '../contexts/BreadcrumbContext';
@@ -51,7 +51,7 @@ const IndividualDashboard = () => {
       title: "Cash",
       icon: null,
     },    {
-      title:"Debitors",
+      title:"Debtors",
       url: "#",
       icon: null,
     },
@@ -64,7 +64,7 @@ const IndividualDashboard = () => {
       icon: null,
     },
     {
-      title:"Investments",
+      title:"Investment",
       url: "#",
       icon: null,
     },
@@ -87,8 +87,8 @@ const IndividualDashboard = () => {
           <BreadcrumbDynamic items={breadcrumbs}/>
           <div className="flex-1 flex flex-col overflow-hidden">
             <main className="flex-1">
-              {activeTab === "Summary" && <Summary />}
-              {activeTab === "Transactions" && <Transactions />}
+              {activeTab === 'Summary' && <Summary />} 
+              {activeTab === 'Transactions' && <Transactions />}
               {activeTab === 'Debtors' && <Debtors />}
               {activeTab === 'Creditors' && <Creditors/>}
               {activeTab === 'EMI' && <EMI/>}
