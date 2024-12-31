@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { PieChart, Pie, Cell, Legend } from "recharts";
+import DataTable from "./TableData";
 
 const Debtors = () => {
   const transactionData = [
@@ -105,6 +106,10 @@ const Debtors = () => {
                 />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+
+          <div>
+            <DataTable data={transactionData} />
           </div>
         </CardContent>
       </Card>
