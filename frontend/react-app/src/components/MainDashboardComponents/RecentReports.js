@@ -38,7 +38,9 @@ const RecentReports = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [currentInfoIndex, setCurrentInfoIndex] = useState(0);
+    const [currentInfoIndex, setCurrentInfoIndex] = useState(0);
 
+    const itemsPerPage = 10;
     const itemsPerPage = 10;
 
     const [recentReports, setRecentReports] = useState([
@@ -118,9 +120,85 @@ const RecentReports = () => {
         }
     };
 
+        { date: '13-12-2024', reportName: 'Report_ATS_unit_1_00008', status: 'Completed' },
+        { date: '13-12-2024', reportName: 'Report_ATS_unit_1_00007', status: 'Completed' },
+        { date: '12-12-2024', reportName: 'Report_ATS_unit_1_00003', status: 'In Progress' },
+        { date: '12-12-2024', reportName: 'Report_ATS_unit_1_00002', status: 'Failed'},
+        { date: '12-12-2024', reportName: 'Report_ATS_unit_1_00001', status: 'Completed' },
+        { date: '11-12-2024', reportName: 'Report_ATS_unit_1_00006', status: 'In Progress' },
+        { date: '11-12-2024', reportName: 'Report_ATS_unit_1_00005', status: 'Completed' },
+        { date: '11-12-2024', reportName: 'Report_ATS_unit_1_00004', status: 'Failed' },
+        { date: '10-12-2024', reportName: 'Report_ATS_unit_1_00009', status: 'Completed' },
+        { date: '10-12-2024', reportName: 'Report_ATS_unit_1_00010', status: 'In Progress' },
+        { date: '10-12-2024', reportName: 'Report_ATS_unit_1_00011', status: 'Completed' },
+        { date: '10-12-2024', reportName: 'Report_ATS_unit_1_00012', status: 'Completed' },
+    ]);
+
+    const reportInfoData = [
+        {
+            id: 1,
+            reportName: 'Report_ATS_unit_1_00008',
+            documents: [
+                {
+                    path: "C:/Users/documents/Reports/2024/January/Statement_Analysis_1.pdf",
+                    type: "Bank Statement"
+                },
+                {
+                    path: "C:/Users/documents/Reports/2024/January/Transaction_Report_1.pdf",
+                    type: "Transaction Report"
+                }
+            ]
+        },
+        {
+            id: 2,
+            reportName: 'Report_ATS_unit_1_00007',
+            documents: [
+                {
+                    path: "C:/Users/documents/Reports/2024/February/Client_Statement.pdf",
+                    type: "Bank Statement"
+                },
+                {
+                    path: "C:/Users/documents/Reports/2024/February/Analysis_Summary.pdf",
+                    type: "Analysis Report"
+                }
+            ]
+        },
+        {
+            id: 3,
+            reportName: 'Report_ATS_unit_1_00006',
+            documents: [
+                {
+                    path: "C:/Users/documents/Reports/2024/March/Corporate_Statement.pdf",
+                    type: "Corporate Statement"
+                },
+                {
+                    path: "C:/Users/documents/Reports/2024/March/Transaction_Analysis.pdf",
+                    type: "Analysis Report"
+                }
+            ]
+        }
+    ];
+
+
+    const isFirstInfo = currentInfoIndex === 0;
+    const isLastInfo = currentInfoIndex === reportInfoData.length - 1;
+
+    const handlePrevInfo = () => {
+        if (!isFirstInfo) {
+            setCurrentInfoIndex(prev => prev - 1);
+        }
+    };
+
+    const handleNextInfo = () => {
+        if (!isLastInfo) {
+            setCurrentInfoIndex(prev => prev + 1);
+        }
+    };
+
     // Filter reports based on search query
     const filteredReports = recentReports.filter(report =>
         report.reportName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        report.reportName.toLowerCase().includes(searchQuery.toLowerCase())
         report.reportName.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -215,6 +293,7 @@ const RecentReports = () => {
                     <div>
                         <CardTitle>Recent Reports</CardTitle>
                         <CardDescription className="py-3">
+                        <CardDescription className="py-3">
                             A list of recent reports from all projects
                         </CardDescription>
                     </div>
@@ -222,6 +301,7 @@ const RecentReports = () => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                             placeholder="Search reports..."
+                            className="pl-10 w-[400px]"
                             className="pl-10 w-[400px]"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -233,15 +313,18 @@ const RecentReports = () => {
                 <Table>
                     <TableHeader>
                         <TableRow className="align-">
+                        <TableRow className="align-">
                             <TableHead>Date</TableHead>
                             <TableHead>Report Name</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Actions</TableHead>
                             <TableHead>Details</TableHead>
+                            <TableHead>Details</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {currentReports.map((report) => (
+                            <TableRow key={report.reportName}>
                             <TableRow key={report.reportName}>
                                 <TableCell>{report.date}</TableCell>
                                 <TableCell>{report.reportName}</TableCell>
@@ -255,12 +338,15 @@ const RecentReports = () => {
                                             size="icon"
                                             onClick={() => handleView(report.caseId)}
                                             className="h-8 w-8"
+                                            onClick={() => handleView(report.caseId)}
+                                            className="h-8 w-8"
                                         >
                                             <Eye className="h-4 w-4" />
                                         </Button>
                                         <Button
                                             variant="outline"
                                             size="icon"
+                                            className="h-8 w-8"
                                             className="h-8 w-8"
                                             onClick={() => handleAddReport()}
                                         >
@@ -270,6 +356,7 @@ const RecentReports = () => {
                                             variant="outline"
                                             size="icon"
                                             className="h-8 w-8"
+                                            className="h-8 w-8"
                                             onClick={() => handleDeleteReport(report.id)}
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -277,65 +364,63 @@ const RecentReports = () => {
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            size="icon"
-                                            className="h-8 w-8"
-                                            onClick={() => handleViewInfo()}
-                                        >
-                                            <Info className="h-4 w-4" />
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent className="max-w-3xl">
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle className="bg-gray-700 text-white p-4 -mx-6 -mt-6 rounded-t-lg">
-                                                Report Information
-                                            </AlertDialogTitle>
-                                            <div className="mt-4">
-                                                <h3 className="text-lg font-semibold mb-2">
-                                                    {reportInfoData[currentInfoIndex].reportName}
-                                                </h3>
-                                                <div className="space-y-4">
-                                                    {reportInfoData[currentInfoIndex].documents.map((doc, idx) => (
-                                                        <div key={idx} className="bg-gray-50 p-4 rounded">
-                                                            <p className="text-gray-600 mt-1">Path: {doc.path}</p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter className="flex-col items-center space-y-4">
-                                            <div className="flex items-center space-x-4">
-                                                <Button
-                                                    variant="default"
-                                                    onClick={handlePrevInfo}
-                                                    disabled={isFirstInfo}
-                                                    className={cn(
-                                                        "flex items-center space-x-2",
-                                                        isFirstInfo && "opacity-50 cursor-not-allowed"
-                                                    )}
-                                                >
-                                                    <span>Previous</span>
-                                                </Button>
-                                                <Button
-                                                    variant="default"
-                                                    onClick={handleNextInfo}
-                                                    disabled={isLastInfo}
-                                                    className={cn(
-                                                        "flex items-center space-x-2",
-                                                        isLastInfo && "opacity-50 cursor-not-allowed"
-                                                    )}
-                                                >
-                                                    <span>Next</span>
-                                                </Button>
-                                                <AlertDialogCancel>Close</AlertDialogCancel>
-                                            </div>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                                </TableCell>
+    <AlertDialog>
+        <AlertDialogTrigger asChild>
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 hover:bg-black/5"
+            >
+                <Info className="h-4 w-4 text-black/80" />
+            </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent className="max-w-2xl bg-white shadow-lg border-0">
+            <AlertDialogHeader>
+                <AlertDialogTitle className="text-xl font-medium text-black bg-black/[0.03] -mx-6 -mt-6 p-4 border-b border-black/10">
+                    Report Information
+                </AlertDialogTitle>
+                <div className="py-6">
+                    <h3 className="text-base font-medium text-black">
+                        {reportInfoData[currentInfoIndex].reportName}
+                    </h3>
+                    <div className="mt-6 space-y-4">
+                        {reportInfoData[currentInfoIndex].documents.map((doc, idx) => (
+                            <div key={idx} className="bg-black/[0.02] hover:bg-black/[0.04] transition-colors p-4 rounded-md border border-black/5">
+                                <div className="flex items-center space-x-2">
+                                    <span className="text-sm font-medium text-black/40">Path:</span>
+                                    <span className="text-sm text-black/70">{doc.path}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="border-t border-black/10 pt-6">
+                <div className="flex justify-between w-full gap-3">
+                    <Button
+                        variant="outline"
+                        onClick={handlePrevInfo}
+                        disabled={isFirstInfo}
+                        className="px-6 bg-transparent border-black/10 text-black/70 hover:bg-black/[0.03] hover:border-black/20 hover:text-black disabled:opacity-30"
+                    >
+                        Previous
+                    </Button>
+                    <AlertDialogCancel className="px-8 bg-black text-white hover:bg-black/90 hover:text-white">
+                        Close
+                    </AlertDialogCancel>
+                    <Button
+                        variant="outline"
+                        onClick={handleNextInfo}
+                        disabled={isLastInfo}
+                        className="px-6 bg-transparent border-black/10 text-black/70 hover:bg-black/[0.03] hover:border-black/20 hover:text-black disabled:opacity-30"
+                    >
+                        Next
+                    </Button>
+                </div>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
