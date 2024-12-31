@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Search, Loader2 ,Save } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from "../../components/ui/card";
+} from "../ui/card";
 import {
   Table,
   TableHeader,
@@ -15,12 +15,13 @@ import {
   TableBody,
   TableCell,
   TableFooter,
-} from "../../components/ui/table";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
+} from "../ui/table";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Badge } from "../ui/badge";
 import { cn } from "../../lib/utils";
-import { Checkbox } from "../../components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { Checkbox } from "../ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import {
   Pagination,
   PaginationContent,
@@ -29,20 +30,10 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "../../components/ui/pagination";
-import { Label } from "../../components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../components/ui/select";
-import { useToast } from "../../hooks/use-toast";
-
+} from "../ui/pagination";
+import { Label } from "../ui/label";
 
 const DataTable = ({ data = [] }) => {
-  
   const [currentPage, setCurrentPage] = useState(1);
   const [filteredData, setFilteredData] = useState(data);
   const [searchTerm, setSearchTerm] = useState("");
@@ -56,15 +47,6 @@ const DataTable = ({ data = [] }) => {
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const rowsPerPage = 10;
-  const { toast } = useToast();
-  const [pendingChanges, setPendingChanges] = useState({});
-  const [isSaving, setIsSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [modifiedData, setModifiedData] = useState(data);
-
-  useEffect(() => {
-    setModifiedData(data);
-  }, [data]);
 
   // Get dynamic columns from first data item
   const columns = data.length > 0 ? Object.keys(data[0]) : [];
@@ -119,15 +101,6 @@ const DataTable = ({ data = [] }) => {
 
     setFilteredData(filtered);
     setCurrentPage(1);
-  };
-  const handleCategoryChange = (rowIndex, newCategory) => {
-    const updatedData = [...modifiedData];
-    updatedData[rowIndex] = {
-      ...updatedData[rowIndex],
-      category: newCategory
-    };
-    setModifiedData(updatedData);
-    setHasChanges(true);
   };
 
   const handleCategorySelect = (category) => {
@@ -233,97 +206,6 @@ const DataTable = ({ data = [] }) => {
     return { ...acc, [column]: total.toFixed(2) };
   }, {});
 
-
-  const categoryOptions = [
-    "Bank Charges",
-    "Bank Interest Received",
-    "Bonus Paid",
-    "Bonus Received",
-    "Bounce",
-    "Cash Deposits",
-    "Cash Reversal",
-    "Cash Withdrawal",
-    "Closing Balance",
-    "Credit Card Payment",
-    "Debtor List",
-    "Departmental Stores",
-    "Donation",
-    "Food Expense/Hotel",
-    "General Insurance",
-    "Gold Loan",
-    "GST Paid",
-    "Income Tax Paid",
-    "Income Tax Refund",
-    "Indirect tax",
-    "Interest Debit",
-    "Interest Received",
-    "Investment",
-    "Life insurance",
-    "Loan",
-    "Loan given",
-    "Local Cheque Collection",
-    "Online Shopping",
-    "Opening Balance",
-    "Other Expenses",
-    "POS-Cr",
-    "POS-Dr",
-    "Probable Claim Settlement",
-    "Property Tax",
-    "Provident Fund",
-    "Redemption, Dividend & Interest",
-    "Refund/Reversal",
-    "Rent Paid",
-    "Rent Received",
-    "Salary Paid",
-    "Salary Received",
-    "Subscription / Entertainment",
-    "TDS Deducted",
-    "Total Income Tax Paid",
-    "Travelling Expense",
-    "UPI-Cr",
-    "UPI-Dr",
-    "Utility Bills"
-  ];
-  const handleSaveChanges = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Make API call to save changes
-      const response = await fetch('/api/update-categories', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ data: modifiedData }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save changes');
-      }
-
-      // Update the parent component with new data
-      // if (onDataUpdate) {
-      //   onDataUpdate(modifiedData);
-      // }
-
-      setHasChanges(false);
-      toast({
-        title: "Changes saved successfully",
-        description: "All category updates have been saved",
-      });
-
-    } catch (error) {
-      toast({
-        title: "Error saving changes",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-
   return (
     <Card>
       <CardHeader>
@@ -396,25 +278,8 @@ const DataTable = ({ data = [] }) => {
                         key={column}
                         className="max-w-[200px] group relative"
                       >
-                        {column.toLowerCase() === "category" ? (
-                          <Select
-                            value={row[column]}
-                            onValueChange={(value) => handleCategoryChange(index, value)}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue>{row[column]}</SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categoryOptions.map((category) => (
-                                <SelectItem key={category} value={category}>
-                                  {category}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <div className="truncate">{row[column]}</div>
-                        )}
+                        <div className="truncate">{row[column]}</div>
+                        {/* Tooltip */}
                         {column.toLowerCase() === "description" && (
                           <div className="absolute left-0 top-10 hidden group-hover:block bg-black text-white text-sm rounded p-2 z-50 whitespace-normal min-w-[200px] max-w-[400px]">
                             {row[column]}
@@ -438,23 +303,6 @@ const DataTable = ({ data = [] }) => {
             </TableFooter>
           </Table>
         </div>
-
-        {hasChanges && (
-          <div className="mt-4 flex justify-end">
-            <Button
-              onClick={handleSaveChanges}
-              disabled={isLoading}
-              className="flex items-center gap-2"
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Save Changes
-            </Button>
-          </div>
-        )}
 
         {/* Pagination */}
         {totalPages > 1 && (
