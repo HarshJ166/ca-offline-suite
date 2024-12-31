@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { cn } from "../lib/utils";
 import { ScrollArea } from "../components/ui/scroll-area"
 import Sidebar from '../components/Sidebar';
@@ -6,65 +6,72 @@ import AccountNumNameManager from '../components/CaseDashboardComponents/Account
 import IndividualTable from '../components/CaseDashboardComponents/IndividualTable';
 import Summary from '../components/IndividualDashboardComponents/Summary';
 import Transactions from '../components/IndividualDashboardComponents/Transactions';
+import { useBreadcrumb } from '../contexts/BreadcrumbContext';
+import { useParams } from 'react-router-dom';
+import {BreadcrumbDynamic}  from '../components/BreadCrumb';
 
 const IndividualDashboard = () => {
-    const [activeTab, setActiveTab] = useState('Acc No and Acc Name');
 
+    const [activeTab, setActiveTab] = useState('Summary');
+    const { breadcrumbs,setIndividualDashboard } = useBreadcrumb();
+    const { caseId, individualId,defaultTab} = useParams();
+
+    
+
+    useEffect(() => {
+      setIndividualDashboard(activeTab, `/individual-dashboard/${caseId}/${individualId}/${activeTab}`);
+    }, [activeTab]);
 
   const navItems = [
     {
       title: "Summary",
-      url: "#",
       icon: null,
       isActive: true,
     },
     {
       title: "Transactions",
-      url: "#",
       icon: null,
     },
     {
       title:"EOD",
-      url: "#",
       icon: null,
     },
     {
       title:"Suspense",
-      url: "#",
       icon: null,
     },
     {
       title:"Cash",
-      url: "#",
       icon: null,
     },    {
       title:"Debitors",
-      url: "#",
       icon: null,
     },    
     {
       title:"Creditors",
-      url: "#",
       icon: null,
     },
     {
       title:"EMI",
-      url: "#",
       icon: null,
     },
     {
       title:"Investments",
-      url: "#",
       icon: null,
     }
   ];
-  console.log('IndividualDashboard');
+
+  useEffect(() => {
+    if (defaultTab==="defaultTab") setActiveTab(navItems[0].title);
+    else setActiveTab(defaultTab);
+  }, []);
 
   return (
     <>
       <div className={cn("w-full flex h-screen bg-background")}>
         <Sidebar navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab}/>
         <ScrollArea className="w-full">
+          <BreadcrumbDynamic items={breadcrumbs}/>
           <div className="flex-1 flex flex-col overflow-hidden">
             <main className="flex-1">
               {activeTab === 'Summary' && <Summary />} 

@@ -8,13 +8,11 @@ import { Badge } from "../ui/badge";
 import { useState } from 'react';
 import { cn } from "../../lib/utils";
 import { useNavigate } from 'react-router-dom';
-import { Eye, Plus, Trash2, Info, Search} from 'lucide-react';
+import { Eye, Plus, Trash2, Info, Search, Edit, Edit2} from 'lucide-react';
 import {
     AlertDialog,
-    AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
-    AlertDialogDescription,
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
@@ -30,6 +28,7 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from "../ui/pagination"
+import CategoryEditModal from './CategoryEditModal';
 
 const RecentReports = () => {
     const { toast } = useToast();
@@ -38,9 +37,10 @@ const RecentReports = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [currentInfoIndex, setCurrentInfoIndex] = useState(0);
+    const [isCategoryEditOpen, setIsCategoryEditOpen] = useState(false);
 
     const itemsPerPage = 10;
-
+    console.log({isLoading})
     const [recentReports, setRecentReports] = useState([
 
         { date: '13-12-2024', reportName: 'Report_ATS_unit_1_00008', status: 'Completed' },
@@ -188,8 +188,8 @@ const RecentReports = () => {
         console.log('Clicked on add report');
     };
 
-    const handleDeleteReport = (id) => {
-        setRecentReports(recentReports.filter(report => report.id !== id));
+    const handleDeleteReport = (reportName) => {
+        setRecentReports(recentReports.filter(report => report.reportName !== reportName));
         toast({
             title: "Report Deleted",
             description: "The report has been removed from your list.",
@@ -198,9 +198,8 @@ const RecentReports = () => {
     };
 
     const handleView = (caseId) => {
-        console.log('View case:', caseId);
         setIsLoading(true);
-        navigate(`/case-dashboard/${caseId}`);
+        navigate(`/case-dashboard/${caseId}/defaultTab`);
         setIsLoading(false);
     };
 
@@ -208,8 +207,16 @@ const RecentReports = () => {
         console.log('Clicked on info');
     };
 
+    const toggleEdit = (id) => {
+        console.log('Clicked on edit');
+        setIsCategoryEditOpen(!isCategoryEditOpen);
+    }
+
+
     return (
         <Card>
+            <CategoryEditModal open={isCategoryEditOpen} onOpenChange={toggleEdit} />
+
             <CardHeader>
                 <div className="flex justify-between items-center">
                     <div>
@@ -258,6 +265,7 @@ const RecentReports = () => {
                                         >
                                             <Eye className="h-4 w-4" />
                                         </Button>
+                                        
                                         <Button
                                             variant="outline"
                                             size="icon"
@@ -269,8 +277,16 @@ const RecentReports = () => {
                                         <Button
                                             variant="outline"
                                             size="icon"
+                                            onClick={() => toggleEdit(report.caseId)}
                                             className="h-8 w-8"
-                                            onClick={() => handleDeleteReport(report.id)}
+                                        >
+                                            <Edit2 className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            onClick={() => handleDeleteReport(report.reportName)}
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>

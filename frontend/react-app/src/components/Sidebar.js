@@ -1,5 +1,5 @@
 
-import * as React from "react";
+import React,{useEffect} from "react";
 import {
   LayoutDashboard,
   Files,
@@ -18,8 +18,8 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
+  // SidebarMenuSubItem,
+  // SidebarMenuSubButton,
 } from "./ui/sidebar";
 
 import {
@@ -41,28 +41,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import Billing from "./MainDashboardComponents/Billing";
-
-const data = {
-  user: {
-    name: "Harsh",
-    email: "m@example.com",
-    avatar: "#",
-  },
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "#",
-      icon: LayoutDashboard,
-      isActive: true,
-    },
-    {
-      title: "Generate Report",
-      url: "#",
-      icon: Files,
-    },
-  ],
-};
 
 const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
   const [expandedItems, setExpandedItems] = React.useState({});

@@ -21,7 +21,7 @@ const reports = [
 
 const Analytics = () => {
   return (
-    <div className="w-full mx-2 p-4 pr-6">
+    <div className="w-full mx-2 p-4 pr-6 pt-0">
       <h1 className="text-4xl font-bold mb-2">Analytics</h1>
       <p className="text-muted-foreground mb-6">
         Select a name to view the report
