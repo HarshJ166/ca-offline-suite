@@ -4,8 +4,8 @@ import ReportGenerator from "../components/MainDashboardComponents/GenerateRepor
 import { cn } from "../lib/utils";
 import { ScrollArea } from "../components/ui/scroll-area";
 
-import Sidebar from "../components/Sidebar";
-import MainDashboard from "../components/MainDashboardComponents/MainDashboard";
+import Sidebar from '../components/Sidebar';
+import MainDashboard from '../components/MainDashboardComponents/MainDashboard';
 import Eligibility from "../components/MainDashboardComponents/Eligibility";
 import Billing from "../components/MainDashboardComponents/Billing";
 import { Toaster } from "../components/ui/toaster";
@@ -62,8 +62,7 @@ const Dashboard = () => {
       url: "#",
       icon: ReceiptIndianRupee,
     },
-  ]
-
+  ];
   useEffect(() => {
       if (!defaultTab || defaultTab==="defaultTab") setActiveTab(navItems[0].title);
       else setActiveTab(defaultTab);
@@ -100,12 +99,16 @@ const Dashboard = () => {
     <>
       <div className={cn("h-full w-full flex h-screen bg-background")}>
         <Sidebar
+         
           navItems={navItems}
+         
           activeTab={activeTab}
+         
           setActiveTab={setActiveTab}
+       
         />
         <ScrollArea className="w-full">
-        <BreadcrumbDynamic items={breadcrumbs}/>
+          <BreadcrumbDynamic items={breadcrumbs} />
           <div className="flex-1 flex flex-col overflow-hidden">
             <main className="flex-1">
               {activeTab === "Dashboard" && <MainDashboard />}

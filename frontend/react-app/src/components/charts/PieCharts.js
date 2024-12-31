@@ -1,5 +1,8 @@
-import { TrendingUp } from "lucide-react";
-import { LabelList, Pie, PieChart } from "recharts";
+"use client"
+
+import { TrendingUp } from "lucide-react"
+import { Pie, PieChart } from "recharts"
+
 import {
   Card,
   CardContent,
@@ -7,13 +10,20 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "../ui/card";
+} from "../ui/card"
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "../ui/chart";
+} from "../ui/chart"
+const chartData = [
+  { browser: "chrome", visitors: 275, fill: "var(--color-chrome)" },
+  { browser: "safari", visitors: 200, fill: "var(--color-safari)" },
+  { browser: "firefox", visitors: 187, fill: "var(--color-firefox)" },
+  { browser: "edge", visitors: 173, fill: "var(--color-edge)" },
+  { browser: "other", visitors: 90, fill: "var(--color-other)" },
+]
 
 const chartConfig = {
   visitors: {
@@ -39,48 +49,33 @@ const chartConfig = {
     label: "Other",
     color: "hsl(var(--chart-5))",
   },
-};
+}
 
-export function PieCharts({ data }) {
+export function PieCharts() {
   return (
     <Card className="flex flex-col">
       <CardHeader className="items-center pb-0">
-        <CardTitle>Pie Chart - Label List</CardTitle>
-        <CardDescription>Janu - June 2024</CardDescription>
+        <CardTitle>Pie Chart</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         <ChartContainer
           config={chartConfig}
-          className="mx-auto aspect-square max-h-[400px] [&_.recharts-text]:fill-background"
+          className="mx-auto aspect-square max-h-[250px]"
         >
-          <PieChart width={400} height={400}>
+          <PieChart>
             <ChartTooltip
-              content={<ChartTooltipContent nameKey="visitors" hideLabel />}
+              cursor={false}
+              content={<ChartTooltipContent hideLabel />}
             />
             <Pie
-              data={data}
+              data={chartData}
               dataKey="visitors"
-              innerRadius={80}
-              outerRadius={160}
-            >
-              <LabelList
-                dataKey="browser"
-                className="fill-background"
-                stroke="none"
-                fontSize={12}
-              />
-            </Pie>
+              nameKey="browser"
+              stroke="0"
+            />
           </PieChart>
         </ChartContainer>
       </CardContent>
-      <CardFooter className="flex-col gap-2 text-sm">
-        <div className="flex items-center gap-2 font-medium leading-none">
-          Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
-        </div>
-        <div className="leading-none text-muted-foreground">
-          Showing total visitors for the last 6 months
-        </div>
-      </CardFooter>
     </Card>
-  );
+  )
 }

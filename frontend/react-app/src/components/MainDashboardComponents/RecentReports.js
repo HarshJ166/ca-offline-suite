@@ -263,6 +263,7 @@ const RecentReports = () => {
                                             variant="outline"
                                             size="icon"
                                             onClick={() => handleView(report.caseId)}
+
                                             className="h-8 w-8"
                                         >
                                             <Eye className="h-4 w-4" />

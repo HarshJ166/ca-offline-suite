@@ -11,6 +11,11 @@ import Suspense from "../components/IndividualDashboardComponents/Suspense";
 import { useBreadcrumb } from '../contexts/BreadcrumbContext';
 import { useParams } from 'react-router-dom';
 import {BreadcrumbDynamic}  from '../components/BreadCrumb';
+import Debtors from '../components/IndividualDashboardComponents/Debtors';
+import Creditors from '../components/IndividualDashboardComponents/Creditors';
+import EMI from '../components/IndividualDashboardComponents/EMI';
+import Investment from '../components/IndividualDashboardComponents/Investment';
+import EodBalance from '../components/IndividualDashboardComponents/EodBalance';
 
 const IndividualDashboard = () => {
 
@@ -45,9 +50,9 @@ const IndividualDashboard = () => {
     {
       title: "Cash",
       icon: null,
-    },
-    {
-      title: "Debitors",
+    },    {
+      title:"Debitors",
+      url: "#",
       icon: null,
     },
     {
@@ -59,7 +64,8 @@ const IndividualDashboard = () => {
       icon: null,
     },
     {
-      title: "Investments",
+      title:"Investments",
+      url: "#",
       icon: null,
     },
   ];
@@ -83,6 +89,11 @@ const IndividualDashboard = () => {
             <main className="flex-1">
               {activeTab === "Summary" && <Summary />}
               {activeTab === "Transactions" && <Transactions />}
+              {activeTab === 'Debtors' && <Debtors />}
+              {activeTab === 'Creditors' && <Creditors/>}
+              {activeTab === 'EMI' && <EMI/>}
+              {activeTab === 'Investment' && <Investment/>}
+              {activeTab === 'EOD' && <EodBalance />}
               {activeTab === "Cash" && <Cash />}
               {activeTab === "Suspense" && <Suspense />}
             </main>
