@@ -4,16 +4,15 @@ import ReportGenerator from "../components/MainDashboardComponents/GenerateRepor
 import { cn } from "../lib/utils";
 import { ScrollArea } from "../components/ui/scroll-area";
 
-import Sidebar from '../components/Sidebar';
-import MainDashboard from '../components/MainDashboardComponents/MainDashboard';
+import Sidebar from "../components/Sidebar";
+import MainDashboard from "../components/MainDashboardComponents/MainDashboard";
 import Eligibility from "../components/MainDashboardComponents/Eligibility";
 import Billing from "../components/MainDashboardComponents/Billing";
 import { Toaster } from "../components/ui/toaster";
-import Analytics from '../components/MainDashboardComponents/Analytics';
-import {BreadcrumbDynamic}  from '../components/BreadCrumb';
+import Analytics from "../components/MainDashboardComponents/Analytics";
+import { BreadcrumbDynamic } from "../components/BreadCrumb";
 
 const Dashboard = () => {
-
   const [activeTab, setActiveTab] = useState("Dashboard");
 
   // const navItems = [
@@ -55,8 +54,7 @@ const Dashboard = () => {
       url: "#",
       icon: ReceiptIndianRupee,
     },
-  ]
-
+  ];
 
   const handleOnNavigate = (selectedNav) => {
     console.log("Navigating to:", selectedNav);
@@ -65,20 +63,21 @@ const Dashboard = () => {
 
   return (
     <>
-
       <div className={cn("h-full w-full flex h-screen bg-background")}>
-        <Sidebar navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Sidebar
+          navItems={navItems}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+        />
         <ScrollArea className="w-full">
-        <BreadcrumbDynamic/>
+          <BreadcrumbDynamic />
           <div className="flex-1 flex flex-col overflow-hidden">
             <main className="flex-1">
-              {activeTab === 'Dashboard' && <MainDashboard />}
-              {activeTab === 'Generate Report' && <ReportGenerator />}
-              {activeTab === 'Eligibility' && <Eligibility />}
-              {activeTab === 'Billing' && <Billing />}
-              {activeTab === 'Analytics' && <Analytics />}
-              
-
+              {activeTab === "Dashboard" && <MainDashboard />}
+              {activeTab === "Generate Report" && <ReportGenerator />}
+              {activeTab === "Eligibility" && <Eligibility />}
+              {activeTab === "Billing" && <Billing />}
+              {activeTab === "Analytics" && <Analytics />}
             </main>
           </div>
         </ScrollArea>
