@@ -1,3 +1,4 @@
+import {  LayoutDashboard, FilePlus2,Files, Import,ChartNoAxesCombined, ReceiptIndianRupee } from "lucide-react";
 import React, { useState } from "react";
 import { LayoutDashboard, Files } from "lucide-react";
 import ReportGenerator from "../components/MainDashboardComponents/GenerateReport";
@@ -43,7 +44,30 @@ const Dashboard = () => {
     {
       title: "Import to Tally",
       url: "#",
-      icon: Files,
+      icon: null,
+      items: [
+        {
+          title: "Ledgers",
+          url: "#",
+          icon: null,
+        },
+        {
+          title: "Payment & Receipte",
+          url: "#",
+          icon: null,
+        },
+        {
+          title: "Sales",
+          url: "#",
+          icon: null,
+        },
+        {
+          title: "Purchase",
+          url: "#",
+          icon: null,
+        },
+      ],
+      alwaysOpen: true, // Ensures the section remains open
     },
     {
       title: "Eligibility",
