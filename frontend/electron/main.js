@@ -1,5 +1,7 @@
 const { app, BrowserWindow ,protocol} = require('electron');
 const path = require('path');
+const database = require('./db');  // Import to trigger the initialization automatically
+
 
 // Instead of electron-is-dev, we'll use this simple check
 const isDev = process.env.NODE_ENV === 'development' 
