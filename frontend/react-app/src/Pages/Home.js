@@ -52,6 +52,34 @@ const Dashboard = () => {
       title: "Import to Tally",
       url: "#",
       icon: Import,
+      items: [
+        {
+          title: "Ledgers voucher",
+          url: "#",
+          icon: null,
+        },
+        {
+          title: "Payment voucher",
+          url: "#",
+          icon: null,
+        },
+        {
+          title: "Receipt voucher",
+          url: "#",
+          icon: null,
+        },
+        {
+          title: "Sales voucher",
+          url: "#",
+          icon: null,
+        },
+        {
+          title: "Purchase voucher",
+          url: "#",
+          icon: null,
+        },
+      ],
+      alwaysOpen: true, // Ensures the section remains open
     },
     {
       title: "Eligibility",
