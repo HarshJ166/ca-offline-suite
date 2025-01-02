@@ -44,25 +44,40 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
     email: "rajsingh08471@gmail.com",
     avatar: "#",
   });
-  const [openItems, setOpenItems] = React.useState({});
+  const [openMenus, setOpenMenus] = React.useState({});
 
-  const toggleItem = (title) => {
-    setOpenItems((prevState) => ({
-      ...prevState,
-      [title]: !prevState[title], // Toggle the current state
-    }));
-  };
+  // const toggleItem = (title) => {
+  //   setOpenItems((prevState) => ({
+  //     ...prevState,
+  //     [title]: !prevState[title], // Toggle the current state
+  //   }));
+  // };
+
+
+  const handleMenuClick = (hasSubmenu, item) => {
+    if (hasSubmenu) {
+      // Toggle open state for this menu item
+      setOpenMenus((prev) => ({
+        ...prev,
+        [item.title]: !prev[item.title],
+      }));
+    } else {
+      // Set active tab for non-submenu items
+      setActiveTab(item.title);
+    }
+  }
 
   const MenuItem = ({ item, level = 0 }) => {
     const hasSubmenu = item.items?.length > 0;
-    const [isOpen, setIsOpen] = React.useState(false); // Local state for submenu toggle
+    const isOpen = openMenus[item.title]; 
+    // const [isOpen, setIsOpen] = React.useState(false); // Local state for submenu toggle
 
-    const handleMenuClick = () => {
-      if (hasSubmenu) {
-        setIsOpen((prev) => !prev); // Toggle submenu
-      }
-      setActiveTab(item.title); // Set active tab if no submenu
-    };
+    // const handleMenuClick = () => {
+    //   if (hasSubmenu) {
+    //     setIsOpen((prev) => !prev); // Toggle submenu
+    //   }
+    //   setActiveTab(item.title); // Set active tab if no submenu
+    // };
   
 
     return (
@@ -73,7 +88,7 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
             ${activeTab === item.title && !hasSubmenu ? "bg-gray-200 text-black font-semibold" : "text-gray-600 hover:bg-gray-100"}
             ${isCollapsed ? "justify-center" : ""}`}
           // onClick={() => !hasSubmenu && setActiveTab(item.title)}
-            onClick={handleMenuClick}
+            onClick={() => handleMenuClick(hasSubmenu, item)}
         >
           <div className="flex items-center gap-3">
             {item.icon && <item.icon className="h-5 w-5 flex-shrink-0" />}
