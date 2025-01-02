@@ -1,28 +1,35 @@
+import React, { useState,useMemo, useEffect } from "react";
 import {  LayoutDashboard, FilePlus2,Files, Import,ChartNoAxesCombined, ReceiptIndianRupee } from "lucide-react";
-import React, { useState } from "react";
-import { LayoutDashboard, Files } from "lucide-react";
 import ReportGenerator from "../components/MainDashboardComponents/GenerateReport";
 import { cn } from "../lib/utils";
 import { ScrollArea } from "../components/ui/scroll-area";
 
-import Sidebar from '../components/Sidebar';
-import MainDashboard from '../components/MainDashboardComponents/MainDashboard';
+import Sidebar from "../components/Sidebar";
+import MainDashboard from "../components/MainDashboardComponents/MainDashboard";
 import Eligibility from "../components/MainDashboardComponents/Eligibility";
 import Billing from "../components/MainDashboardComponents/Billing";
 import { Toaster } from "../components/ui/toaster";
-import Analytics from '../components/MainDashboardComponents/Analytics';
-import {BreadcrumbDynamic}  from '../components/BreadCrumb';
+import Analytics from "../components/MainDashboardComponents/Analytics";
+import { BreadcrumbDynamic } from "../components/BreadCrumb";
+import { useBreadcrumb } from '../contexts/BreadcrumbContext';
+import { useParams } from "react-router-dom";
 
 const Dashboard = () => {
-
+  
+  const { breadcrumbs, setMainDashboard } = useBreadcrumb();
   const [activeTab, setActiveTab] = useState("Dashboard");
+  const {defaultTab} = useParams();
 
+
+  
   // const navItems = [
   //   // { name: 'Dashboard', icon: LayoutDashboard, id: 'Dashboard' },
   //   // { name: 'Generate Report', icon: Files, id: 'report' }
   //   {text: 'Dashboard', icon: LayoutDashboard},
   //   {text: 'Generate Report', icon: Files}
   // ];
+
+  
 
   const navItems = [
     {
@@ -34,40 +41,17 @@ const Dashboard = () => {
     {
       title: "Generate Report",
       url: "#",
-      icon: Files,
+      icon: FilePlus2 ,
     },
     {
       title: "Analytics",
       url: "#",
-      icon: Files,
+      icon: ChartNoAxesCombined,
     },
     {
       title: "Import to Tally",
       url: "#",
-      icon: null,
-      items: [
-        {
-          title: "Ledgers",
-          url: "#",
-          icon: null,
-        },
-        {
-          title: "Payment & Receipte",
-          url: "#",
-          icon: null,
-        },
-        {
-          title: "Sales",
-          url: "#",
-          icon: null,
-        },
-        {
-          title: "Purchase",
-          url: "#",
-          icon: null,
-        },
-      ],
-      alwaysOpen: true, // Ensures the section remains open
+      icon: Import,
     },
     {
       title: "Eligibility",
@@ -77,32 +61,58 @@ const Dashboard = () => {
     {
       title: "Billing",
       url: "#",
-      icon: Files,
+      icon: ReceiptIndianRupee,
     },
-  ]
+  ];
+  useEffect(() => {
+      if (!defaultTab || defaultTab==="defaultTab") setActiveTab(navItems[0].title);
+      else setActiveTab(defaultTab);
+  }, []);
 
+  useEffect(() => {
+    setMainDashboard(activeTab,`/${activeTab}`);
+  }, [activeTab]);
 
-  const handleOnNavigate = (selectedNav) => {
-    console.log("Navigating to:", selectedNav);
-    setActiveTab(selectedNav);
-  };
+  // const breadcrumbItems = [
+  //   {
+  //     label: "Home",
+  //     href: "/"
+  //   },
+  //   {
+  //     label: "...",
+  //     dropdown: [
+  //       { label: "Documentation", href: "/docs" },
+  //       { label: "Themes", href: "/themes" },
+  //       { label: "GitHub", href: "/github" }
+  //     ]
+  //   },
+  //   {
+  //     label: "Components",
+  //     href: "/docs/components"
+  //   },
+  //   {
+  //     label: "Breadcrumb",
+  //     isCurrentPage: true
+  //   }
+  // ];
 
   return (
     <>
-
       <div className={cn("h-full w-full flex h-screen bg-background")}>
-        <Sidebar navItems={navItems} activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Sidebar
+          navItems={navItems}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+        />
         <ScrollArea className="w-full">
-        <BreadcrumbDynamic/>
+          <BreadcrumbDynamic items={breadcrumbs} />
           <div className="flex-1 flex flex-col overflow-hidden">
             <main className="flex-1">
-              {activeTab === 'Dashboard' && <MainDashboard />}
-              {activeTab === 'Generate Report' && <ReportGenerator />}
-              {activeTab === 'Eligibility' && <Eligibility />}
-              {activeTab === 'Billing' && <Billing />}
-              {activeTab === 'Analytics' && <Analytics />}
-              
-
+              {activeTab === "Dashboard" && <MainDashboard />}
+              {activeTab === "Generate Report" && <ReportGenerator />}
+              {activeTab === "Eligibility" && <Eligibility />}
+              {activeTab === "Billing" && <Billing />}
+              {activeTab === "Analytics" && <Analytics />}
             </main>
           </div>
         </ScrollArea>
