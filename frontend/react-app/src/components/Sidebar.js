@@ -93,6 +93,11 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
           <div className="flex items-center gap-3">
             {item.icon && <item.icon className="h-5 w-5 flex-shrink-0" />}
             {!isCollapsed && <span className="text-sm">{item.title}</span>}
+            {hasSubmenu && (
+            <span className="ml-auto">
+              {isOpen ? "▲" : "▼"} {/* Indicator for submenu toggle */}
+            </span>
+          )}
           </div>
         </button>
 
