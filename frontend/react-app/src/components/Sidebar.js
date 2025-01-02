@@ -40,13 +40,30 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
   const navigate = useNavigate();
   const { isCollapsed } = useSidebar();
   const [user] = React.useState({
-    name: "Harsh Jajal",
-    email: "m@example.com",
+    name: "Raj Singh",
+    email: "rajsingh08471@gmail.com",
     avatar: "#",
   });
+  const [openItems, setOpenItems] = React.useState({});
+
+  const toggleItem = (title) => {
+    setOpenItems((prevState) => ({
+      ...prevState,
+      [title]: !prevState[title], // Toggle the current state
+    }));
+  };
 
   const MenuItem = ({ item, level = 0 }) => {
     const hasSubmenu = item.items?.length > 0;
+    const [isOpen, setIsOpen] = React.useState(false); // Local state for submenu toggle
+
+    const handleMenuClick = () => {
+      if (hasSubmenu) {
+        setIsOpen((prev) => !prev); // Toggle submenu
+      }
+      setActiveTab(item.title); // Set active tab if no submenu
+    };
+  
 
     return (
       <div className="w-full">
@@ -55,7 +72,8 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
             ${level > 0 ? "ml-4" : ""} 
             ${activeTab === item.title && !hasSubmenu ? "bg-gray-200 text-black font-semibold" : "text-gray-600 hover:bg-gray-100"}
             ${isCollapsed ? "justify-center" : ""}`}
-          onClick={() => !hasSubmenu && setActiveTab(item.title)}
+          // onClick={() => !hasSubmenu && setActiveTab(item.title)}
+            onClick={handleMenuClick}
         >
           <div className="flex items-center gap-3">
             {item.icon && <item.icon className="h-5 w-5 flex-shrink-0" />}
@@ -63,7 +81,7 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
           </div>
         </button>
 
-        {hasSubmenu && (
+        {hasSubmenu && isOpen && (
           <div className={`ml-4 mt-1 space-y-1 ${isCollapsed ? "hidden" : ""}`}>
             {item.items.map((subItem) => (
               <MenuItem key={subItem.title} item={subItem} level={level + 1} />
