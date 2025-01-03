@@ -27,7 +27,7 @@ const GenerateReportForm = () => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
   const caseIdRef = useRef(null);
-  const [forAts, setForAts] = useState(false);
+  const [forAts, setForAts] = useState(true);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const [progress, setProgress] = useState(0);
@@ -41,12 +41,12 @@ const GenerateReportForm = () => {
     setProgress(0);
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 90) {
+        if (prev >= 95) {
           return prev; // Hold at 90% until completion
         }
         // Non-linear progress simulation for more realistic feel
-        const increment = Math.max(1, Math.floor((90 - prev) / 10));
-        return Math.min(90, prev + increment);
+        const increment = Math.max(1, Math.floor((95 - prev) / 10));
+        return Math.min(95, prev + increment);
       });
     }, 300);
     return interval;
@@ -132,32 +132,6 @@ const GenerateReportForm = () => {
     }
   };
 
-  // const simulateProgress = () => {
-  //   setProgress(0);
-  //   const interval = setInterval(() => {
-  //     setProgress((prev) => {
-  //       if (prev >= 99) {
-  //         clearInterval(interval); // Stop at 95%
-  //         return 99;
-  //       }
-  //       return prev + 5; // Increment progress
-  //     });
-  //   }, 200); // Adjust interval speed as needed
-  //   return interval;
-  // };
-  // const simulateProgress = () => {
-  //   setProgress(0);
-  //   const interval = setInterval(() => {
-  //     setProgress((prev) => {
-  //       if (prev >= 99) {
-  //         clearInterval(interval); // Stop at 95%
-  //         return 99;
-  //       }
-  //       return prev + 5; // Increment progress
-  //     });
-  //   }, 200); // Adjust interval speed as needed
-  //   return interval;
-  // };
 
   useEffect(() => {
     if (toastId && progress > 0 && progress < 100) {
@@ -178,13 +152,6 @@ const GenerateReportForm = () => {
       });
     }
   }, [progress, toastId]);
-
-  // const simulateProgress = () => {
-  //   const interval = setInterval(() => {
-  //     setProgress((prev) => (prev < 100 ? prev + 10 : prev));
-  //   }, 500);
-  //   return interval;
-  // };
 
   const analyzeBankStatements = async (fileDetails) => {
   // Construct the payload dynamically from fileDetails
@@ -226,6 +193,13 @@ const handleSubmit = async (e) => {
   e.preventDefault();
   setLoading(true);
 
+  // Clear any existing progress state
+  setProgress(0);
+  setToastId(null);
+  if (progressIntervalRef.current) {
+    clearInterval(progressIntervalRef.current);
+  }
+
   if (selectedFiles.length === 0) {
     toast({
       title: "Error",
@@ -236,43 +210,53 @@ const handleSubmit = async (e) => {
     return;
   }
 
-  // Create initial progress toast
-  const id = toast({
-    title: "Initializing Report Generation",
-    description: (
-      <div className="mt-2 w-full flex flex-col gap-2">
-        <div className="flex items-center gap-4">
-          <CircularProgress value={0} className="w-full" />
-          <span className="text-sm font-medium">0%</span>
-        </div>
-        <p className="text-sm text-gray-500">Preparing to process files...</p>
-      </div>
-    ),
-    duration: Infinity,
-  });
-  setToastId(id);
-
-  const progressInterval = simulateProgress();
+  let id;
 
   try {
+    id = toast({
+      title: "Initializing Report Generation",
+      description: (
+        <div className="mt-2 w-full flex flex-col gap-2">
+          <div className="flex items-center gap-4">
+            <CircularProgress value={0} className="w-full" />
+            <span className="text-sm font-medium">0%</span>
+          </div>
+          <p className="text-sm text-gray-500">Preparing to process files...</p>
+        </div>
+      ),
+      duration: Infinity,
+    });
+    setToastId(id);
+
+    progressIntervalRef.current = simulateProgress();
+
     const result = await analyzeBankStatements(fileDetails);
 
-    // Complete the progress
-    clearInterval(progressInterval);
+    clearInterval(progressIntervalRef.current);
     setProgress(100);
 
-    // Show success message
+    // Dismiss the progress toast before showing success
+    toast.dismiss(id);
+    
     toast({
       title: "Success",
       description: "Report generated successfully!",
       duration: 3000,
     });
 
-    // Reset form state
     setSelectedFiles([]);
     setFileDetails([]);
   } catch (error) {
-    clearInterval(progressInterval);
+    // Clean up progress-related state
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+    if (id) {
+      toast.dismiss(id);
+    }
+    setProgress(0);
+    setToastId(null);
+
     toast({
       title: "Error",
       description: `Failed to generate report: ${error.message}`,
@@ -281,12 +265,10 @@ const handleSubmit = async (e) => {
     });
   } finally {
     setLoading(false);
-    setTimeout(() => {
-      setProgress(0);
-      setToastId(null);
-    }, 3000);
+    progressIntervalRef.current = null;
   }
 };
+
   const formatFileSize = (bytes) => {
     if (bytes < 1024 * 1024) {
       return `${(bytes / 1024).toFixed(2)} KB`;
