@@ -221,9 +221,7 @@ const GenerateReportForm = () => {
   }
 };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+
 const handleSubmit = async (e) => {
   e.preventDefault();
   setLoading(true);
@@ -254,7 +252,6 @@ const handleSubmit = async (e) => {
   });
   setToastId(id);
 
-  const progressInterval = simulateProgress();
   const progressInterval = simulateProgress();
 
   try {

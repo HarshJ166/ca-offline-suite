@@ -427,7 +427,7 @@ const CategoryEditTable = ({ data = [], categoryOptions }) => {
                             value={row[column]}
                             onValueChange={(value) => handleCategoryChange(index, value)}
                             className="w-full"
-                            disabled={selectedRows.includes(index)}
+                            disabled={globalSelectedRows.has(startIndex + index)}
                           >
                             <SelectTrigger className="w-full">
                               <SelectValue>{row[column]}</SelectValue>
