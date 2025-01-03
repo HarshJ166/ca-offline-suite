@@ -153,3 +153,9 @@ local_settings.py
 *.out
 
 /dist/
+
+/PythonCode/__pycache__/
+/PythonCode/build/
+/PythonCode/dist/
+/PythonCode/env/
+
