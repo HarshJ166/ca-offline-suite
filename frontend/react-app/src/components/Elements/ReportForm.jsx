@@ -544,18 +544,7 @@ const handleSubmit = async (e) => {
                                 handleFileDetailChange(index, "startDate", formattedDate);
                               }}
                               placeholder="DD-MM-YYYY"
-                              value={
-                                detail.startDate
-                                  ? detail.startDate.split("-").reverse().join("-")
-                                  : "" // Ensure correct initial value
-                              }
-                              onChange={(e) => {
-                                const date = e.target.value; // Get the date in YYYY-MM-DD format
-                                const [year, month, day] = date.split("-"); // Split into components
-                                const formattedDate = `${day}-${month}-${year}`; // Format to DD-MM-YYYY
-                                handleFileDetailChange(index, "startDate", formattedDate);
-                              }}
-                              placeholder="DD-MM-YYYY"
+                            
                               className="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all"
                             />
                           </div>
@@ -577,18 +566,7 @@ const handleSubmit = async (e) => {
                                 handleFileDetailChange(index, "endDate", formattedDate);
                               }}
                               placeholder="DD-MM-YYYY"
-                              value={
-                                detail.endDate
-                                  ? detail.endDate.split("-").reverse().join("-")
-                                  : "" // Ensure correct initial value
-                              }
-                              onChange={(e) => {
-                                const date = e.target.value; // Get the date in YYYY-MM-DD format
-                                const [year, month, day] = date.split("-"); // Split into components
-                                const formattedDate = `${day}-${month}-${year}`; // Format to DD-MM-YYYY
-                                handleFileDetailChange(index, "endDate", formattedDate);
-                              }}
-                              placeholder="DD-MM-YYYY"
+                             
                               className="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all"
                             />
                           </div>
