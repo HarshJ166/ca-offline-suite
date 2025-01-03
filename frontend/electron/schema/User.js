@@ -1,8 +1,14 @@
 // models/User.js
 const { DataTypes } = require('sequelize');
+const sequelize = require('../db');
+if (sequelize) {
+    console.log("Sequelize present");
+}
+else{
+    console.log("Sequelize not present");
+}
 
-module.exports = (sequelize) => {
-  return sequelize.define('User', {
+const User = sequelize.define('User', {
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
@@ -25,4 +31,5 @@ module.exports = (sequelize) => {
     tableName: 'users',
     timestamps: true,
   });
-};
+
+module.exports = User;

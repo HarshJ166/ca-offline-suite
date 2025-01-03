@@ -1,6 +1,6 @@
 const { Sequelize, DataTypes } = require('sequelize');
-const dbConfig = require('../config/dbconfig');  // Import your configuration file
-const UserModel = require('./models/User'); // Import User model
+const dbConfig = require('./config/dbConfig');  // Import your configuration file
+// const UserModel = require('./schema/User'); // Import User model
 
 class Database {
   // Static property to hold the single instance
@@ -19,20 +19,8 @@ class Database {
       logging: dbConfig.logging,  // Disable or enable logging based on config
     });
 
-    this.User = UserModel(this.sequelize);
+    // this.User = UserModel(this.sequelize);
 
-    // // Define models inside the class
-    // this.User = this.sequelize.define('User', {
-    //   name: {
-    //     type: DataTypes.STRING,
-    //     allowNull: false,
-    //   },
-    //   email: {
-    //     type: DataTypes.STRING,
-    //     allowNull: false,
-    //     unique: true,
-    //   },
-    // });
     // Set the singleton instance
     Database.instance = this;
 
@@ -51,11 +39,11 @@ class Database {
       console.log('Models have been synchronized with the database.');
 
       // Optionally, create a test user or any other setup actions
-      await this.User.create({ name: 'John Doe', email: 'john.doe@example.com' });
+    //   await this.User.create({ name: 'John Doe', email: 'john.doe@example.com' });
 
-      // Log the users (optional)
-      const users = await this.User.findAll();
-      console.log('Users:', users);
+    //   // Log the users (optional)
+    //   const users = await this.User.findAll();
+    //   console.log('Users:', users);
     } catch (error) {
       console.error('Database connection failed:', error);
     }
@@ -65,8 +53,12 @@ class Database {
   static getInstance() {
     if (!Database.instance) {
       Database.instance = new Database();
+      console.log("DB created")
     }
-    return Database.instance;
+    else{
+        console.log("Db Instance already present");
+    }
+    return Database.instance.sequelize;
   }
 }
 

@@ -1,13 +1,15 @@
 // repositories/UserRepository.js
-const { User } = require('../models/User'); // Import User model (assuming it's already defined)
 const { Op } = require('sequelize');  // Sequelize Operators for filtering
+const User = require('../schema/User'); // Import User model (assuming it's already defined)
 
 class UserRepository {
   // Create a new user
   static async createUser(data) {
+
+    console.log("User Model : ", User? "present" : "Not present", User);
     try {
       const user = await User.create(data);
-      return user;
+      return user.toJSON();
     } catch (error) {
       console.error('Error creating user:', error);
       throw new Error('Could not create user');

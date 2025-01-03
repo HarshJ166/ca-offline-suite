@@ -1,6 +1,7 @@
 const { app, BrowserWindow ,protocol} = require('electron');
 const path = require('path');
-const database = require('./db');  // Import to trigger the initialization automatically
+const database = require('./db');
+const UserRepository = require('./repository/UserRepository');
 
 
 // Instead of electron-is-dev, we'll use this simple check
@@ -50,10 +51,32 @@ function createWindow() {
     }
 }
 
+function createUser() {
+    try {
+      const userData = {
+        username: 'john_doe',
+        email: 'john.doe@example.com',
+        password: 'securepassword', // Adjust this according to your hashing mechanism
+      };
+  
+      const newUser = UserRepository.createUser(userData);
+      console.log('User created successfully:', newUser);
+    } catch (error) {
+      console.error('Error creating user:', error);
+    }
+  }
+
 app.whenReady().then(() => {
   createProtocol();
   createWindow();
+
+  try {
+    createUser();
+  } catch (dbError) {
+    console.error('User creation error:', dbError);
+  }
 });
+
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
         app.quit();
