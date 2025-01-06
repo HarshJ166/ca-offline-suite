@@ -48,6 +48,10 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
   });
   const [openMenus, setOpenMenus] = React.useState({});
 
+  useEffect(() => {
+    console.log({isCollapsed});
+  }, [isCollapsed]);
+
   // const toggleItem = (title) => {
   //   setOpenItems((prevState) => ({
   //     ...prevState,
