@@ -55,7 +55,6 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
   //   }));
   // };
 
-
   const handleMenuClick = (hasSubmenu, item) => {
     if (hasSubmenu) {
       // Toggle open state for this menu item
@@ -67,11 +66,11 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
       // Set active tab for non-submenu items
       setActiveTab(item.title);
     }
-  }
+  };
 
   const MenuItem = ({ item, level = 0 }) => {
     const hasSubmenu = item.items?.length > 0;
-    const isOpen = openMenus[item.title]; 
+    const isOpen = openMenus[item.title];
     // const [isOpen, setIsOpen] = React.useState(false); // Local state for submenu toggle
 
     // const handleMenuClick = () => {
@@ -80,12 +79,11 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
     //   }
     //   setActiveTab(item.title); // Set active tab if no submenu
     // };
-  
 
     return (
       <div className="w-full">
         <button
-          className={`w-full flex items-center justify-start p-2 rounded-md transition-all duration-200 ease-in-out
+          className={`w-full flex items-center justify-start p-2 rounded-md transition-all duration-200 ease-in-out dark:text-white
             ${level > 0 ? "ml-4" : ""} 
             ${
               activeTab === item.title && !hasSubmenu
@@ -94,7 +92,7 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
             }
             ${isCollapsed ? "justify-center" : ""}`}
           // onClick={() => !hasSubmenu && setActiveTab(item.title)}
-            onClick={() => handleMenuClick(hasSubmenu, item)}
+          onClick={() => handleMenuClick(hasSubmenu, item)}
         >
           <div className="flex items-center gap-3">
             {item.icon && <item.icon className="h-5 w-5 flex-shrink-0" />}
@@ -103,7 +101,7 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
               <span className="ml-auto mt-1">
                 {isOpen ? <ChevronUp /> : <ChevronDown />}
               </span>
-          )}
+            )}
           </div>
         </button>
 
@@ -137,7 +135,9 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
           {!isCollapsed && (
             <>
               <div className="ml-3 flex-1 text-left">
-                <p className="text-sm font-medium">{user.name}</p>
+                <p className="text-sm font-medium hover:text-black">
+                  {user.name}
+                </p>
                 <p className="text-xs text-gray-500">{user.email}</p>
               </div>
             </>

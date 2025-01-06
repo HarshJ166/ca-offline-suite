@@ -6,8 +6,8 @@ import AccountNumNameManager from "../components/CaseDashboardComponents/Account
 import IndividualTable from "../components/CaseDashboardComponents/IndividualTable";
 import CombinedTable from "../components/CaseDashboardComponents/CombinedTable";
 import { useNavigate, useParams } from "react-router-dom";
-import { useBreadcrumb } from '../contexts/BreadcrumbContext';
-import {BreadcrumbDynamic}  from '../components/BreadCrumb';
+import { useBreadcrumb } from "../contexts/BreadcrumbContext";
+import { BreadcrumbDynamic } from "../components/BreadCrumb";
 import { ClipboardPlus, UserPen } from "lucide-react";
 
 const CaseDashboard = () => {
@@ -24,13 +24,13 @@ const CaseDashboard = () => {
     {
       title: "Acc No and Acc Name",
       url: "#",
-      icon: UserPen  ,
+      icon: UserPen,
       isActive: true,
     },
     {
       title: "Reports",
       url: "#",
-      icon: ClipboardPlus ,
+      icon: ClipboardPlus,
       items: [
         {
           title: "Individual Table",
