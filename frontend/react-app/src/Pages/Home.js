@@ -10,6 +10,8 @@ import Eligibility from "../components/MainDashboardComponents/Eligibility";
 import Billing from "../components/MainDashboardComponents/Billing";
 import { Toaster } from "../components/ui/toaster";
 import Analytics from "../components/MainDashboardComponents/Analytics";
+import ExcelViewer from "../components/MainDashboardComponents/TallyVoucher";
+import ExcelERP from '../components/ImortTally/TallyERP'; 
 import { BreadcrumbDynamic } from "../components/BreadCrumb";
 import { useBreadcrumb } from '../contexts/BreadcrumbContext';
 import { useParams } from "react-router-dom";
@@ -54,27 +56,12 @@ const Dashboard = () => {
       icon: Import,
       items: [
         {
-          title: "Ledgers voucher",
+          title: "TallyPrime",
           url: "#",
           icon: null,
         },
         {
-          title: "Payment voucher",
-          url: "#",
-          icon: null,
-        },
-        {
-          title: "Receipt voucher",
-          url: "#",
-          icon: null,
-        },
-        {
-          title: "Sales voucher",
-          url: "#",
-          icon: null,
-        },
-        {
-          title: "Purchase voucher",
+          title: "TallyERP",
           url: "#",
           icon: null,
         },
@@ -140,7 +127,11 @@ const Dashboard = () => {
               {activeTab === "Generate Report" && <ReportGenerator />}
               {activeTab === "Eligibility" && <Eligibility />}
               {activeTab === "Billing" && <Billing />}
+
               {activeTab === "Analytics" && <Analytics />}
+              {/* {activeTab === "Import to Tally" && <ImportToTally />} */}
+              {activeTab === "TallyPrime" && <ExcelViewer />}
+              {activeTab === "TallyERP" && <ExcelERP />}
             </main>
           </div>
         </ScrollArea>
