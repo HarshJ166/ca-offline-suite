@@ -8,7 +8,7 @@ class DatabaseManager {
 
   static getInstance() {
     if (!DatabaseManager.#instance) {
-      const dbUrl = process.env.DATABASE_URL;
+      const dbUrl = process.env.DB_FILE_NAME;
       if (!dbUrl) {
         throw new Error("DATABASE_URL is not defined in the environment variables.");
       }
