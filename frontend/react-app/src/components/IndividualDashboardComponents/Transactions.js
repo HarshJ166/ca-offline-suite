@@ -1,105 +1,176 @@
-import React from 'react';
-import BarChart from '../charts/BarChart';
-import BarLineChart from '../charts/BarLineChart';
-import {PieCharts} from '../charts/PieCharts';
-import DataTable from './TableData';
+import React, { useState } from "react";
+import SingleLineChart from "../charts/LineChart";
+import SingleBarChart from "../charts/BarChart";
+import PieCharts from "../charts/PieCharts";
+import DataTable from "./TableData";
+import { Maximize2, Minimize2 } from "lucide-react";
+import transactionData from "../../data/Transaction.json";
+import { Card, CardHeader, CardTitle } from "../ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import ToggleStrip from "./ToggleStrip"; // Import the ToggleStrip component
 
-const chartData = [
-    { month: "January", balance: 1200, debit: 8000 },
-    { month: "February", balance: 3050, debit: 2000 },
-    { month: "March", balance: 2370, debit: 1200 },
-    { month: "April", balance: 7300, debit: 1900 },
-    { month: "May", balance: 2090, debit: 1300 },
-    { month: "June", balance: 2140, debit: 1400 },
-    { month: "July", balance: 1100, debit: 8000 },
-    { month: "August", balance: 1750, debit: 2000 },
-    { month: "September", balance: 2370, debit: 1200 },
-    { month: "October", balance: 7300, debit: 1900 },
-    { month: "November", balance: 2090, debit: 1300 },
-    { month: "December", balance: 1000, debit: 1400 },
-];
+const MaximizableChart = ({ children, title }) => {
+  const [isMaximized, setIsMaximized] = useState(false);
 
-const transactionData = [
-    {
-      date: "2024-01-01",
-      description: "Purchase",
-      debit: 100,
-      credit: 0,
-      balance: 900,
-      category: "Shopping",
-      entity: "Store A",
-    },
-    {
-      date: "2024-01-01",
-      description:
-        "hello what ois u doing the i want to tell something to u can i talk to na pata tenu dj fadu song suna raha hu kya kar raha hai tu bata na mujhe",
-      debit: 100,
-      credit: 0,
-      balance: 900,
-      category: "Shopping",
-      entity: "Store A",
-    },
-    {
-      date: "2024-01-05",
-      description: "Purchase",
-      debit: 100,
-      credit: 0,
-      balance: 900,
-      category: "Shopping",
-      entity: "Store A",
-    },
-    {
-      date: "2024-01-03",
-      description: "Purchase",
-      debit: 100,
-      credit: 0,
-      balance: 900,
-      category: "Shopping",
-      entity: "Store A",
-    },
-    {
-      date: "2024-01-04",
-      description: "Purchase",
-      debit: 100,
-      credit: 0,
-      balance: 900,
-      category: "Shopping",
-      entity: "Store A",
-    },
-  
-    // ... more transaction data
-  ];
-  
+  const toggleMaximize = () => setIsMaximized(!isMaximized);
 
+  if (isMaximized) {
+    return (
+      <Dialog open={isMaximized} onOpenChange={setIsMaximized}>
+        <DialogContent className="max-w-[100vw] w-[70vw] max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 w-full overflow-hidden">{children}</div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <div className="w-full md:w-1/2 lg:w-1/3 p-2">
+      <Card className="h-full">
+        <CardHeader className="relative">
+          <CardTitle className="dark:text-slate-300">{title}</CardTitle>
+          <button
+            onClick={toggleMaximize}
+            className="absolute top-4 right-4 p-1 rounded-lg 
+                     bg-slate-100 dark:bg-slate-800 
+                     hover:bg-slate-200 dark:hover:bg-slate-700
+                     transition-colors duration-200"
+            aria-label="Maximize"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </button>
+        </CardHeader>
+        <div className="p-4">{children}</div>
+      </Card>
+    </div>
+  );
+};
 
 const Transactions = () => {
-    return (
-        <div className="bg-white rounded-lg p-4">
-            <BarLineChart
-                data={chartData}
-                title="Transactions"
-                xAxis={{ key: 'month'}}
-                yAxis={[
-                    { key: 'debit', type: 'bar', color: 'hsl(var(--chart-5))' },
-                    { key: 'balance', type: 'line', color: 'hsl(var(--chart-3))' },
-                ]}
-            />
-            <BarChart
-                data={chartData}
-                title="Transactions"
-                xAxis={{ key: 'month'}}
-                yAxis={[
-                    { key: 'balance', type: 'bar', color: 'hsl(var(--chart-3))' },
-                    { key: 'debit', type: 'line', color: 'hsl(var(--chart-5))' },
-                ]}
-            />
+  const monthsData = transactionData.reduce((acc, transaction) => {
+    const date = new Date(transaction["Value Date"]);
+    const monthKey = `${date.getFullYear()}-${String(
+      date.getMonth() + 1
+    ).padStart(2, "0")}`;
+    if (!acc[monthKey]) acc[monthKey] = [];
+    acc[monthKey].push(transaction);
+    return acc;
+  }, {});
 
-            <PieCharts />
-            <div>
-            <DataTable data={transactionData} />
-          </div>
+  const processDailyData = (transactions) => {
+    return transactions.reduce((acc, transaction) => {
+      const date = transaction["Value Date"];
+      if (!acc[date]) {
+        acc[date] = {
+          date,
+          credit: transaction.Credit || 0,
+          debit: transaction.Debit || 0,
+          balance: transaction.Balance,
+          category: transaction.Category,
+        };
+      }
+      acc[date].credit += transaction.credit || 0;
+      acc[date].debit += transaction.debit || 0;
+      return acc;
+    }, {});
+  };
+
+  const processCategoryData = (transactions) => {
+    const categoryTotals = transactions.reduce((acc, transaction) => {
+      const category = transaction.Category;
+      if (!acc[category]) {
+        acc[category] = {
+          Category: category,
+          Debit: 0,
+        };
+      }
+      acc[category].Debit += transaction.Debit || 0;
+      return acc;
+    }, {});
+
+    return Object.values(categoryTotals);
+  };
+
+  const availableMonths = Object.keys(monthsData).sort();
+  const [selectedMonths, setSelectedMonths] = useState(availableMonths);
+
+  const filteredData = selectedMonths
+    .flatMap((month) => {
+      const dailyData = processDailyData(monthsData[month]);
+      return Object.values(dailyData);
+    })
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  const categoryData = processCategoryData(
+    selectedMonths.flatMap((month) => monthsData[month])
+  );
+
+  return (
+    <div className="bg-white dark:bg-slate-950 rounded-lg space-y-6 m-8 mt-2">
+      <ToggleStrip
+        columns={availableMonths}
+        selectedColumns={selectedMonths}
+        setSelectedColumns={setSelectedMonths} // Use the state setter directly
+      />
+
+      {selectedMonths.length === 0 ? (
+        <div className="text-center text-gray-600 dark:text-gray-400 my-6">
+          Select months to display the graphs
         </div>
-    );
+      ) : (
+        <>
+          <div className="flex flex-wrap -mx-2">
+            <MaximizableChart title="Daily Balance Trend">
+              <div className="w-full h-full">
+                <SingleLineChart
+                  data={filteredData}
+                  xAxisKey="date"
+                  selectedColumns={["balance"]}
+                  cardheight={"h-[37vh]"}
+                />
+              </div>
+            </MaximizableChart>
+
+            <MaximizableChart title="Credit vs Debit">
+              <div className="w-full h-full">
+                <SingleBarChart
+                  data={filteredData}
+                  xAxis={{ key: "date" }}
+                  yAxis={[
+                    {
+                      key: "credit",
+                      type: "bar",
+                      color: "hsl(var(--chart-3))",
+                    },
+                    {
+                      key: "debit",
+                      type: "line",
+                      color: "hsl(var(--chart-5))",
+                    },
+                  ]}
+                />
+              </div>
+            </MaximizableChart>
+
+            <MaximizableChart title="Debit Distribution by Category">
+              <div className="w-full h-full">
+                <PieCharts
+                  data={categoryData}
+                  nameKey="Category"
+                  valueKey="Debit"
+                />
+              </div>
+            </MaximizableChart>
+          </div>
+
+          <DataTable data={filteredData} />
+        </>
+      )}
+    </div>
+  );
 };
 
 export default Transactions;
