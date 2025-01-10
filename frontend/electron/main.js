@@ -1,6 +1,8 @@
 const { app, BrowserWindow, protocol, ipcMain, shell } = require('electron');
-require("dotenv").config();
+require('dotenv').config();
 const path = require('path');
+console.log('Working Directory:', process.cwd());
+
 const log = require('electron-log');
 // const database = require('./db/db');
 // const UserRepository = require('./db/repository/UserRepository');
@@ -13,6 +15,9 @@ log.transports.file.level = 'info'; // Only log info level and above in the log 
 // Instead of electron-is-dev, we'll use this simple check
 const isDev = process.env.NODE_ENV === 'development'
 console.log('process.env.NODE_ENV', process.env.NODE_ENV);
+
+const BASE_DIR = isDev ? __dirname : process.resourcesPath;
+
 // Add this function to handle file protocol
 function createProtocol() {
   protocol.registerFileProtocol('app', (request, callback) => {
@@ -38,7 +43,7 @@ function createWindow() {
     },
     icon: path.join(__dirname, './assets/cyphersol-icon.png'),
     autoHideMenuBar: true,
-    title: 'CypherSol',
+    title: isDev? 'CypherSol Dev' : 'CypherSol',
 
   });
 
@@ -62,7 +67,7 @@ function createWindow() {
   // Register the IPC event for opening a file path
   ipcMain.handle('open-file', async (event, filePath) => {
     try {
-      systemFilePath = path.join(process.resourcesPath, "media", "vouchers", filePath);
+      systemFilePath = path.join(BASE_DIR, "media", "vouchers", filePath);
       console.log('Opening file:', systemFilePath);
       log.info('Opening file:', systemFilePath);
       const result = await shell.openPath(systemFilePath);
