@@ -1,3 +1,5 @@
+console.log('Working Directory in DB:', process.cwd());
+console.log("Directory name in DB:", __dirname);
 require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") }); // Explicitly resolve the .env path
 const { drizzle } = require("drizzle-orm/libsql");
 // const { createClient } = require("@libsql/client");

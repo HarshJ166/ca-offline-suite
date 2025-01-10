@@ -1,3 +1,5 @@
+console.log('Working Directory in DB:', process.cwd());
+console.log("Directory name in DB:", __dirname);
 require("dotenv").config();
 import { defineConfig } from "drizzle-kit";
 
