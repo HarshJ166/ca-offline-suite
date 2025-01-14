@@ -2,18 +2,14 @@ import React, { useState, useMemo, useEffect } from "react";
 import summaryData from "../../data/summary.json";
 import PieCharts from "../charts/PieCharts";
 import TableData from "./TableData";
-import { Checkbox } from "../ui/checkbox";
 import { Card, CardHeader, CardTitle } from "../ui/card";
-import BarChart from "../charts/BarChart";
-import { Table } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "../ui/button";
 import ToggleStrip from "./ToggleStrip";
 
-const MaximizableChart = ({ children, title, isMaximized, setIsMaximized }) => {
-  // const [isMaximized, setIsMaximized] = useState(false);
-
+// Rest of the imports and MaximizableChart component remain the same...
+const MaximizableChart = ({ children, title, isMaximized, setIsMaximized}) => {
   const toggleMaximize = () => setIsMaximized(!isMaximized);
 
   if (isMaximized) {
@@ -32,7 +28,7 @@ const MaximizableChart = ({ children, title, isMaximized, setIsMaximized }) => {
   return (
     <div className="w-full md:w-1/2 lg:w-1/3 p-2">
       <Card className="h-full">
-        <CardHeader className="relative pb-0 pt-2">
+        <CardHeader className="relative">
           <CardTitle className="dark:text-slate-300">{title}</CardTitle>
           <button
             onClick={toggleMaximize}
@@ -53,27 +49,17 @@ const MaximizableChart = ({ children, title, isMaximized, setIsMaximized }) => {
 
 const Summary = () => {
   const { income, importantExpenses, otherExpenses } = summaryData;
-  const [activeTable, setActiveTable] = useState("income"); // Default to showing income table
-  const [isMaximized, setIsMaximized] = useState(false);
+  const [activeTable, setActiveTable] = useState("income");
+  const [incomeMaximized, setIncomeMaximized] = useState(false);
+  const [importantExpensesMaximized, setImportantExpensesMaximized] = useState(false);
+  const [otherExpensesMaximized, setOtherExpensesMaximized] = useState(false);
 
   const monthOrder = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
   ];
 
-  const particulars = summaryData.particulars;
   const [selectedMonths, setSelectedMonths] = useState([]);
-
   const months = useMemo(() => {
     const allMonths = new Set();
     [income, importantExpenses, otherExpenses].forEach((category) => {
@@ -109,10 +95,8 @@ const Summary = () => {
     );
   };
 
-  const handleSelectAll = () => {
-    setSelectedMonths(
-      selectedMonths.length === months.length ? [] : [...months]
-    );
+  const formatNumber = (value) => {
+    return Number(parseFloat(value || 0).toFixed(2));
   };
 
   const transformData = (data, valueKey, nameKey, excludeName) => {
@@ -121,21 +105,31 @@ const Summary = () => {
         .filter((item) => item[nameKey] !== excludeName)
         .map((item) => ({
           name: item[nameKey],
-          value: parseFloat(item[valueKey] || 0),
+          value: formatNumber(item[valueKey] || 0),
         }))
         .filter((item) => item.value > 0);
     }
 
-    return data
+    const transformedData = data
       .filter((item) => item[nameKey] !== excludeName)
       .map((item) => ({
         name: item[nameKey],
-        value: selectedMonths.reduce(
-          (sum, month) => sum + parseFloat(item[month] || 0),
-          0
+        value: formatNumber(
+          selectedMonths.reduce(
+            (sum, month) => sum + parseFloat(item[month] || 0),
+            0
+          )
         ),
       }))
       .filter((item) => item.value > 0);
+
+    const hasDataForSelectedMonths = transformedData.some(item => item.value > 0);
+    return hasDataForSelectedMonths ? transformedData : [];
+  };
+
+  const checkDataAvailability = (data) => {
+    if (selectedMonths.length === 0) return false;
+    return data.length > 0;
   };
 
   const incomeData = transformData(income, "total", "income", "Total Credit");
@@ -152,132 +146,95 @@ const Summary = () => {
     "Total Debit"
   );
 
-  // Helper function to map data keys
   const mapDataKeys = (data) =>
     data.map((item) => ({
       "Income Category": item.name,
-      Amounts: item.value,
+      Amounts: formatNumber(item.value),
     }));
 
   const incomeDataTransformed = mapDataKeys(incomeData);
   const importantExpensesDataTransformed = mapDataKeys(importantExpensesData);
   const otherExpensesDataTransformed = mapDataKeys(otherExpensesData);
 
+  const renderChart = (data, title, isMaximized, setIsMaximized, tableType) => {
+    return (
+      <MaximizableChart
+        title={title}
+        isMaximized={isMaximized}
+        setIsMaximized={setIsMaximized}
+      >
+        <div className="w-full p-4">
+          {checkDataAvailability(data) ? (
+            <>
+              <PieCharts
+                data={data}
+                title=""
+                valueKey="value"
+                nameKey="name"
+                showLegends={isMaximized}
+              />
+              {!isMaximized && (
+                <Button
+                  onClick={() => setActiveTable(tableType)}
+                  variant={activeTable === tableType ? "default" : "outline"}
+                  className={`mt-4 w-full ${activeTable === tableType ? "dark:bg-slate-300" : ""}`}
+                >
+                  View Table
+                </Button>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center justify-center h-48">
+              <p className="text-gray-500 dark:text-gray-400">No Data Available</p>
+            </div>
+          )}
+        </div>
+      </MaximizableChart>
+    );
+  };
+
   const renderActiveTable = () => {
+    const getTableContent = (data, title) => {
+      return checkDataAvailability(data) ? (
+        <TableData data={data} title={title} />
+      ) : (
+        <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md w-full">
+          <p className="text-gray-800 dark:text-gray-200 text-center font-medium">
+            No Data Available for Selected Month(s)
+          </p>
+        </div>
+      );
+    };
+
     switch (activeTable) {
       case "income":
-        return <TableData data={incomeDataTransformed} title="Income" />;
+        return getTableContent(incomeDataTransformed, "Income");
       case "importantExpenses":
-        return (
-          <TableData
-            data={importantExpensesDataTransformed}
-            title="Important Expenses"
-          />
-        );
+        return getTableContent(importantExpensesDataTransformed, "Important Expenses");
       case "otherExpenses":
-        return (
-          <TableData
-            data={otherExpensesDataTransformed}
-            title="Other Expenses"
-          />
-        );
+        return getTableContent(otherExpensesDataTransformed, "Other Expenses");
       default:
-        return <TableData data={incomeDataTransformed} />;
+        return getTableContent(incomeDataTransformed, "Income");
     }
   };
 
   return (
     <div className="space-y-6 m-8 mt-2">
-      {/* Use ToggleStrip for month selection */}
       <ToggleStrip
         columns={months}
         selectedColumns={selectedMonths}
         setSelectedColumns={setSelectedMonths}
       />
       {selectedMonths.length === 0 ? (
-        <div className="text-center text-gray-600 my-6">
-          Select checkbox to display the graph
+        <div className="text-center text-gray-600 dark:text-gray-400 my-6">
+          Select months to display the graphs
         </div>
       ) : (
         <>
           <div className="flex flex-wrap -mx-2">
-            <MaximizableChart
-              title="Income"
-              isMaximized={isMaximized}
-              setIsMaximized={setIsMaximized}
-            >
-              <div className="w-full h-full p-5">
-                <PieCharts
-                  data={incomeData}
-                  title=""
-                  valueKey="value"
-                  nameKey="name"
-                />
-                {!isMaximized && (
-                  <Button
-                    onClick={() => setActiveTable("income")}
-                    variant={activeTable === "income" ? "default" : "outline"}
-                    className="mt-4 w-full"
-                  >
-                    View Table
-                  </Button>
-                )}
-              </div>
-            </MaximizableChart>
-
-            <MaximizableChart
-              title="Important Expenses"
-              isMaximized={isMaximized}
-              setIsMaximized={setIsMaximized}
-            >
-              <div className="w-full h-full p-5">
-                <PieCharts
-                  data={importantExpensesData}
-                  title=""
-                  valueKey="value"
-                  nameKey="name"
-                />
-                {!isMaximized && (
-                  <Button
-                    onClick={() => setActiveTable("importantExpenses")}
-                    variant={
-                      activeTable === "importantExpenses"
-                        ? "default"
-                        : "outline"
-                    }
-                    className="mt-4 w-full"
-                  >
-                    View Table
-                  </Button>
-                )}
-              </div>
-            </MaximizableChart>
-
-            <MaximizableChart
-              title="Other Expenses Breakdown"
-              isMaximized={isMaximized}
-              setIsMaximized={setIsMaximized}
-            >
-              <div className="w-full h-full p-5">
-                <PieCharts
-                  data={otherExpensesData}
-                  title=""
-                  valueKey="value"
-                  nameKey="name"
-                />
-                {!isMaximized && (
-                  <Button
-                    onClick={() => setActiveTable("otherExpenses")}
-                    variant={
-                      activeTable === "otherExpenses" ? "default" : "outline"
-                    }
-                    className="mt-4 w-full"
-                  >
-                    View Table
-                  </Button>
-                )}
-              </div>
-            </MaximizableChart>
+            {renderChart(incomeData, "Income", incomeMaximized, setIncomeMaximized, "income")}
+            {renderChart(importantExpensesData, "Important Expenses", importantExpensesMaximized, setImportantExpensesMaximized, "importantExpenses")}
+            {renderChart(otherExpensesData, "Other Expenses Breakdown", otherExpensesMaximized, setOtherExpensesMaximized, "otherExpenses")}
           </div>
           {renderActiveTable()}
         </>
