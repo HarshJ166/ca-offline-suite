@@ -12,5 +12,6 @@ contextBridge.exposeInMainWorld('electron', {
   file: {
     open: (filePath) => ipcRenderer.send('file:open', filePath),
     save: (fileContent) => ipcRenderer.invoke('file:save', fileContent),
+    getData: (filePath) => ipcRenderer.invoke('file:get-data', filePath),
   },
 });

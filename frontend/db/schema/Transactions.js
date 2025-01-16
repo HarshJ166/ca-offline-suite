@@ -1,11 +1,11 @@
 const { sqliteTable, text, real } = require("drizzle-orm/sqlite-core");
-const { cases } = require("./Cases");
+const { statements } = require("./Statement");
 
 export const transactions = sqliteTable("transactions", {
   id: text("id").primaryKey().notNull(),
-  caseId: text("case_id")
+  statementId: text("statement_id")
   .notNull()
-  .references(() => cases.id, { onDelete: "CASCADE" }),
+  .references(() => statements.id, { onDelete: "CASCADE" }),
   date: text("date").notNull(),
   description: text("description").notNull(),
   amount: real("amount").notNull(),
