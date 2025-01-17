@@ -2,10 +2,12 @@
 const { sqliteTable, text, integer } = require("drizzle-orm/sqlite-core");
 
 // Users table
-export const users = sqliteTable("users", {
-  id: integer("id").primaryKey().notNull(),
+const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }).notNull(),
   name: text("name").notNull(),
   email: text("email").unique().notNull(),
   password: text("password").notNull(),
-  createdAt: integer("created_at").notNull(),
+  dateJoined: integer("date_joined", { mode: "timestamp" }).notNull(),
 });
+
+module.exports = { users };
