@@ -1,5 +1,5 @@
 const { app, BrowserWindow, protocol, ipcMain, shell } = require('electron');
-const {registerOpenFileIpc} = require("./ipc/fileHandler");
+// const {registerOpenFileIpc} = require("./ipc/fileHandler");
 require('dotenv').config();
 const path = require('path');
 console.log('Working Directory:', process.cwd());
@@ -65,7 +65,7 @@ function createWindow() {
     // win.webContents.openDevTools();
   }
 
-  registerOpenFileIpc(BASE_DIR)
+  // registerOpenFileIpc(BASE_DIR)
 }
 
 function createUser() {
