@@ -2,7 +2,7 @@ CREATE TABLE `cases` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` integer NOT NULL,
 	`status` text NOT NULL,
-	`created_at` integer NOT NULL,
+	`created_at` text NOT NULL,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE CASCADE
 );
 --> statement-breakpoint
@@ -50,7 +50,7 @@ CREATE TABLE `users` (
 	`name` text NOT NULL,
 	`email` text NOT NULL,
 	`password` text NOT NULL,
-	`date_joined` integer NOT NULL
+	`date_joined` text NOT NULL
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);

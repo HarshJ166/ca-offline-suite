@@ -1,17 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import SingleLineChart from "../charts/LineChart";
 import SingleBarChart from "../charts/BarChart";
 import PieCharts from "../charts/PieCharts";
 import DataTable from "./TableData";
 import { Maximize2, Minimize2 } from "lucide-react";
-import transactionData from "../../data/Transaction.json";
-
+// import transactionData from "../../data/Transaction.json";
 import { Card, CardHeader, CardTitle } from "../ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import ToggleStrip from "./ToggleStrip"; // Import the ToggleStrip component
 
-const MaximizableChart = ({ children, title , isMaximized,setIsMaximized}) => {
-
+const MaximizableChart = ({ children, title, isMaximized, setIsMaximized }) => {
   const toggleMaximize = () => setIsMaximized(!isMaximized);
 
   if (isMaximized) {
@@ -53,47 +51,75 @@ const Transactions = () => {
   const [isDailyBalanceMaximized, setIsDailyBalanceMaximized] = useState(false);
   const [isCreditDebitMaximized, setIsCreditDebitMaximized] = useState(false);
   const [isCategoryMaximized, setIsCategoryMaximized] = useState(false);
+  const [transactionData, setTransactionData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const monthsData = transactionData.reduce((acc, transaction) => {
-    const date = new Date(transaction["Value Date"]);
-    const monthKey = `${date.getFullYear()}-${String(
-      date.getMonth() + 1
-    ).padStart(2, "0")}`;
-    if (!acc[monthKey]) acc[monthKey] = [];
-    acc[monthKey].push(transaction);
-    return acc;
-  }, {});
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const data = await window.electron.getTransactions();
+        setTransactionData(data);
+        console.log("Fetched transactions:", data);
+        setIsLoading(false);
+      } catch (err) {
+        setError("Failed to fetch transactions");
+        setIsLoading(false);
+        console.error("Error fetching transactions:", err);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
+
+  const monthsData = React.useMemo(() => {
+    return transactionData.reduce((acc, transaction) => {
+      const date = new Date(transaction.date * 1000); // Adjust property name based on your DB schema
+      console.log("Date:", date);
+      const monthKey = `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}`;
+      if (!acc[monthKey]) acc[monthKey] = [];
+      acc[monthKey].push(transaction);
+      return acc;
+    }, {});
+  }, [transactionData]);
 
   const processDailyData = (transactions) => {
     return transactions.reduce((acc, transaction) => {
-      const date = transaction["Value Date"];
+      const date = new Date(transaction.date * 1000)
+        .toISOString()
+        .split("T")[0]; // Adjust property names based on your DB schema
+      console.log("Date:", date);
       if (!acc[date]) {
         acc[date] = {
           date,
-          Description:transaction.Description,
-          credit: transaction.Credit || 0,
-          debit: transaction.Debit || 0,
-          balance: transaction.Balance,
-          category: transaction.Category,
-          // Entity:transaction.Entity
+          description: transaction.description,
+          credit: transaction.credit || 0,
+          debit: transaction.debit || 0,
+          balance: transaction.balance,
+          category: transaction.category,
+          entity: transaction.entity,
         };
       }
-      acc[date].credit += transaction.credit || 0;
-      acc[date].debit += transaction.debit || 0;
+      if (transaction.type === "Credit") {
+        acc[date].credit += transaction.amount;
+      } else if (transaction.type === "Debit") {
+        acc[date].debit += transaction.amount;
+      }
       return acc;
     }, {});
   };
 
   const processCategoryData = (transactions) => {
     const categoryTotals = transactions.reduce((acc, transaction) => {
-      const category = transaction.Category;
-      if (!acc[category]) {
-        acc[category] = {
-          Category: category,
-          Debit: 0,
-        };
+      if (transaction.type === "Debit") {
+        const category = transaction.category || "Uncategorized";
+        if (!acc[category]) {
+          acc[category] = { name: category, value: 0 }; // Changed to match PieChart expected format
+        }
+        acc[category].value += Math.abs(transaction.amount); // Ensure positive values
       }
-      acc[category].Debit += transaction.Debit || 0;
       return acc;
     }, {});
 
@@ -103,17 +129,41 @@ const Transactions = () => {
   const availableMonths = Object.keys(monthsData).sort();
   const [selectedMonths, setSelectedMonths] = useState(availableMonths);
 
-  if(transactionData.length === 0)
-    {
-        return (
-            <div className="rounded-lg space-y-6 m-8 mt-2">
-            <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
-                <p className="text-gray-800 text-center mt-3 font-medium text-lg">No Data Available</p>
-            </div>
-            </div>
-        )
-    }
+  if (isLoading) {
+    return (
+      <div className="rounded-lg space-y-6 m-8 mt-2">
+        <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
+          <p className="text-gray-800 text-center mt-3 font-medium text-lg">
+            Loading...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
+  if (error) {
+    return (
+      <div className="rounded-lg space-y-6 m-8 mt-2">
+        <div className="bg-red-100 p-4 rounded-md w-full h-[10vh]">
+          <p className="text-red-800 text-center mt-3 font-medium text-lg">
+            {error}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (transactionData.length === 0) {
+    return (
+      <div className="rounded-lg space-y-6 m-8 mt-2">
+        <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
+          <p className="text-gray-800 text-center mt-3 font-medium text-lg">
+            No Data Available
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const filteredData = selectedMonths
     .flatMap((month) => {
@@ -141,7 +191,11 @@ const Transactions = () => {
       ) : (
         <>
           <div className="flex flex-wrap -mx-2">
-            <MaximizableChart title="Daily Balance Trend" isMaximized={isDailyBalanceMaximized} setIsMaximized={setIsDailyBalanceMaximized}>
+            <MaximizableChart
+              title="Daily Balance Trend"
+              isMaximized={isDailyBalanceMaximized}
+              setIsMaximized={setIsDailyBalanceMaximized}
+            >
               <div className="w-full h-full">
                 <SingleLineChart
                   data={filteredData}
@@ -152,7 +206,11 @@ const Transactions = () => {
               </div>
             </MaximizableChart>
 
-            <MaximizableChart title="Credit vs Debit" isMaximized={isCreditDebitMaximized} setIsMaximized={setIsCreditDebitMaximized}>
+            <MaximizableChart
+              title="Credit vs Debit"
+              isMaximized={isCreditDebitMaximized}
+              setIsMaximized={setIsCreditDebitMaximized}
+            >
               <div className="w-full h-full">
                 <SingleBarChart
                   data={filteredData}
@@ -174,12 +232,16 @@ const Transactions = () => {
               </div>
             </MaximizableChart>
 
-            <MaximizableChart title="Debit Distribution by Category" isMaximized={isCategoryMaximized} setIsMaximized={setIsCategoryMaximized}>
+            <MaximizableChart
+              title="Debit Distribution by Category"
+              isMaximized={isCategoryMaximized}
+              setIsMaximized={setIsCategoryMaximized}
+            >
               <div className="w-full h-full">
                 <PieCharts
                   data={categoryData}
-                  nameKey="Category"
-                  valueKey="Debit"
+                  nameKey="name" // Changed from "Category" to "name"
+                  valueKey="value"
                   showLegends={isCategoryMaximized}
                 />
               </div>

@@ -2,7 +2,7 @@ const { app, BrowserWindow, protocol, ipcMain, shell } = require("electron");
 const { registerOpenFileIpc } = require("./ipc/fileHandler");
 require("dotenv").config();
 const path = require("path");
-const { setupTransactionIPC } = require("./ipc/individualDashboard");
+const { registerIndividualDashboardIpc } = require("./ipc/individualDashboard");
 
 console.log("Working Directory:", process.cwd());
 
@@ -47,7 +47,7 @@ async function createWindow() {
     title: isDev ? "CypherSol Dev" : "CypherSol",
   });
 
-  setupTransactionIPC();
+  registerIndividualDashboardIpc();
 
   if (isDev) {
     win.loadURL("http://localhost:3000");

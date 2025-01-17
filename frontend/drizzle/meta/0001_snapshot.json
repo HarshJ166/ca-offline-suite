@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b2246451-dcde-44c2-b1e2-4bc30dc15aa7",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "a3f1bbf4-bd64-4e43-bc1e-500b82a4d6c6",
+  "prevId": "b2246451-dcde-44c2-b1e2-4bc30dc15aa7",
   "tables": {
     "cases": {
       "name": "cases",
@@ -30,7 +30,7 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "text",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -295,6 +295,14 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "entity": {
+          "name": "entity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'unknown'"
         }
       },
       "indexes": {},
@@ -350,7 +358,7 @@
         },
         "date_joined": {
           "name": "date_joined",
-          "type": "text",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false

@@ -1,34 +1,56 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import HorizontalBarChart from "../charts/HorizontalBarChart";
 import SuspensePieChart from "../charts/SuspensePieChart";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import DataTable from "./TableData";
-import SuspenseCreditData from "../../data/suspense_credit.json";
-import SuspenseDebitData from "../../data/suspense_debit.json";
-import PieCharts from "../charts/PieCharts";
 
 const Suspense = () => {
-  // Transform credit data
-  const transformedCreditData = SuspenseCreditData.map((item) => ({
-    date: new Date(item["Value Date"]).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    }),
-    Description: item.Description,
-    Credit: Number(item.Credit || 0),
-  }));
+  const [creditData, setCreditData] = useState([]);
+  const [debitData, setDebitData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Transform debit data
-  const transformedDebitData = SuspenseDebitData.map((item) => ({
-    date: new Date(item["Value Date"]).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    }),
-    Description: item.Description,
-    Debit: Number(item.Debit || 0),
-  }));
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch both credit and debit data
+        const creditTransactions =
+          await window.electron.getTransactionsBySuspenseCredit();
+        const debitTransactions =
+          await window.electron.getTransactionsBySuspenseDebit();
+
+        // Transform credit data
+        const transformedCreditData = creditTransactions.map((item) => ({
+          date: new Date(item.date).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          }),
+          Description: item.description,
+          Credit: item.amount,
+        }));
+
+        // Transform debit data
+        const transformedDebitData = debitTransactions.map((item) => ({
+          date: new Date(item.date).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          }),
+          Description: item.description,
+          Debit: item.amount,
+        }));
+
+        setCreditData(transformedCreditData);
+        setDebitData(transformedDebitData);
+      } catch (error) {
+        console.error("Error fetching suspense data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Chart configuration
   const chartConfig = {
@@ -42,8 +64,12 @@ const Suspense = () => {
     },
   };
 
+  if (isLoading) {
+    return <div className="p-8">Loading...</div>;
+  }
+
   return (
-    <div className="rounded-xl shadow-sm m-8 mt-2 bg-white space-y-6 dark:bg-slate-950 ">
+    <div className="rounded-xl shadow-sm m-8 mt-2 bg-white space-y-6 dark:bg-slate-950">
       <Tabs defaultValue="credit">
         <TabsList className="grid w-[500px] grid-cols-2 pb-10">
           <TabsTrigger value="credit">Credit</TabsTrigger>
@@ -55,7 +81,7 @@ const Suspense = () => {
             <div className="grid grid-cols-2 gap-6">
               <div className="w-full h-full">
                 <HorizontalBarChart
-                  data={transformedCreditData}
+                  data={creditData}
                   title="Suspense Credit Chart"
                   xAxisKey="Description"
                   yAxisKey="Credit"
@@ -64,13 +90,13 @@ const Suspense = () => {
               </div>
               <div className="w-full h-full">
                 <SuspensePieChart
-                  data={transformedCreditData}
+                  data={creditData}
                   title="Suspense Credit Chart"
                 />
               </div>
             </div>
             <div>
-              <DataTable data={transformedCreditData} />
+              <DataTable data={creditData} />
             </div>
           </div>
         </TabsContent>
@@ -80,7 +106,7 @@ const Suspense = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="w-full h-full">
                 <HorizontalBarChart
-                  data={transformedDebitData}
+                  data={debitData}
                   title="Suspense Debit Chart"
                   xAxisKey="Description"
                   yAxisKey="Debit"
@@ -89,13 +115,13 @@ const Suspense = () => {
               </div>
               <div className="w-full h-full">
                 <SuspensePieChart
-                  data={transformedDebitData}
+                  data={debitData}
                   title="Suspense Debit Chart"
                 />
               </div>
             </div>
             <div>
-              <DataTable data={transformedDebitData} />
+              <DataTable data={debitData} />
             </div>
           </div>
         </TabsContent>
