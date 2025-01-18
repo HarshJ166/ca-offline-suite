@@ -47,7 +47,6 @@ async function createWindow() {
     title: isDev ? "CypherSol Dev" : "CypherSol",
   });
 
-  registerIndividualDashboardIpc();
 
   if (isDev) {
     win.loadURL("http://localhost:3000");
@@ -77,6 +76,7 @@ async function createWindow() {
     // win.webContents.openDevTools();
   }
 
+  registerIndividualDashboardIpc();
   registerOpenFileIpc(BASE_DIR);
 }
 
