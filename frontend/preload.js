@@ -40,4 +40,6 @@ contextBridge.exposeInMainWorld("electron", {
     save: (fileContent) => ipcRenderer.invoke("file:save", fileContent),
     getData: (filePath) => ipcRenderer.invoke("file:get-data", filePath),
   },
+
+  getRecentReports: () => ipcRenderer.invoke("get-recent-reports"),
 });

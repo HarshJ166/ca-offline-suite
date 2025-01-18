@@ -15,7 +15,7 @@ const CaseDashboard = () => {
   const [activeTab, setActiveTab] = useState("Acc No and Acc Name");
   const navigate = useNavigate();
   const { caseId, defaultTab } = useParams();
-
+  console.log("CaseId : ", caseId, "Default Tab : ", defaultTab);
   useEffect(() => {
     setCaseDashboard(activeTab, `/case-dashboard/${caseId}/${activeTab}`);
   }, [activeTab]);

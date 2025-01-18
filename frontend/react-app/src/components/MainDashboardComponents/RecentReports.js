@@ -18,7 +18,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { useToast } from "../../hooks/use-toast";
 import { Badge } from "../ui/badge";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "../../lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Eye, Plus, Trash2, Info, Search, Edit2, X } from "lucide-react";
@@ -55,68 +55,46 @@ const RecentReports = () => {
   const [isAddPdfModalOpen, setIsAddPdfModalOpen] = useState(false);
   const itemsPerPage = 10;
 
-  const [recentReports, setRecentReports] = useState([
-    {
-      date: "13-12-2024",
-      reportName: "Report_ATS_unit_1_00008",
-      status: "Completed",
-    },
-    {
-      date: "13-12-2024",
-      reportName: "Report_ATS_unit_1_00007",
-      status: "Completed",
-    },
-    {
-      date: "12-12-2024",
-      reportName: "Report_ATS_unit_1_00003",
-      status: "In Progress",
-    },
-    {
-      date: "12-12-2024",
-      reportName: "Report_ATS_unit_1_00002",
-      status: "Failed",
-    },
-    {
-      date: "12-12-2024",
-      reportName: "Report_ATS_unit_1_00001",
-      status: "Completed",
-    },
-    {
-      date: "11-12-2024",
-      reportName: "Report_ATS_unit_1_00006",
-      status: "In Progress",
-    },
-    {
-      date: "11-12-2024",
-      reportName: "Report_ATS_unit_1_00005",
-      status: "Completed",
-    },
-    {
-      date: "11-12-2024",
-      reportName: "Report_ATS_unit_1_00004",
-      status: "Failed",
-    },
-    {
-      date: "10-12-2024",
-      reportName: "Report_ATS_unit_1_00009",
-      status: "Completed",
-    },
-    {
-      date: "10-12-2024",
-      reportName: "Report_ATS_unit_1_00010",
-      status: "In Progress",
-    },
-    {
-      date: "10-12-2024",
-      reportName: "Report_ATS_unit_1_00011",
-      status: "Completed",
-    },
-    {
-      date: "10-12-2024",
-      reportName: "Report_ATS_unit_1_00012",
-      status: "Completed",
-    },
-  ]);
+  const [recentReports, setRecentReports] = useState([]);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+        try {
+            const result = await window.electron.getRecentReports();
+            console.log("Fetched reports:", result);
+
+            const formattedReports = result.map((report) => ({
+              ...report,
+              createdAt: new Date(report.createdAt).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              }),
+              statements: report.statements.map((statement) => ({
+                ...statement,
+                createdAt: new Date(statement.createdAt).toLocaleDateString("en-GB", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                }),
+              })),
+            }));
+
+            setRecentReports(formattedReports);
+            // toast({ title: "Success", description: "Reports loaded successfully." });
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: `Failed to load reports: ${error.message}`,
+                variant: "destructive",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    fetchReports();
+}, []);
 
   const reportInfoData = [
     {
@@ -180,9 +158,8 @@ const RecentReports = () => {
 
   // Filter reports based on search query
   const filteredReports = recentReports.filter(
-    (report) =>
-      report.reportName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.reportName.toLowerCase().includes(searchQuery.toLowerCase())
+    (report) => report.id.toLowerCase().includes(searchQuery.toLowerCase()) || report.id.toLowerCase().includes(searchQuery.toLowerCase())
+
   );
 
   const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
@@ -326,9 +303,9 @@ const RecentReports = () => {
           </TableHeader>
           <TableBody>
             {currentReports.map((report) => (
-              <TableRow key={report.reportName}>
-                <TableCell>{report.date}</TableCell>
-                <TableCell>{report.reportName}</TableCell>
+              <TableRow key={report.id}>
+                <TableCell>{report.createdAt}</TableCell>
+                <TableCell>{report.id}</TableCell>
                 <TableCell>
                   <StatusBadge status={report.status} />
                 </TableCell>
@@ -337,7 +314,7 @@ const RecentReports = () => {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => handleView(report.caseId)}
+                      onClick={() => handleView(report.id)}
                       className="h-8 w-8"
                     >
                       <Eye className="h-4 w-4" />
@@ -354,7 +331,7 @@ const RecentReports = () => {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => toggleEdit(report.caseId)}
+                      onClick={() => toggleEdit(report.id)}
                       className="h-8 w-8"
                     >
                       <Edit2 className="h-4 w-4" />
@@ -363,7 +340,7 @@ const RecentReports = () => {
                       variant="outline"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => handleDeleteReport(report.reportName)}
+                      onClick={() => handleDeleteReport(report.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -387,10 +364,10 @@ const RecentReports = () => {
                         </AlertDialogTitle>
                         <div className="py-6">
                           <h3 className="text-base font-medium text-black dark:text-slate-400">
-                            {reportInfoData[currentInfoIndex].reportName}
+                            {report.id}
                           </h3>
                           <div className="mt-6 space-y-4 ">
-                            {reportInfoData[currentInfoIndex].documents.map(
+                            {report.statements.map(
                               (doc, idx) => (
                                 <div
                                   key={idx}
@@ -401,7 +378,7 @@ const RecentReports = () => {
                                       Path:
                                     </span>
                                     <span className="text-sm text-black/70 dark:text-white">
-                                      {doc.path}
+                                      {doc.ifscCode}
                                     </span>
                                   </div>
                                 </div>

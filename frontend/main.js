@@ -3,6 +3,7 @@ const { registerOpenFileIpc } = require("./ipc/fileHandler");
 require("dotenv").config();
 const path = require("path");
 const { registerIndividualDashboardIpc } = require("./ipc/individualDashboard");
+const { registerReportHandlers } = require("./ipc/reportHandlers");
 
 console.log("Working Directory:", process.cwd());
 
@@ -78,6 +79,7 @@ async function createWindow() {
 
   registerIndividualDashboardIpc();
   registerOpenFileIpc(BASE_DIR);
+  registerReportHandlers();
 }
 
 function createUser() {
