@@ -1,4 +1,5 @@
 const { contextBridge, ipcRenderer } = require("electron");
+const { generateReportIpc } = require("./ipc/generateReport");
 
 // Expose a secure API for opening files to the renderer process
 contextBridge.exposeInMainWorld("electron", {
@@ -37,6 +38,8 @@ contextBridge.exposeInMainWorld("electron", {
 
   getCombinedStatements: (case_id) =>
     ipcRenderer.invoke("get-combine-statements", case_id),
+
+  generateReportIpc: () => ipcRenderer.invoke("generate-report"),
 
   user: {
     getData: (userId) => ipcRenderer.invoke("user:get-data", userId),

@@ -4,6 +4,7 @@ require("dotenv").config();
 const path = require("path");
 const { registerIndividualDashboardIpc } = require("./ipc/individualDashboard");
 const { registerCaseDashboardIpc } = require("./ipc/caseDashboard");
+const {generateReportIpc} = require("./ipc/generateReport");
 
 console.log("Working Directory:", process.cwd());
 
@@ -78,6 +79,7 @@ async function createWindow() {
 
   registerIndividualDashboardIpc();
   registerCaseDashboardIpc();
+  generateReportIpc();
   registerOpenFileIpc(BASE_DIR);
   registerReportHandlers();
 }

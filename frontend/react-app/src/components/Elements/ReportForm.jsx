@@ -180,21 +180,7 @@ const GenerateReportForm = () => {
   //   return interval;
   // };
 
-  const analyzeBankStatements = async (fileDetails) => {
-    // Construct the payload dynamically from fileDetails
-    const payload = {
-      bank_names: fileDetails.map((detail) => detail.bankName),
-      pdf_paths: fileDetails.map(
-        (detail) =>
-          `C:/Users/Harsh Jajal/Documents/coding/CypherSol Fintech India Pvt Ltd/clone--fork/ca-offline-suite/frontend/data/${detail.file.name}`
-      ),
-      passwords: fileDetails.map((detail) => detail.password || ""),
-      start_date: fileDetails.map((detail) => detail.startDate || ""),
-      end_date: fileDetails.map((detail) => detail.endDate || ""),
-      ca_id: "CASE_00009", // You can make this dynamic as well if needed
-    };
-
-    // const payload = {
+   // const payload = {
     //   bank_names: ["HDFC"],
     //   pdf_paths: fileDetails.map((detail) => `C:/Users/Harsh Jajal/Documents/coding/CypherSol Fintech India Pvt Ltd/clone--fork/ca-offline-suite/frontend/data/${detail.file.name}`),
     //   passwords: [""],
@@ -202,91 +188,93 @@ const GenerateReportForm = () => {
     //     end_date: ["22-02-2024"],
     //     ca_id: "HDFC",
     //   };
-
-    try {
-      const response = await axios.post(
-        "http://localhost:7500/analyze-statements/",
-        payload,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      console.log("API Response:", response.data);
-      return response.data;
-    } catch (error) {
-      console.error("Error during API call:", error);
-      throw error;
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    if (selectedFiles.length === 0) {
-      toast({
-        title: "Error",
-        description: "Please select at least one file to generate the report.",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
-    // Create initial progress toast
-    const id = toast({
-      title: "Initializing Report Generation",
-      description: (
-        <div className="mt-2 w-full flex flex-col gap-2">
-          <div className="flex items-center gap-4">
-            <CircularProgress value={0} className="w-full" />
-            <span className="text-sm font-medium">0%</span>
+    const handleSubmit = async (e) => {
+      e.preventDefault(); // Prevent form submission
+      
+      if (selectedFiles.length === 0) {
+        toast({
+          title: "Error",
+          description: "Please select at least one file",
+          variant: "destructive",
+          duration: 3000,
+        });
+        return;
+      }
+    
+      setLoading(true);
+      const toastId = toast({
+        title: "Initializing Report Generation",
+        description: (
+          <div className="mt-2 w-full flex flex-col gap-2">
+            <div className="flex items-center gap-4">
+              <CircularProgress value={0} className="w-full" />
+              <span className="text-sm font-medium">0%</span>
+            </div>
+            <p className="text-sm text-gray-500">Preparing to process files...</p>
           </div>
-          <p className="text-sm text-gray-500">Preparing to process files...</p>
-        </div>
-      ),
-      duration: Infinity,
-    });
-    setToastId(id);
-
-    const progressInterval = simulateProgress();
-
-    try {
-      const result = await analyzeBankStatements(fileDetails);
-
-      // Complete the progress
-      clearInterval(progressInterval);
-      setProgress(100);
-
-      // Show success message
-      toast({
-        title: "Success",
-        description: "Report generated successfully!",
-        duration: 3000,
+        ),
+        duration: Infinity,
       });
-
-      // Reset form state
-      setSelectedFiles([]);
-      setFileDetails([]);
-    } catch (error) {
-      clearInterval(progressInterval);
-      toast({
-        title: "Error",
-        description: `Failed to generate report: ${error.message}`,
-        variant: "destructive",
-        duration: 5000,
-      });
-    } finally {
-      setLoading(false);
-      setProgress(0);
-      setToastId(null);
-     
-    }
-  };
-  const formatFileSize = (bytes) => {
+      setToastId(toastId);
+    
+      // Start progress simulation
+      progressIntervalRef.current = simulateProgress();
+    
+      try {
+        // Prepare the file details with all necessary data
+        const processableFiles = fileDetails.map(detail => ({
+          file: {
+            name: detail.file.name,
+            type: detail.file.type,
+            size: detail.file.size
+          },
+          bankName: detail.bankName || '',
+          password: detail.password || '',
+          startDate: detail.startDate || '',
+          endDate: detail.endDate || '',
+          caseId: caseId // Include the caseId
+        }));
+    
+        console.log('Sending files for processing:', processableFiles);
+    
+        // Call the IPC handler with the prepared data
+    
+        // Handle successful response
+        clearInterval(progressIntervalRef.current);
+        setProgress(100);
+        toast.dismiss(toastId);
+        
+        toast({
+          title: "Success",
+          description: "Report generated successfully!",
+          duration: 3000,
+        });
+    
+        // Reset form
+        setSelectedFiles([]);
+        setFileDetails([]);
+    
+      } catch (error) {
+        console.error('Report generation failed:', error);
+        
+        clearInterval(progressIntervalRef.current);
+        toast.dismiss(toastId);
+        setProgress(0);
+        setToastId(null);
+    
+        toast({
+          title: "Error",
+          description: error.message || "Failed to generate report",
+          variant: "destructive",
+          duration: 5000,
+        });
+    
+      } finally {
+        setLoading(false);
+        progressIntervalRef.current = null;
+      }
+    };
+    const formatFileSize = (bytes) => {
     if (bytes < 1024 * 1024) {
       return `${(bytes / 1024).toFixed(2)} KB`;
     }

@@ -4,16 +4,24 @@ import logging
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
+from fastapi.middleware.cors import CORSMiddleware
+import json
 
 # If you have other custom imports:
 from tax_professional.banks.CA_Statement_Analyzer import CABankStatement
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(_name_)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Bank Statement Analyzer API")
 
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
+)
 class BankStatementRequest(BaseModel):
     bank_names: List[str]
     pdf_paths: List[str]
@@ -28,6 +36,7 @@ async def analyze_bank_statements(request: BankStatementRequest):
     try:
         logger.info(f"Received request with banks: {request.bank_names}")
 
+     
         # Create a progress tracking function
         def progress_tracker(current: int, total: int, info: str) -> None:
             logger.info(f"{info} ({current}/{total})")
@@ -61,13 +70,16 @@ async def analyze_bank_statements(request: BankStatementRequest):
         )
 
         logger.info("Starting extraction")
-        result = converter.start_extraction()
+        json_result = converter.start_extraction()
 
+        # Convert the JSON string to a Python dictionary
+        result_dict = json.loads(json_result)
+        print(json_result)
         logger.info("Extraction completed successfully")
         return {
             "status": "success",
             "message": "Bank statements analyzed successfully",
-            "data": result,
+            "data": result_dict,
         }
 
     except Exception as e:
@@ -82,7 +94,7 @@ async def health_check():
     return {"status": "healthy"}
 
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     # Optionally use environment variables for host/port. Falls back to "0.0.0.0" and 7500 if none provided.
     host = os.getenv("API_HOST", "0.0.0.0")
     port = int(os.getenv("API_PORT", "7500"))
