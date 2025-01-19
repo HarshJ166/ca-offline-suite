@@ -1,4 +1,4 @@
-import React, { useEffect,  useState } from "react";
+import React, { useEffect, useState } from "react";
 import { cn } from "../lib/utils";
 import { ScrollArea } from "../components/ui/scroll-area";
 import Sidebar from "../components/Sidebar";
@@ -26,7 +26,7 @@ import {
   History,
   IndianRupee,
   MessageSquareText,
-  Undo2
+  Undo2,
 } from "lucide-react";
 
 const IndividualDashboard = () => {
@@ -80,11 +80,12 @@ const IndividualDashboard = () => {
       title: "Investment",
       url: "#",
       icon: ChartNoAxesCombined,
-    }, {
+    },
+    {
       title: "Reversal",
       url: "#",
-      icon: Undo2
-  }
+      icon: Undo2,
+    },
   ];
 
   useEffect(() => {
@@ -125,7 +126,7 @@ const IndividualDashboard = () => {
               {activeTab === "Suspense" && <Suspense />}
               {activeTab === "Reversal" && <Reversal />}
               {/* {activeTab === "Reversal" && <ForeignTransactions />} */}
-              </main>
+            </main>
           </div>
         </ScrollArea>
       </div>

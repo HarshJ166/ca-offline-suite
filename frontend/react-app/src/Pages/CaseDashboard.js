@@ -80,8 +80,12 @@ const CaseDashboard = () => {
           <BreadcrumbDynamic items={breadcrumbs} />
           <div className="flex-1 flex flex-col overflow-hidden">
             <main className="flex-1">
-              {activeTab === "Acc No and Acc Name" && <AccountNumNameManager />}
-              {activeTab === "Individual Table" && <IndividualTable />}
+              {activeTab === "Acc No and Acc Name" && (
+                <AccountNumNameManager caseId="1" />
+              )}
+              {activeTab === "Individual Table" && (
+                <IndividualTable caseId="1" />
+              )}
               {activeTab === "Combined Table" && <CombinedTable />}
             </main>
           </div>

@@ -30,6 +30,14 @@ contextBridge.exposeInMainWorld("electron", {
   getTransactionsByReversal: () =>
     ipcRenderer.invoke("get-transactions-by-reversal"),
 
+  getStatements: (case_id) => ipcRenderer.invoke("get-statements", case_id),
+
+  updateStatement: ({ id, customerName, accountNumber }) =>
+    ipcRenderer.invoke("update-statement", { id, customerName, accountNumber }),
+
+  getCombinedStatements: (case_id) =>
+    ipcRenderer.invoke("get-combine-statements", case_id),
+
   user: {
     getData: (userId) => ipcRenderer.invoke("user:get-data", userId),
     updateData: (userData) => ipcRenderer.send("user:update-data", userData),
