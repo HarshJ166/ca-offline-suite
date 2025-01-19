@@ -12,7 +12,7 @@ const Cash = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const withdrawalResponse =
+        const withdrawalResponse =  
           await window.electron.getTransactionsByCashWithdrawal();
         const depositResponse =
           await window.electron.getTransactionsByCashDeposit();

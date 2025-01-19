@@ -10,6 +10,7 @@ const statements = sqliteTable("statements", {
   customerName: text("customer_name").notNull(),
   ifscCode: text("ifsc_code"),
   bankName: text("bank_name"),
+  filePath: text("file_path").notNull().default("downloads"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 

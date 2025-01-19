@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Search } from "lucide-react";
 import {
@@ -27,6 +27,7 @@ import {
   PaginationPrevious,
 } from "../ui/pagination";
 import { cn } from "../../lib/utils";
+import { Button } from "../ui/button";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -34,31 +35,39 @@ const IndividualTable = ({ caseId }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [statements, setStatements] = useState([]);
   const navigate = useNavigate();
 
-  // Sample data
-  const data = [
-    {
-      name: "MR AIYAZ ANWAR QURESHI",
-      accountNumber: "50100575475699",
-      filePath:
-        "C:/Users/qures/Downloads/ATS_TESTING_BANK_PDF/ATS_TESTING_BANK_PDF/Aiyaz hdf 23.pdf",
-    },
-    {
-      name: "POOJAN VIG",
-      accountNumber: "50100575475700",
-      filePath:
-        "C:/Users/qures/Downloads/ATS_TESTING_BANK_PDF/ATS_TESTING_BANK_PDF/hdfc poojan.pdf",
-    },
-  ];
+  useEffect(() => {
+    const fetchStatements = async () => {
+      setIsLoading(true);
+      try {
+        // Call the IPC handler to get statements
+        const result = await window.electron.getStatements(caseId);
+        console.log("Statements fetched successfully:", result);
+        setStatements(result);
+      } catch (error) {
+        console.error("Error fetching statements:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    if (caseId) {
+      fetchStatements();
+    }
+  }, [caseId]);
 
   // Filter data based on search term
-  const filteredData = data.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.accountNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.filePath.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredData = statements.filter((item) => {
+    const name = item.customerName || "";
+    const accountNumber = item.accountNumber || "";
+    const filePath = item.filePath || "";
+    return (
+      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      accountNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      filePath.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
   const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -78,10 +87,11 @@ const IndividualTable = ({ caseId }) => {
     }
   };
 
+  console.log("caseId", caseId);
+
   const getPageNumbers = () => {
     const pageNumbers = [];
     const maxVisiblePages = 5;
-
     if (totalPages <= maxVisiblePages) {
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
@@ -118,6 +128,15 @@ const IndividualTable = ({ caseId }) => {
     }
   };
 
+  const handleCombinedDashboardClick = (caseId) => {
+    setIsLoading(true);
+    try {
+      navigate(`/individual-dashboard/${caseId}/defaultTab`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="p-8 space-y-8">
       <Card>
@@ -129,14 +148,19 @@ const IndividualTable = ({ caseId }) => {
                 Search and view individual records for this case
               </CardDescription>
             </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search records..."
-                className="pl-10 w-[400px]"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className="relative flex items-center space-x-4">
+              <Button onClick={() => handleCombinedDashboardClick(caseId)}>
+                Combined Dashboard
+              </Button>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search records..."
+                  className="pl-10 w-[400px]"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -163,7 +187,11 @@ const IndividualTable = ({ caseId }) => {
                     key={index}
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() =>
-                      handleRowClick(item.name, item.accountNumber, index)
+                      handleRowClick(
+                        item.customerName,
+                        item.accountNumber,
+                        index
+                      )
                     }
                   >
                     <TableCell>{startIndex + index + 1}</TableCell>
@@ -175,14 +203,13 @@ const IndividualTable = ({ caseId }) => {
                         {item.filePath}
                       </div>
                     </TableCell>
-                    <TableCell>{item.name}</TableCell>
+                    <TableCell>{item.customerName}</TableCell>
                     <TableCell>{item.accountNumber}</TableCell>
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
-
           <div className="mt-4">
             <Pagination>
               <PaginationContent>
@@ -195,7 +222,6 @@ const IndividualTable = ({ caseId }) => {
                     )}
                   />
                 </PaginationItem>
-
                 {getPageNumbers().map((pageNumber, index) => (
                   <PaginationItem key={index}>
                     {pageNumber === "ellipsis" ? (
@@ -211,7 +237,6 @@ const IndividualTable = ({ caseId }) => {
                     )}
                   </PaginationItem>
                 ))}
-
                 <PaginationItem>
                   <PaginationNext
                     onClick={() => handlePageChange(currentPage + 1)}
@@ -227,7 +252,6 @@ const IndividualTable = ({ caseId }) => {
           </div>
         </CardContent>
       </Card>
-
       {isLoading && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin" />

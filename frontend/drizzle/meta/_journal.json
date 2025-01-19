@@ -15,6 +15,13 @@
       "when": 1737114932481,
       "tag": "0001_ambitious_reavers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1737209184784,
+      "tag": "0002_red_valkyrie",
+      "breakpoints": true
     }
   ]
 }
