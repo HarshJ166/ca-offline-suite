@@ -39,7 +39,7 @@ contextBridge.exposeInMainWorld("electron", {
   getCombinedStatements: (case_id) =>
     ipcRenderer.invoke("get-combine-statements", case_id),
 
-  generateReportIpc: () => ipcRenderer.invoke("generate-report"),
+  generateReportIpc: (_,data) => ipcRenderer.invoke("generate-report", data),
 
   user: {
     getData: (userId) => ipcRenderer.invoke("user:get-data", userId),
@@ -50,6 +50,15 @@ contextBridge.exposeInMainWorld("electron", {
     open: (filePath) => ipcRenderer.send("file:open", filePath),
     save: (fileContent) => ipcRenderer.invoke("file:save", fileContent),
     getData: (filePath) => ipcRenderer.invoke("file:get-data", filePath),
+  },
+
+  auth: {
+    login: (userData) => ipcRenderer.invoke('auth:login', userData),
+    logout: () => ipcRenderer.invoke('auth:logout'),
+    getUser: () => ipcRenderer.invoke('auth:getUser'),
+    // updateUser: (userData) => ipcRenderer.invoke('auth:updateUser', userData)
+    checkLicense: () => ipcRenderer.invoke('license:check'),
+    activateLicense: (credentials) => ipcRenderer.invoke('license:activate', credentials)
   },
 
   getRecentReports: () => ipcRenderer.invoke("get-recent-reports"),

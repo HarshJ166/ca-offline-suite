@@ -50,109 +50,83 @@ const RecentReports = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [currentInfoIndex, setCurrentInfoIndex] = useState(0);
+  // const [currentInfoIndex, setCurrentInfoIndex] = useState(0);
   const [isCategoryEditOpen, setIsCategoryEditOpen] = useState(false);
   const [isAddPdfModalOpen, setIsAddPdfModalOpen] = useState(false);
+  const [isFirstInfo, setIsFirstInfo] = useState();
+  const [isLastInfo, setIsLastInfo] = useState();
   const itemsPerPage = 10;
 
   const [recentReports, setRecentReports] = useState([]);
 
   useEffect(() => {
     const fetchReports = async () => {
-        try {
-            const result = await window.electron.getRecentReports();
-            console.log("Fetched reports:", result);
+      try {
+        const result = await window.electron.getRecentReports();
+        console.log("Fetched reports:", result);
 
-            const formattedReports = result.map((report) => ({
-              ...report,
-              createdAt: new Date(report.createdAt).toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-              }),
-              statements: report.statements.map((statement) => ({
-                ...statement,
-                createdAt: new Date(statement.createdAt).toLocaleDateString("en-GB", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                }),
-              })),
-            }));
+        const formattedReports = result.map((report) => ({
+          ...report,
+          createdAt: new Date(report.createdAt).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          }),
+          statements: report.statements.map((statement) => ({
+            ...statement,
+            createdAt: new Date(statement.createdAt).toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            }),
+          })),
+        }));
 
-            setRecentReports(formattedReports);
-            // toast({ title: "Success", description: "Reports loaded successfully." });
-        } catch (error) {
-            toast({
-                title: "Error",
-                description: `Failed to load reports: ${error.message}`,
-                variant: "destructive",
-            });
-        } finally {
-            setIsLoading(false);
-        }
+        setRecentReports(formattedReports);
+        // toast({ title: "Success", description: "Reports loaded successfully." });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: `Failed to load reports: ${error.message}`,
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchReports();
-}, []);
+  }, []);
 
-  const reportInfoData = [
-    {
-      id: 1,
-      reportName: "Report_ATS_unit_1_00008",
-      documents: [
-        {
-          path: "C:/Users/documents/Reports/2024/January/Statement_Analysis_1.pdf",
-          type: "Bank Statement",
-        },
-        {
-          path: "C:/Users/documents/Reports/2024/January/Transaction_Report_1.pdf",
-          type: "Transaction Report",
-        },
-      ],
-    },
-    {
-      id: 2,
-      reportName: "Report_ATS_unit_1_00007",
-      documents: [
-        {
-          path: "C:/Users/documents/Reports/2024/February/Client_Statement.pdf",
-          type: "Bank Statement",
-        },
-        {
-          path: "C:/Users/documents/Reports/2024/February/Analysis_Summary.pdf",
-          type: "Analysis Report",
-        },
-      ],
-    },
-    {
-      id: 3,
-      reportName: "Report_ATS_unit_1_00006",
-      documents: [
-        {
-          path: "C:/Users/documents/Reports/2024/March/Corporate_Statement.pdf",
-          type: "Corporate Statement",
-        },
-        {
-          path: "C:/Users/documents/Reports/2024/March/Transaction_Analysis.pdf",
-          type: "Analysis Report",
-        },
-      ],
-    },
-  ];
 
-  const isFirstInfo = currentInfoIndex === 0;
-  const isLastInfo = currentInfoIndex === reportInfoData.length - 1;
-
-  const handlePrevInfo = () => {
-    if (!isFirstInfo) {
-      setCurrentInfoIndex((prev) => prev - 1);
+  const handleDetails = (statements_length) => {
+    console.log("Clicked on details");
+    if (statements_length > 0) {
+      setIsFirstInfo(true);
+      setIsLastInfo(statements_length - 1 === 0);
     }
   };
 
-  const handleNextInfo = () => {
-    if (!isLastInfo) {
-      setCurrentInfoIndex((prev) => prev + 1);
+  const handlePrevInfo = (statements_length, currentInfoIndex) => {
+    console.log("Clicked on prev", "statements_length", statements_length, "currentInfoIndex", currentInfoIndex);
+
+    if (currentInfoIndex === 0) {
+      setIsFirstInfo(true);
+    }
+
+    if (currentInfoIndex < statements_length - 1) {
+      setIsLastInfo(false);
+    }
+  };
+
+  const handleNextInfo = (statements_length, currentInfoIndex) => {
+    console.log("Clicked on next", "statements_length", statements_length, "currentInfoIndex", currentInfoIndex);
+
+    if (currentInfoIndex === statements_length - 1) {
+      setIsLastInfo(true);
+    }
+    if (currentInfoIndex > 0) {
+      setIsFirstInfo(false);
     }
   };
 
@@ -302,7 +276,7 @@ const RecentReports = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {currentReports.map((report) => (
+            {currentReports.map((report, index) => (
               <TableRow key={report.id}>
                 <TableCell>{report.createdAt}</TableCell>
                 <TableCell>{report.id}</TableCell>
@@ -352,7 +326,8 @@ const RecentReports = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 hover:bg-black/5 "
+                        className="h-8 w-8 hover:bg-black/5"
+                        onClick={() => handleDetails(report.statements.length)}
                       >
                         <Info className="h-4 w-4 " />
                       </Button>
@@ -389,25 +364,25 @@ const RecentReports = () => {
                       </AlertDialogHeader>
                       <AlertDialogFooter className="border-t border-black/10 pt-6">
                         <div className="flex justify-between w-full gap-3">
-                          <Button
+                          {/* <Button
                             variant="outline"
-                            onClick={handlePrevInfo}
+                            onClick={() => handlePrevInfo(report.statements.length, index)}
                             disabled={isFirstInfo}
                             className="px-6 bg-transparent border-black/10 text-black/70 hover:bg-black/[0.03] hover:border-black/20 hover:text-black disabled:opacity-30 dark:text-white dark:border-white/10 dark:bg-slate-900"
                           >
                             Previous
-                          </Button>
+                          </Button> */}
                           <AlertDialogCancel className="px-8 bg-black text-white hover:bg-black/90 hover:text-white dark:bg-white dark:text-black">
                             Close
                           </AlertDialogCancel>
-                          <Button
+                          {/* <Button
                             variant="outline"
-                            onClick={handleNextInfo}
+                            onClick={() => handleNextInfo(report.statements.length, index)}
                             disabled={isLastInfo}
                             className="px-6 bg-transparent border-black/10 text-black/70 hover:bg-black/[0.03] hover:border-black/20 hover:text-black disabled:opacity-30 dark:text-white dark:border-white/10 dark:bg-slate-900"
                           >
                             Next
-                          </Button>
+                          </Button> */}
                         </div>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -453,7 +428,7 @@ const RecentReports = () => {
                     className={cn(
                       "cursor-pointer",
                       currentPage === totalPages &&
-                        "pointer-events-none opacity-50"
+                      "pointer-events-none opacity-50"
                     )}
                   />
                 </PaginationItem>
