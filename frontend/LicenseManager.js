@@ -18,17 +18,15 @@ class LicenseManager {
         LicenseManager.instance = this; // Set the singleton instance
     }
 
-    static async getInstance() {
+    static getInstance() {
         if (!LicenseManager.instance) {
-            const instance = new LicenseManager();
-            await instance.initialize();  // Wait for initialization
+            LicenseManager.instance = new LicenseManager();
         }
         return LicenseManager.instance;
     }
 
-
     // Initialize method to check for existing license key
-    async initialize() {
+    async init() {
         try {
             const licenseKey = await keytar.getPassword(SERVICE_NAME, LICENSE_KEY_ACCOUNT);
             this.isActivated = !!licenseKey;
@@ -46,7 +44,7 @@ class LicenseManager {
             const isValid = await this.validateLicense(credentials.licenseKey, credentials.username);
 
             if (isValid) {
-                await keytar.setPassword(SERVICE_NAME, LICENSE_KEY_ACCOUNT, licenseKey);
+                // await keytar.setPassword(SERVICE_NAME, LICENSE_KEY_ACCOUNT, licenseKey);
                 this.isActivated = true;
                 return { success: true };
             }
@@ -68,7 +66,7 @@ class LicenseManager {
         try {
             const timestamp = Date.now();
 
-            const apiKey = 'your-api-key';
+            const apiKey = 'U08fir-OsEXdgMZKARdgz5oPvyRT6cIZioOeV_kZdLMeXsAc46_x.CAgICAgICAo=';
 
             const response = await axios.post(API_URL, {
                 username,
@@ -79,11 +77,14 @@ class LicenseManager {
                     'X-API-Key': apiKey,
                 }
             });
-
+            
+            console.log("Response : ", response);
             const { data } = response;
 
+            console.log("Data : ", data);
+
             // Handle successful response
-            if (response.status === 'OK') {
+            if (response.status === 200) {
                 const expiryTimestamp = data.expiry_timestamp;
                 const currentTimestamp = Date.now() / 1000;
 
@@ -121,5 +122,5 @@ class LicenseManager {
 }
 
 // Export a single instance of the LicenseManager
-const licenseManager = new LicenseManager().getInstance();
-module.exports = licenseManager;
+// const licenseManager = new LicenseManager().getInstance();
+module.exports = LicenseManager.getInstance();

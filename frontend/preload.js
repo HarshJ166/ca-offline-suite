@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require("electron");
+const { contextBridge, ipcRenderer, shell } = require("electron");
 
 // Expose a secure API for opening files to the renderer process
 contextBridge.exposeInMainWorld("electron", {
@@ -40,7 +40,7 @@ contextBridge.exposeInMainWorld("electron", {
 
   user: {
     getData: (userId) => ipcRenderer.invoke("user:get-data", userId),
-    updateData: (userData) => ipcRenderer.send("user:update-data", userData),
+    updateData: (userData) => ipcRenderer.send("user:update-data", userData),   
   },
 
   file: {
@@ -59,4 +59,8 @@ contextBridge.exposeInMainWorld("electron", {
   },
 
   getRecentReports: () => ipcRenderer.invoke("get-recent-reports"),
+
+  shell: {
+    openExternal: (url) => shell.openExternal(url),
+  },
 });

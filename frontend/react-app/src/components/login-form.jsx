@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
 import {
@@ -18,32 +18,38 @@ export function LoginForm({ className, ...props }) {
   const { login, loading, error, isActivated, activateLicense } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  // const [needsLicense, setNeedsLicense] = useState(true);
   const [credentials, setCredentials] = useState({
     email: "",
     password: "",
     licenseKey: "",
   });
 
+  // useEffect(() => {
+  //   const checkLicenseStatus = async () => {
+  //     const hasValidLicense = await checkLicense();
+  //     setNeedsLicense(!hasValidLicense);
+  //   };
+
+  //   checkLicenseStatus();
+  // }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!isActivated) {
-      // Handle license activation
+      // First handle license activation
       const success = await activateLicense(credentials.licenseKey);
-      if (success) {
-        // Clear license key and proceed to login
-        setCredentials(prev => ({
-          ...prev,
-          licenseKey: ""
-        }));
+      if (!success) {
+        return;
       }
-      return;
+      // setNeedsLicense(false);
     }
 
-    // Handle regular login
+    // Proceed with login regardless of whether we just activated a license or not
     const success = await login({
       email: credentials.email,
-      password: credentials.password
+      password: credentials.password,
     });
 
     if (success) {
@@ -64,13 +70,11 @@ export function LoginForm({ className, ...props }) {
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">
-            {isActivated ? "Login" : "Activate License"}
-          </CardTitle>
+          <CardTitle className="text-2xl">Login</CardTitle>
           <CardDescription>
-            {isActivated
-              ? "Enter your email below to login to your account"
-              : "Please enter your license key to activate the application"}
+            {!isActivated
+              ? "Please enter your license key and credentials"
+              : "Enter your credentials to login"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -82,7 +86,8 @@ export function LoginForm({ className, ...props }) {
                 </Alert>
               )}
 
-              {!isActivated ? (
+              {/* Show license key field only if needed */}
+              {!isActivated && (
                 <div className="grid gap-2">
                   <Label htmlFor="licenseKey">License Key</Label>
                   <Input
@@ -96,55 +101,56 @@ export function LoginForm({ className, ...props }) {
                     title="Please enter a valid license key in the format: XXXX-XXXX-XXXX-XXXX"
                   />
                 </div>
-              ) : (
-                <>
-                  <div className="grid gap-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="m@example.com"
-                      required
-                      value={credentials.email}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <div className="flex items-center">
-                      <Label htmlFor="password">Password</Label>
-                      <a
-                        href="#"
-                        className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-                      >
-                        Forgot your password?
-                      </a>
-                    </div>
-                    <Input
-                      id="password"
-                      type="password"
-                      required
-                      value={credentials.password}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </>
               )}
 
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="m@example.com"
+                  required
+                  value={credentials.email}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <div className="flex items-center">
+                  <Label htmlFor="password">Password</Label>
+                  <Link
+                    to="/forgot-password" // Replace '#' with your desired route
+                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
+                  >
+                    Forgot your password?
+                  </Link>
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  required
+                  value={credentials.password}
+                  onChange={handleInputChange}
+                />
+              </div>
+
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading
-                  ? (isActivated ? "Logging in..." : "Activating...")
-                  : (isActivated ? "Login" : "Activate License")}
+                {loading ? "Processing..." : "Login"}
               </Button>
             </div>
 
-            {isActivated && (
-              <div className="mt-4 text-center text-sm">
-                Don&apos;t have an account?{" "}
-                <a href="#" className="underline underline-offset-4">
-                  Sign up
-                </a>
-              </div>
-            )}
+            <div className="mt-4 text-center text-sm">
+              Don&apos;t have an account?{" "}
+              <button
+                type="button"
+                className="underline underline-offset-4 text-blue-600 hover:text-blue-800"
+                onClick={() => {
+                  window.electron.shell.openExternal("https://cyphersol.co.in");
+                }}
+              >
+                Sign up
+              </button>
+            </div>
           </form>
         </CardContent>
       </Card>

@@ -14,7 +14,9 @@ export const AuthProvider = ({ children }) => {
 
     const checkLicenseStatus = async () => {
         try {
-            const activated = await window.electron.auth.checkLicense();
+            const result = await window.electron.auth.checkLicense();
+            const activated = result.success;
+            console.log('Check license key isActivated:', result);
             setIsActivated(activated);
             if (activated) {
                 // If activated, try to restore user session
@@ -38,14 +40,14 @@ export const AuthProvider = ({ children }) => {
         }
     }, [error]);
 
-    const activateLicense = async (licenseKey) => {
+    const signUp = async (credentials) => {
         try {
             setLoading(true);
             setError(null);
 
-            const result = await window.auth.activateLicense(licenseKey);
+            const result = await window.electron.auth.signup(credentials);
             if (result.success) {
-                setIsActivated(true);
+                setIsActivated(false);
                 return true;
             } else {
                 setError(result.error || 'License activation failed');
@@ -91,7 +93,7 @@ export const AuthProvider = ({ children }) => {
     const logout = async () => {
         try {
             setLoading(true);
-            const result = await window.auth.logout();
+            const result = await window.electron.auth.logout();
 
             if (result.success) {
                 setUser(null);
@@ -135,7 +137,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         error,
         isActivated,
-        activateLicense,
+        signUp,
         login,
         logout,
         // updateUser,
