@@ -9,6 +9,8 @@ import ElectronIntro from "./components/ElectronIntro";
 import { useState } from "react";
 import { SidebarProvider } from "./components/ui/sidebar";
 import { BreadcrumbProvider } from "./contexts/BreadcrumbContext";
+import { PrivateRoute } from './components/PrivateRoute';
+import Login from './components/Authentication/Login';
 
 function App() {
   const [showIntro, setShowIntro] = useState(true);
@@ -19,7 +21,7 @@ function App() {
       <SidebarProvider>
         <HashRouter>
           <BreadcrumbProvider>
-            <Routes>
+            {/* <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/:defaultTab" element={<Dashboard />} />
               <Route
@@ -33,6 +35,53 @@ function App() {
               <Route
                 path="/individual-dashboard/:caseId/:defaultTab"
                 element={<IndividualDashboard />}
+              />
+            </Routes> */}
+
+            <Routes>
+              {/* Public route */}
+              <Route path="/login" element={<Login />} />
+
+              {/* Protected routes */}
+              <Route
+                path="/"
+                element={
+                  <PrivateRoute>
+                    <Dashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/:defaultTab"
+                element={
+                  <PrivateRoute>
+                    <Dashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/case-dashboard/:caseId/:defaultTab"
+                element={
+                  <PrivateRoute>
+                    <CaseDashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/individual-dashboard/:caseId/:individualId/:defaultTab"
+                element={
+                  <PrivateRoute>
+                    <IndividualDashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/individual-dashboard/:caseId/:defaultTab"
+                element={
+                  <PrivateRoute>
+                    <IndividualDashboard />
+                  </PrivateRoute>
+                }
               />
             </Routes>
           </BreadcrumbProvider>

@@ -1,9 +1,12 @@
 const { app, BrowserWindow, protocol, ipcMain, shell } = require("electron");
-const { registerOpenFileIpc } = require("./ipc/fileHandler");
+const { registerOpenFileIpc } = require("./ipc/fileHandler.js");
 require("dotenv").config();
 const path = require("path");
-const { registerIndividualDashboardIpc } = require("./ipc/individualDashboard");
-const { registerCaseDashboardIpc } = require("./ipc/caseDashboard");
+const { registerIndividualDashboardIpc } = require("./ipc/individualDashboard.js");
+const { registerCaseDashboardIpc } = require("./ipc/caseDashboard.js");
+const { registerReportHandlers } = require("./ipc/reportHandlers.js");
+const { registerAuthHandlers } = require("./ipc/authHandlers.js");
+const sessionManager = require("./SessionManager");
 
 console.log("Working Directory:", process.cwd());
 
@@ -66,12 +69,6 @@ async function createWindow() {
     });
   }
 
-  try {
-    await initializeTransactions();
-  } catch (error) {
-    log.error("Failed to initialize transactions:", error);
-  }
-
   if (isDev) {
     // win.webContents.openDevTools();
   }
@@ -80,6 +77,7 @@ async function createWindow() {
   registerCaseDashboardIpc();
   registerOpenFileIpc(BASE_DIR);
   registerReportHandlers();
+  registerAuthHandlers();
 }
 
 function createUser() {
@@ -97,14 +95,26 @@ function createUser() {
   }
 }
 
-app.whenReady().then(() => {
-  createProtocol();
-  createWindow();
+app.setName("CypherSol Dev");
 
+app.whenReady().then(async () => {
+  console.log("App is ready", app.getPath('userData'));
   try {
-    createUser();
-  } catch (dbError) {
-    console.error("User creation error:", dbError);
+    await sessionManager.init();
+
+    // Proceed with the window creation and other tasks after initialization
+    createProtocol();
+    createWindow();
+
+    // try {
+    //   createUser();  // Handle user creation after SessionManager is ready
+    // } catch (dbError) {
+    //   console.error("User creation error:", dbError);
+    // }
+  } catch (error) {
+    console.error("Failed to initialize SessionManager:", error);
+    // Optionally handle the error, e.g., show an error dialog or quit the app
+    app.quit();
   }
 });
 

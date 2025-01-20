@@ -49,5 +49,14 @@ contextBridge.exposeInMainWorld("electron", {
     getData: (filePath) => ipcRenderer.invoke("file:get-data", filePath),
   },
 
+  auth: {
+    login: (userData) => ipcRenderer.invoke('auth:login', userData),
+    logout: () => ipcRenderer.invoke('auth:logout'),
+    getUser: () => ipcRenderer.invoke('auth:getUser'),
+    // updateUser: (userData) => ipcRenderer.invoke('auth:updateUser', userData)
+    checkLicense: () => ipcRenderer.invoke('license:check'),
+    activateLicense: (credentials) => ipcRenderer.invoke('license:activate', credentials)
+  },
+
   getRecentReports: () => ipcRenderer.invoke("get-recent-reports"),
 });
