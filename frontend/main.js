@@ -7,6 +7,7 @@ const { registerCaseDashboardIpc } = require("./ipc/caseDashboard.js");
 const { registerReportHandlers } = require("./ipc/reportHandlers.js");
 const { registerAuthHandlers } = require("./ipc/authHandlers.js");
 const sessionManager = require("./SessionManager");
+const licenseManager = require('./LicenseManager');
 const {generateReportIpc} = require("./ipc/generateReport");
 
 console.log("Working Directory:", process.cwd());
@@ -80,6 +81,43 @@ async function createWindow() {
   registerOpenFileIpc(BASE_DIR);
   registerReportHandlers();
   registerAuthHandlers();
+  const createTempDirectory = () => {
+    const tempDir = path.join(app.getPath('temp'), 'report-generator');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    return tempDir;
+  };
+  
+  // Handle file saving to temp directory
+  ipcMain.handle('save-file-to-temp', async (event, fileBuffer) => {
+    try {
+      const tempDir = createTempDirectory();
+      const fileName = `${uuidv4()}.pdf`; // Generate unique filename
+      const filePath = path.join(tempDir, fileName);
+      
+      await fs.promises.writeFile(filePath, Buffer.from(fileBuffer));
+      return filePath;
+    } catch (error) {
+      console.error('Error saving file to temp directory:', error.message);
+      throw error;
+    }
+  });
+  
+  // Clean up temp files
+  ipcMain.handle('cleanup-temp-files', async () => {
+    const tempDir = path.join(app.getPath('temp'), 'report-generator');
+    try {
+      if (fs.existsSync(tempDir)) {
+        await fs.promises.rm(tempDir, { recursive: true, force: true });
+      }
+      return true;
+    } catch (error) {
+      console.error('Error cleaning up temp files:', error);
+      throw error;
+    }
+  });
+  
 }
 
 function createUser() {
@@ -102,7 +140,20 @@ app.setName("CypherSol Dev");
 app.whenReady().then(async () => {
   console.log("App is ready", app.getPath('userData'));
   try {
-    await sessionManager.init();
+    try{
+      await sessionManager.init();
+    }
+    catch(error){
+      console.log("SessionManager initialization failed:", error);
+    }
+
+    try{
+      await licenseManager.init();
+    }
+    catch(error){
+      console.log("LicenseManager initialization failed:", error);
+    }
+
 
     // Proceed with the window creation and other tasks after initialization
     createProtocol();
@@ -114,7 +165,7 @@ app.whenReady().then(async () => {
     //   console.error("User creation error:", dbError);
     // }
   } catch (error) {
-    console.error("Failed to initialize SessionManager:", error);
+    console.error("Failed to initialize App:", error);
     // Optionally handle the error, e.g., show an error dialog or quit the app
     app.quit();
   }

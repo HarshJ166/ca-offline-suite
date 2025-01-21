@@ -21,7 +21,7 @@ function App() {
       <SidebarProvider>
         <HashRouter>
           <BreadcrumbProvider>
-            {/* <Routes>
+            <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/:defaultTab" element={<Dashboard />} />
               <Route
@@ -36,13 +36,13 @@ function App() {
                 path="/individual-dashboard/:caseId/:defaultTab"
                 element={<IndividualDashboard />}
               />
-            </Routes> */}
-
+            </Routes>
+{/* 
             <Routes>
-              {/* Public route */}
+              Public route
               <Route path="/login" element={<Login />} />
 
-              {/* Protected routes */}
+               Protected routes 
               <Route
                 path="/"
                 element={
@@ -83,7 +83,7 @@ function App() {
                   </PrivateRoute>
                 }
               />
-            </Routes>
+            </Routes> */}
           </BreadcrumbProvider>
         </HashRouter>
       </SidebarProvider>

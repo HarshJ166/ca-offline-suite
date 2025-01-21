@@ -4,24 +4,16 @@ import logging
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
-from fastapi.middleware.cors import CORSMiddleware
-import json
 
 # If you have other custom imports:
-from tax_professional.banks.CA_Statement_Analyzer import CABankStatement
+from tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Bank Statement Analyzer API")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods
-    allow_headers=["*"],  # Allow all headers
-)
+
 class BankStatementRequest(BaseModel):
     bank_names: List[str]
     pdf_paths: List[str]
@@ -36,7 +28,6 @@ async def analyze_bank_statements(request: BankStatementRequest):
     try:
         logger.info(f"Received request with banks: {request.bank_names}")
 
-     
         # Create a progress tracking function
         def progress_tracker(current: int, total: int, info: str) -> None:
             logger.info(f"{info} ({current}/{total})")
@@ -59,27 +50,24 @@ async def analyze_bank_statements(request: BankStatementRequest):
 
         logger.info("Initializing CABankStatement")
         # Pass empty list if no passwords
-        converter = CABankStatement(
-            request.bank_names,
-            request.pdf_paths,
-            request.passwords if request.passwords else [],
-            request.start_date,
-            request.end_date,
-            request.ca_id,
-            progress_data,
-        )
+
+        bank_names = request.bank_names 
+        pdf_paths = request.pdf_paths
+        passwords =  request.passwords if request.passwords else []
+        start_date = request.start_date if request.start_date else []
+        end_date = request.end_date if request.end_date else []
+        CA_ID = request.ca_id
+        progress_data = progress_data
 
         logger.info("Starting extraction")
-        json_result = converter.start_extraction()
-
-        # Convert the JSON string to a Python dictionary
-        result_dict = json.loads(json_result)
-        print(json_result)
+        result = start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_date, end_date, CA_ID, progress_data)
+        print("RESULT GENERATED")
         logger.info("Extraction completed successfully")
         return {
             "status": "success",
             "message": "Bank statements analyzed successfully",
-            "data": result_dict,
+            "data": result["sheets_in_json"],
+            "pdf_paths_not_extracted": result["pdf_paths_not_extracted"],
         }
 
     except Exception as e:
