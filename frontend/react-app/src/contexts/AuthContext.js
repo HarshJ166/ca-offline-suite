@@ -19,6 +19,7 @@ export const AuthProvider = ({ children }) => {
             console.log('Check license key isActivated:', result);
             setIsActivated(activated);
             if (activated) {
+                console.log('Activated:', result);
                 // If activated, try to restore user session
                 const userData = await window.electron.auth.getUser();
                 if (userData) setUser(userData);
