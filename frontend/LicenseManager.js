@@ -20,12 +20,12 @@ class LicenseManager {
         LicenseManager.instance = this; // Set the singleton instance
     }
 
-    //     static getInstance() {
-    //         if (!LicenseManager.instance) {
-    //             LicenseManager.instance = new LicenseManager();
-    //         }
-    //         return LicenseManager.instance;
-    //     }
+    static getInstance() {
+        if (!LicenseManager.instance) {
+            LicenseManager.instance = new LicenseManager();
+        }
+        return LicenseManager.instance;
+    }
 
     // Initialize method to check for existing license key
     async init() {
@@ -71,7 +71,7 @@ class LicenseManager {
         try {
             const timestamp = Date.now() / 1000;
 
-            //             const apiKey = 'U08fir-OsEXdgMZKARdgz5oPvyRT6cIZioOeV_kZdLMeXsAc46_x.CAgICAgICAo=';
+            const apiKey = 'U08fir-OsEXdgMZKARdgz5oPvyRT6cIZioOeV_kZdLMeXsAc46_x.CAgICAgICAo=';
 
             const response = await axios.post(API_URL, {
                 username: username,
@@ -88,44 +88,44 @@ class LicenseManager {
             console.log("Response Status : ", response.status)
             console.log("Data : ", data);
 
-            //             // Handle successful response
-            //             if (response.status === 200) {
-            //                 const expiryTimestamp = data.expiry_timestamp;
-            //                 const currentTimestamp = Date.now() / 1000;
+            // Handle successful response
+            if (response.status === 200) {
+                const expiryTimestamp = data.expiry_timestamp;
+                const currentTimestamp = Date.now() / 1000;
 
-            // Check if the license has expired
-            if (currentTimestamp > expiryTimestamp) {
-                throw new Error('License key has expired');
+                // Check if the license has expired
+                if (currentTimestamp > expiryTimestamp) {
+                    throw new Error('License key has expired');
+                }
+
+                return { success: true, data: data };
+            } else {
+                // Handle invalid license or username
+                throw new Error(data.detail || 'License validation failed');
             }
-
-            return { success: true, data: data };
-        } else {
-            // Handle invalid license or username
-            throw new Error(data.detail || 'License validation failed');
-        }
-    } catch(error) {
-        console.error('License validation error: ', error.status, error.response.data);
-        // Handle different error cases based on API response
-        if (error.response) {
-            // The API returned an error response
-            return { success: false, error: error.response.data.detail || 'License validation failed' };
-        } else if (error.request) {
-            // No response received (possible network error)
-            return { success: false, error: 'No response from the license validation server' };
-        } else {
-            // Some other error (e.g., misconfiguration or unexpected error)
-            return { success: false, error: error.message };
+        } catch (error) {
+            console.error('License validation error: ', error.status, error.response.data);
+            // Handle different error cases based on API response
+            if (error.response) {
+                // The API returned an error response
+                return { success: false, error: error.response.data.detail || 'License validation failed' };
+            } else if (error.request) {
+                // No response received (possible network error)
+                return { success: false, error: 'No response from the license validation server' };
+            } else {
+                // Some other error (e.g., misconfiguration or unexpected error)
+                return { success: false, error: error.message };
+            }
         }
     }
-}
 
     // Method to check if the license is activated
     async checkActivation() {
-    console.log('isActivated:', this.isActivated);
-    return this.isActivated;
-}
+        console.log('isActivated:', this.isActivated);
+        return this.isActivated;
+    }
 }
 
-// // Export a single instance of the LicenseManager
-// // const licenseManager = new LicenseManager().getInstance();
-// module.exports = LicenseManager.getInstance();
+// Export a single instance of the LicenseManager
+// const licenseManager = new LicenseManager().getInstance();
+module.exports = LicenseManager.getInstance();
