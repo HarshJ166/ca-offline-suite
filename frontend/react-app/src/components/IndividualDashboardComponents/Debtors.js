@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import BarLineChart from "../charts/BarLineChart";
 import DataTable from "./TableData";
 
-const Debtors = () => {
+const Debtors = ({ caseId }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -11,7 +11,7 @@ const Debtors = () => {
       try {
         setLoading(true);
         // Fetch transactions filtered by "debtor"
-        const result = await window.electron.getTransactionsByDebtor();
+        const result = await window.electron.getTransactionsByDebtor(caseId);
         console.log("Debtors' transactions:", result);
 
         // Transform data to include only required fields
@@ -35,7 +35,7 @@ const Debtors = () => {
     };
 
     fetchData();
-  }, []);
+  }, [caseId]);
 
   if (loading) {
     return (

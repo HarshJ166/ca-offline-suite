@@ -3,7 +3,7 @@ import BarLineChart from "../charts/BarLineChart";
 import DataTable from "./TableData";
 // import CreditorData from "../../data/Creditors.json";
 
-const Creditors = () => {
+const Creditors = ({ caseId }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -12,7 +12,7 @@ const Creditors = () => {
       try {
         setLoading(true);
         // Fetch transactions filtered by "debtor"
-        const result = await window.electron.getTransactionsByCreditor();
+        const result = await window.electron.getTransactionsByCreditor(caseId);
         console.log("Debtors' transactions:", result);
         // Transform data to include only required fields
         const transformedData = result.map((item) => ({

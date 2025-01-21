@@ -9,8 +9,8 @@ import ElectronIntro from "./components/ElectronIntro";
 import { useState } from "react";
 import { SidebarProvider } from "./components/ui/sidebar";
 import { BreadcrumbProvider } from "./contexts/BreadcrumbContext";
-import { PrivateRoute } from './components/PrivateRoute';
-import Login from './components/Authentication/Login';
+// import { PrivateRoute } from "./components/PrivateRoute";
+// import Login from "./components/Authentication/Login";
 
 function App() {
   const [showIntro, setShowIntro] = useState(true);
@@ -26,7 +26,7 @@ function App() {
               <Route path="/:defaultTab" element={<Dashboard />} />
               <Route
                 path="/case-dashboard/:caseId/:defaultTab"
-                element={<CaseDashboard />}
+                element={<IndividualDashboard />}
               />
               <Route
                 path="/individual-dashboard/:caseId/:individualId/:defaultTab"
@@ -37,12 +37,13 @@ function App() {
                 element={<IndividualDashboard />}
               />
             </Routes>
-{/* 
-            <Routes>
+
+
+            {/* <Routes>
               Public route
               <Route path="/login" element={<Login />} />
 
-               Protected routes 
+              Protected routes
               <Route
                 path="/"
                 element={

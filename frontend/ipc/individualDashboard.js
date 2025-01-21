@@ -1,14 +1,55 @@
 const { ipcMain } = require("electron");
 const log = require("electron-log");
 const db = require("../db/db");
+const { statements } = require("../db/schema/Statement");
 const { transactions } = require("../db/schema/Transactions");
 const { eq, and } = require("drizzle-orm"); // Add this import
 
 function registerIndividualDashboardIpc() {
-  ipcMain.handle("get-transactions", async () => {
+  ipcMain.handle("get-transactions", async (event, caseId) => {
     try {
-      const result = await db.select().from(transactions);
-      log.info("Transactions fetched successfully:", result.length);
+      // Get all statements for the case
+      const allStatements = await db
+        .select()
+        .from(statements)
+        .where(eq(statements.caseId, caseId));
+
+      // Get all transactions for these statements
+      const allTransactions = await db
+        .select()
+        .from(transactions)
+        .where(
+          inArray(
+            transactions.statementId,
+            allStatements.map((stmt) => stmt.id)
+          )
+        );
+      return allTransactions;
+    } catch (error) {
+      log.error("Error fetching transactions:", error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle("get-transactions-by-debtor", async (event, caseId) => {
+    try {
+      const allStatements = await db
+        .select()
+        .from(statements)
+        .where(eq(statements.caseId, caseId));
+
+      const statementIds = allStatements.map((stmt) => stmt.id);
+
+      const result = await db
+        .select()
+        .from(transactions)
+        .where(
+          and(
+            inArray(transactions.statementId, statementIds), // Check if statementId is in the list
+            eq(transactions.category, "Debtor") // Filter by category
+          )
+        ); // Apply both filters
+
       return result;
     } catch (error) {
       log.error("Error fetching transactions:", error);
@@ -16,35 +57,25 @@ function registerIndividualDashboardIpc() {
     }
   });
 
-  ipcMain.handle("get-transactions-by-debtor", async () => {
+  ipcMain.handle("get-transactions-by-creditor", async (event, statementId) => {
     try {
-      const result = await db
+      const allStatements = await db
         .select()
-        .from(transactions)
-        .where(eq(transactions.category, "Debtor")); // Add the WHERE clause here
-      log.info(
-        "Transactions with category 'Debtors' fetched successfully:",
-        result.length
-      );
-      console.log("debtors", result);
-      return result;
-    } catch (error) {
-      log.error("Error fetching transactions with category 'debtor':", error);
-      throw error;
-    }
-  });
+        .from(statements)
+        .where(eq(statements.caseId, caseId));
 
-  ipcMain.handle("get-transactions-by-creditor", async () => {
-    try {
+      const statementIds = allStatements.map((stmt) => stmt.id);
+
       const result = await db
         .select()
         .from(transactions)
-        .where(eq(transactions.category, "Creditor")); // Add the WHERE clause here
-      log.info(
-        "Transactions with category 'Creditors' fetched successfully:",
-        result.length
-      );
-      console.log("Creditor", result);
+        .where(
+          and(
+            inArray(transactions.statementId, statementIds), // Check if statementId is in the list
+            eq(transactions.category, "Creditor") // Filter by category
+          )
+        ); // Apply both filters
+
       return result;
     } catch (error) {
       log.error("Error fetching transactions with category 'creditor':", error);
@@ -52,38 +83,57 @@ function registerIndividualDashboardIpc() {
     }
   });
 
-  ipcMain.handle("get-transactions-by-cashwithdrawal", async () => {
-    try {
-      const result = await db
-        .select()
-        .from(transactions)
-        .where(eq(transactions.category, "Cash withdrawal")); // Add the WHERE clause here
-      log.info(
-        "Transactions with category 'Cash withdrawal' fetched successfully:",
-        result.length
-      );
-      console.log("Cash withdrawal", result);
-      return result;
-    } catch (error) {
-      log.error(
-        "Error fetching transactions with category 'Cash withdrawal':",
-        error
-      );
-      throw error;
-    }
-  });
+  ipcMain.handle(
+    "get-transactions-by-cashwithdrawal",
+    async (event, caseId) => {
+      try {
+        const allStatements = await db
+          .select()
+          .from(statements)
+          .where(eq(statements.caseId, caseId));
 
-  ipcMain.handle("get-transactions-by-cashdeposit", async () => {
+        const statementIds = allStatements.map((stmt) => stmt.id);
+
+        const result = await db
+          .select()
+          .from(transactions)
+          .where(
+            and(
+              inArray(transactions.statementId, statementIds), // Check if statementId is in the list
+              eq(transactions.category, "Cash withdrawal") // Filter by category
+            )
+          ); // Apply both filters
+
+        return result;
+      } catch (error) {
+        log.error(
+          "Error fetching transactions with category 'Cash withdrawal':",
+          error
+        );
+        throw error;
+      }
+    }
+  );
+
+  ipcMain.handle("get-transactions-by-cashdeposit", async (event, caseId) => {
     try {
+      const allStatements = await db
+        .select()
+        .from(statements)
+        .where(eq(statements.caseId, caseId));
+
+      const statementIds = allStatements.map((stmt) => stmt.id);
+
       const result = await db
         .select()
         .from(transactions)
-        .where(eq(transactions.category, "Cash deposits")); // Add the WHERE clause here
-      log.info(
-        "Transactions with category 'Cash deposits' fetched successfully:",
-        result.length
-      );
-      console.log("Cash deposits", result);
+        .where(
+          and(
+            inArray(transactions.statementId, statementIds), // Check if statementId is in the list
+            eq(transactions.category, "Cash deposits") // Filter by category
+          )
+        ); // Apply both filters
+
       return result;
     } catch (error) {
       log.error(
@@ -95,62 +145,79 @@ function registerIndividualDashboardIpc() {
   });
 
   // Handler for getting Suspense Credit transactions
-  ipcMain.handle("get-transactions-by-suspensecredit", async () => {
-    try {
-      const result = await db
-        .select()
-        .from(transactions)
-        .where(
-          and(
-            eq(transactions.category, "Suspense"),
-            eq(transactions.type, "Credit")
-          )
-        );
+  ipcMain.handle(
+    "get-transactions-by-suspensecredit",
+    async (event, caseId) => {
+      try {
+        const allStatements = await db
+          .select()
+          .from(statements)
+          .where(eq(statements.caseId, caseId));
 
-      log.info(
-        "Suspense Credit transactions fetched successfully:",
-        result.length
-      );
-      console.log("suspense credits:", result);
-      return result;
-    } catch (error) {
-      log.error("Error fetching Suspense Credit transactions:", error);
-      throw error;
+        const statementIds = allStatements.map((stmt) => stmt.id);
+
+        const result = await db
+          .select()
+          .from(transactions)
+          .where(
+            and(
+              inArray(transactions.statementId, statementIds), // Check if statementId is in the list
+              eq(transactions.category, "Suspense"),
+              eq(transactions.type, "Credit") // Filter by category
+            )
+          ); // Apply both filters
+      } catch (error) {
+        log.error("Error fetching Suspense Credit transactions:", error);
+        throw error;
+      }
     }
-  });
+  );
 
-  ipcMain.handle("get-transactions-by-suspensedebit", async () => {
+  ipcMain.handle("get-transactions-by-suspensedebit", async (event, caseId) => {
     try {
+      const allStatements = await db
+        .select()
+        .from(statements)
+        .where(eq(statements.caseId, caseId));
+
+      const statementIds = allStatements.map((stmt) => stmt.id);
+
       const result = await db
         .select()
         .from(transactions)
         .where(
           and(
-            eq(transactions.category, "Suspense"),
+            inArray(transactions.statementId, statementIds), // Check if statementId is in the list
+            eq(transactions.category, "Suspense"), // Filter by category
             eq(transactions.type, "Debit")
           )
-        );
-
-      log.info(
-        "Suspense Debit transactions fetched successfully:",
-        result.length
-      );
-      console.log("suspense debits:", result);
-      return result;
+        ); // Apply both filters
     } catch (error) {
       log.error("Error fetching Suspense Debit transactions:", error);
       throw error;
     }
   });
-  ipcMain.handle("get-transactions-by-emi", async () => {
+  ipcMain.handle("get-transactions-by-emi", async (event, caseId) => {
     // log.info("Handler for 'get-transactions-by-emi' registered.");
+
     try {
+      const allStatements = await db
+        .select()
+        .from(statements)
+        .where(eq(statements.caseId, caseId));
+
+      const statementIds = allStatements.map((stmt) => stmt.id);
+
       const result = await db
         .select()
         .from(transactions)
-        .where(eq(transactions.category, "Probable emi")); // Add the WHERE clause here
-      log.info(" 'Probable emi' transactions fetched successfully:", result);
-      console.log("emi transactions:", result);
+        .where(
+          and(
+            inArray(transactions.statementId, statementIds), // Check if statementId is in the list
+            eq(transactions.category, "Probable emi") // Filter by category
+          )
+        ); // Apply both filters
+
       return result;
     } catch (error) {
       console.log("Error fetching transactions");
@@ -159,17 +226,26 @@ function registerIndividualDashboardIpc() {
     }
   });
 
-  ipcMain.handle("get-transactions-by-investment", async () => {
+  ipcMain.handle("get-transactions-by-investment", async (event, caseId) => {
     // log.info("Handler for 'get-transactions-by-emi' registered.");
     try {
+      const allStatements = await db
+        .select()
+        .from(statements)
+        .where(eq(statements.caseId, caseId));
+
+      const statementIds = allStatements.map((stmt) => stmt.id);
+
       const result = await db
         .select()
         .from(transactions)
-        .where(eq(transactions.category, "Investment")); // Add the WHERE clause here
-      log.info(
-        "Transactions with category 'Investment' fetched successfully:",
-        result
-      );
+        .where(
+          and(
+            inArray(transactions.statementId, statementIds), // Check if statementId is in the list
+            eq(transactions.category, "Investment") // Filter by category
+          )
+        ); // Apply both filters
+
       return result;
     } catch (error) {
       console.log("Error fetching transactions");
@@ -181,17 +257,27 @@ function registerIndividualDashboardIpc() {
     }
   });
 
-  ipcMain.handle("get-transactions-by-reversal", async () => {
+  ipcMain.handle("get-transactions-by-reversal", async (event, caseId) => {
     // log.info("Handler for 'get-transactions-by-emi' registered.");
+
     try {
+      const allStatements = await db
+        .select()
+        .from(statements)
+        .where(eq(statements.caseId, caseId));
+
+      const statementIds = allStatements.map((stmt) => stmt.id);
+
       const result = await db
         .select()
         .from(transactions)
-        .where(eq(transactions.category, "Refund/reversal")); // Add the WHERE clause here
-      log.info(
-        "Transactions with category 'Reversal' fetched successfully:",
-        result.length
-      );
+        .where(
+          and(
+            inArray(transactions.statementId, statementIds), // Check if statementId is in the list
+            eq(transactions.category, "Refund/reversal") // Filter by category
+          )
+        ); // Apply both filters
+
       return result;
     } catch (error) {
       console.log("Error fetching transactions");

@@ -4,7 +4,7 @@ import SuspensePieChart from "../charts/SuspensePieChart";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import DataTable from "./TableData";
 
-const Suspense = () => {
+const Suspense = ({ caseId }) => {
   const [creditData, setCreditData] = useState([]);
   const [debitData, setDebitData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -14,9 +14,9 @@ const Suspense = () => {
       try {
         // Fetch both credit and debit data
         const creditTransactions =
-          await window.electron.getTransactionsBySuspenseCredit();
+          await window.electron.getTransactionsBySuspenseCredit(caseId);
         const debitTransactions =
-          await window.electron.getTransactionsBySuspenseDebit();
+          await window.electron.getTransactionsBySuspenseDebit(caseId);
 
         // Transform credit data
         const transformedCreditData = creditTransactions.map((item) => ({

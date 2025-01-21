@@ -74,11 +74,14 @@ const RecentReports = () => {
           }),
           statements: report.statements.map((statement) => ({
             ...statement,
-            createdAt: new Date(statement.createdAt).toLocaleDateString("en-GB", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-            }),
+            createdAt: new Date(statement.createdAt).toLocaleDateString(
+              "en-GB",
+              {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              }
+            ),
           })),
         }));
 
@@ -98,7 +101,6 @@ const RecentReports = () => {
     fetchReports();
   }, []);
 
-
   const handleDetails = (statements_length) => {
     console.log("Clicked on details");
     if (statements_length > 0) {
@@ -108,7 +110,13 @@ const RecentReports = () => {
   };
 
   const handlePrevInfo = (statements_length, currentInfoIndex) => {
-    console.log("Clicked on prev", "statements_length", statements_length, "currentInfoIndex", currentInfoIndex);
+    console.log(
+      "Clicked on prev",
+      "statements_length",
+      statements_length,
+      "currentInfoIndex",
+      currentInfoIndex
+    );
 
     if (currentInfoIndex === 0) {
       setIsFirstInfo(true);
@@ -120,7 +128,13 @@ const RecentReports = () => {
   };
 
   const handleNextInfo = (statements_length, currentInfoIndex) => {
-    console.log("Clicked on next", "statements_length", statements_length, "currentInfoIndex", currentInfoIndex);
+    console.log(
+      "Clicked on next",
+      "statements_length",
+      statements_length,
+      "currentInfoIndex",
+      currentInfoIndex
+    );
 
     if (currentInfoIndex === statements_length - 1) {
       setIsLastInfo(true);
@@ -132,8 +146,9 @@ const RecentReports = () => {
 
   // Filter reports based on search query
   const filteredReports = recentReports.filter(
-    (report) => report.id.toLowerCase().includes(searchQuery.toLowerCase()) || report.id.toLowerCase().includes(searchQuery.toLowerCase())
-
+    (report) =>
+      report.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      report.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
@@ -222,6 +237,7 @@ const RecentReports = () => {
   };
 
   const handleView = (caseId) => {
+    console.log("case", caseId);
     console.log({ isLoading });
     setIsLoading(true);
     navigate(`/case-dashboard/${caseId}/defaultTab`);
@@ -342,23 +358,21 @@ const RecentReports = () => {
                             {report.id}
                           </h3>
                           <div className="mt-6 space-y-4 ">
-                            {report.statements.map(
-                              (doc, idx) => (
-                                <div
-                                  key={idx}
-                                  className="bg-black/[0.02] hover:bg-black/[0.04] transition-colors p-4 rounded-md border border-black/5 dark:bg-slate-800"
-                                >
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-sm font-medium text-black/40 dark:text-white">
-                                      Path:
-                                    </span>
-                                    <span className="text-sm text-black/70 dark:text-white">
-                                      {doc.ifscCode}
-                                    </span>
-                                  </div>
+                            {report.statements.map((doc, idx) => (
+                              <div
+                                key={idx}
+                                className="bg-black/[0.02] hover:bg-black/[0.04] transition-colors p-4 rounded-md border border-black/5 dark:bg-slate-800"
+                              >
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm font-medium text-black/40 dark:text-white">
+                                    Path:
+                                  </span>
+                                  <span className="text-sm text-black/70 dark:text-white">
+                                    {doc.ifscCode}
+                                  </span>
                                 </div>
-                              )
-                            )}
+                              </div>
+                            ))}
                           </div>
                         </div>
                       </AlertDialogHeader>
@@ -428,7 +442,7 @@ const RecentReports = () => {
                     className={cn(
                       "cursor-pointer",
                       currentPage === totalPages &&
-                      "pointer-events-none opacity-50"
+                        "pointer-events-none opacity-50"
                     )}
                   />
                 </PaginationItem>
