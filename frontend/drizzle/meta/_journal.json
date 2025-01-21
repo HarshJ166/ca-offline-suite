@@ -29,6 +29,13 @@
       "when": 1737372964162,
       "tag": "0003_slim_proteus",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1737396381265,
+      "tag": "0004_overjoyed_groot",
+      "breakpoints": true
     }
   ]
 }

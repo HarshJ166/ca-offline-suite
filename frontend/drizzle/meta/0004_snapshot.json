@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b2246451-dcde-44c2-b1e2-4bc30dc15aa7",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "5886b31e-0061-424b-9832-f48e152291a0",
+  "prevId": "3618ddb7-e972-4f3e-ba21-d396e6d2a216",
   "tables": {
     "cases": {
       "name": "cases",
@@ -44,6 +44,51 @@
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "CASCADE",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "eod": {
+      "name": "eod",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "case_id": {
+          "name": "case_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "data": {
+          "name": "data",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "eod_case_id_cases_id_fk": {
+          "name": "eod_case_id_cases_id_fk",
+          "tableFrom": "eod",
+          "tableTo": "cases",
+          "columnsFrom": [
+            "case_id"
           ],
           "columnsTo": [
             "id"
@@ -209,6 +254,14 @@
           "notNull": false,
           "autoincrement": false
         },
+        "file_path": {
+          "name": "file_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'downloads'"
+        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -222,6 +275,51 @@
         "statements_case_id_cases_id_fk": {
           "name": "statements_case_id_cases_id_fk",
           "tableFrom": "statements",
+          "tableTo": "cases",
+          "columnsFrom": [
+            "case_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "CASCADE",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "summary": {
+      "name": "summary",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "case_id": {
+          "name": "case_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "data": {
+          "name": "data",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "summary_case_id_cases_id_fk": {
+          "name": "summary_case_id_cases_id_fk",
+          "tableFrom": "summary",
           "tableTo": "cases",
           "columnsFrom": [
             "case_id"
@@ -295,6 +393,14 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "entity": {
+          "name": "entity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'unknown'"
         }
       },
       "indexes": {},
@@ -354,9 +460,23 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "last_login": {
+          "name": "last_login",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
+        "users_name_unique": {
+          "name": "users_name_unique",
+          "columns": [
+            "name"
+          ],
+          "isUnique": true
+        },
         "users_email_unique": {
           "name": "users_email_unique",
           "columns": [

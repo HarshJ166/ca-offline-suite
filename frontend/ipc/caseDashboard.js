@@ -3,6 +3,7 @@ const log = require("electron-log");
 const db = require("../db/db");
 const { statements } = require("../db/schema/Statement");
 const { eq, and } = require("drizzle-orm"); // Add this import
+const { transactions } = require("../db/schema/Transactions");
 
 function registerCaseDashboardIpc() {
   ipcMain.handle("get-statements", async (event, caseId) => {

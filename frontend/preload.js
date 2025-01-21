@@ -1,34 +1,36 @@
 const { contextBridge, ipcRenderer, shell } = require("electron");
+const { generateReportIpc } = require("./ipc/generateReport");
 
 // Expose a secure API for opening files to the renderer process
 contextBridge.exposeInMainWorld("electron", {
   openFile: (filePath) => ipcRenderer.invoke("open-file", filePath),
 
-  getTransactions: () => ipcRenderer.invoke("get-transactions"),
+  getTransactions: (caseId) => ipcRenderer.invoke("get-transactions", caseId),
 
-  getTransactionsByDebtor: () =>
-    ipcRenderer.invoke("get-transactions-by-debtor"),
+  getTransactionsByDebtor: (caseId) =>
+    ipcRenderer.invoke("get-transactions-by-debtor", caseId),
 
-  getTransactionsByCreditor: () =>
-    ipcRenderer.invoke("get-transactions-by-creditor"),
+  getTransactionsByCreditor: (caseId) =>
+    ipcRenderer.invoke("get-transactions-by-creditor", caseId),
 
-  getTransactionsByCashWithdrawal: () =>
-    ipcRenderer.invoke("get-transactions-by-cashwithdrawal"),
+  getTransactionsByCashWithdrawal: (caseId) =>
+    ipcRenderer.invoke("get-transactions-by-cashwithdrawal", caseId),
 
-  getTransactionsByCashDeposit: () =>
-    ipcRenderer.invoke("get-transactions-by-cashdeposit"),
+  getTransactionsByCashDeposit: (caseId) =>
+    ipcRenderer.invoke("get-transactions-by-cashdeposit", caseId),
 
-  getTransactionsBySuspenseCredit: () =>
-    ipcRenderer.invoke("get-transactions-by-suspensecredit"),
+  getTransactionsBySuspenseCredit: (caseId) =>
+    ipcRenderer.invoke("get-transactions-by-suspensecredit", caseId),
 
-  getTransactionsBySuspenseDebit: () =>
-    ipcRenderer.invoke("get-transactions-by-suspensedebit"),
+  getTransactionsBySuspenseDebit: (caseId) =>
+    ipcRenderer.invoke("get-transactions-by-suspensedebit", caseId),
 
-  getTransactionsByEmi: () => ipcRenderer.invoke("get-transactions-by-emi"),
-  getTransactionsByInvestment: () =>
-    ipcRenderer.invoke("get-transactions-by-investment"),
-  getTransactionsByReversal: () =>
-    ipcRenderer.invoke("get-transactions-by-reversal"),
+  getTransactionsByEmi: (caseId) =>
+    ipcRenderer.invoke("get-transactions-by-emi", caseId),
+  getTransactionsByInvestment: (caseId) =>
+    ipcRenderer.invoke("get-transactions-by-investment", caseId),
+  getTransactionsByReversal: (caseId) =>
+    ipcRenderer.invoke("get-transactions-by-reversal", caseId),
 
   getStatements: (case_id) => ipcRenderer.invoke("get-statements", case_id),
 
@@ -37,6 +39,12 @@ contextBridge.exposeInMainWorld("electron", {
 
   getCombinedStatements: (case_id) =>
     ipcRenderer.invoke("get-combine-statements", case_id),
+
+
+  saveFileToTemp: (fileBuffer) => ipcRenderer.invoke('save-file-to-temp', fileBuffer),
+  cleanupTempFiles: () => ipcRenderer.invoke('cleanup-temp-files'),
+  generateReportIpc: (result) => ipcRenderer.invoke("generate-report", result),
+
 
   user: {
     getData: (userId) => ipcRenderer.invoke("user:get-data", userId),
@@ -55,11 +63,16 @@ contextBridge.exposeInMainWorld("electron", {
     logout: () => ipcRenderer.invoke('auth:logout'),
     getUser: () => ipcRenderer.invoke('auth:getUser'),
     // updateUser: (userData) => ipcRenderer.invoke('auth:updateUser', userData)
-    checkLicense: () => ipcRenderer.invoke('license:check'),
-    activateLicense: (credentials) => ipcRenderer.invoke('license:activate', credentials)
+    checkLicense: () => ipcRenderer.invoke("license:check"),
+    activateLicense: (credentials) =>
+      ipcRenderer.invoke("license:activate", credentials),
   },
 
   getRecentReports: () => ipcRenderer.invoke("get-recent-reports"),
+
+  shell: {
+    openExternal: (url) => shell.openExternal(url),
+  },
 
   shell: {
     openExternal: (url) => shell.openExternal(url),

@@ -103,6 +103,8 @@ const IndividualDashboard = () => {
     }
   };
 
+  console.log("Statement", individualId);
+
   return (
     <>
       <div className={cn("w-full flex h-screen bg-background")}>
@@ -115,16 +117,16 @@ const IndividualDashboard = () => {
           <BreadcrumbDynamic items={breadcrumbs} />
           <div className="flex-1 flex flex-col overflow-hidden">
             <main className="flex-1">
-              {activeTab === "Summary" && <Summary />}
-              {activeTab === "Transactions" && <Transactions />}
-              {activeTab === "Debtors" && <Debtors />}
-              {activeTab === "Creditors" && <Creditors />}
-              {activeTab === "EMI" && <EMI />}
-              {activeTab === "Investment" && <Investment />}
-              {activeTab === "EOD" && <EodBalance />}
-              {activeTab === "Cash" && <Cash />}
-              {activeTab === "Suspense" && <Suspense />}
-              {activeTab === "Reversal" && <Reversal />}
+              {activeTab === "Summary" && <Summary caseId={caseId} />}
+              {activeTab === "Transactions" && <Transactions caseId={caseId} />}
+              {activeTab === "Debtors" && <Debtors caseId={caseId} />}
+              {activeTab === "Creditors" && <Creditors caseId={caseId} />}
+              {activeTab === "EMI" && <EMI caseId={caseId} />}
+              {activeTab === "Investment" && <Investment caseId={caseId} />}
+              {activeTab === "EOD" && <EodBalance caseId={caseId} />}
+              {activeTab === "Cash" && <Cash caseId={caseId} />}
+              {activeTab === "Suspense" && <Suspense caseId={caseId} />}
+              {activeTab === "Reversal" && <Reversal caseId={caseId} />}
               {/* {activeTab === "Reversal" && <ForeignTransactions />} */}
             </main>
           </div>

@@ -47,7 +47,7 @@ const MaximizableChart = ({ children, title, isMaximized, setIsMaximized }) => {
   );
 };
 
-const Transactions = () => {
+const Transactions = ({ caseId }) => {
   const [isDailyBalanceMaximized, setIsDailyBalanceMaximized] = useState(false);
   const [isCreditDebitMaximized, setIsCreditDebitMaximized] = useState(false);
   const [isCategoryMaximized, setIsCategoryMaximized] = useState(false);
@@ -58,19 +58,20 @@ const Transactions = () => {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        const data = await window.electron.getTransactions();
+        console.log("Fetching transactions for statementId:", caseId);
+        const data = await window.electron.getTransactions(caseId); // Ensure proper communication
         setTransactionData(data);
         console.log("Fetched transactions:", data);
-        setIsLoading(false);
       } catch (err) {
         setError("Failed to fetch transactions");
-        setIsLoading(false);
         console.error("Error fetching transactions:", err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchTransactions();
-  }, []);
+  }, [caseId]);
 
   const monthsData = React.useMemo(() => {
     return transactionData.reduce((acc, transaction) => {
