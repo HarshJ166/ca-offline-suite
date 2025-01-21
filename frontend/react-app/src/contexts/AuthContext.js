@@ -45,9 +45,11 @@ export const AuthProvider = ({ children }) => {
             setLoading(true);
             setError(null);
 
-            const result = await window.electron.auth.signup(credentials);
+            const result = await window.electron.auth.signUp(credentials);
             if (result.success) {
-                setIsActivated(false);
+                // setIsActivated(false);
+                setUser(credentials); // Use returned user data if available
+                console.log('User signed up:', result);
                 return true;
             } else {
                 setError(result.error || 'License activation failed');
