@@ -36,7 +36,7 @@ const GenerateReportForm = () => {
 
   // Load the last case number from localStorage on component mount
   useEffect(() => {
-    const savedLastNumber = localStorage.getItem('lastCaseNumber');
+    const savedLastNumber = localStorage.getItem("lastCaseNumber");
     if (savedLastNumber) {
       setLastCaseNumber(parseInt(savedLastNumber));
     }
@@ -45,9 +45,9 @@ const GenerateReportForm = () => {
   // Generate new case ID when component mounts or after form submission
   const generateNewCaseId = () => {
     const newNumber = lastCaseNumber + 1;
-    const paddedNumber = newNumber.toString().padStart(4, '0');
+    const paddedNumber = newNumber.toString().padStart(4, "0");
     setLastCaseNumber(newNumber);
-    localStorage.setItem('lastCaseNumber', newNumber.toString());
+    localStorage.setItem("lastCaseNumber", newNumber.toString());
     return `CASE_${paddedNumber}`;
   };
 
@@ -140,14 +140,14 @@ const GenerateReportForm = () => {
           console.log(`Updated ${field} for file ${index}:`, {
             previous: detail[field],
             new: value,
-            fullDetail: updatedDetail
+            fullDetail: updatedDetail,
           });
           return updatedDetail;
         }
         return detail;
       });
-      
-      console.log('Updated fileDetails:', updated);
+
+      console.log("Updated fileDetails:", updated);
       return updated;
     });
   };
@@ -163,35 +163,16 @@ const GenerateReportForm = () => {
     }
   };
 
+  const convertDateFormat = (dateStr) => {
+    if (!dateStr) return "";
+    const [year, month, day] = dateStr.split("-");
+    return `${day}-${month}-${year}`;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const validationErrors = [];
-    
-    // fileDetails.forEach((file, index) => {
-    //   if (!file.start_date) validationErrors.push(`Start date missing for file ${index + 1}`);
-    //   if (!file.end_date) validationErrors.push(`End date missing for file ${index + 1}`);
-    //   if (!file.bankName) validationErrors.push(`Bank name missing for file ${index + 1}`);
-      
-    //   if (file.start_date && file.end_date) {
-    //     const start = new Date(file.start_date);
-    //     const end = new Date(file.end_date);
-    //     if (start > end) {
-    //       validationErrors.push(`Invalid date range for file ${index + 1}`);
-    //     }
-    //   }
-    // });
-
-    if (validationErrors.length > 0) {
-      toast({
-        title: "Validation Error",
-        description: validationErrors.join('\n'),
-        variant: "destructive",
-        duration: 5000,
-      });
-      return;
-    }
 
     if (selectedFiles.length === 0) {
       toast({
@@ -232,20 +213,22 @@ const GenerateReportForm = () => {
           });
 
           const detail = fileDetails[index];
-          
+
           return {
             fileContent,
             pdf_paths: file.name,
             bankName: detail.bankName,
             passwords: detail.password || "",
-            start_date: detail.start_date,
-            end_date: detail.end_date,
+            start_date: convertDateFormat(detail.start_date), // Convert date format
+            end_date: convertDateFormat(detail.end_date), // Convert date format
             ca_id: caseId,
           };
         })
       );
 
-      const result = await window.electron.generateReportIpc({ files: filesWithContent });
+      const result = await window.electron.generateReportIpc({
+        files: filesWithContent,
+      });
 
       if (result.success) {
         clearInterval(progressIntervalRef.current);
@@ -257,18 +240,16 @@ const GenerateReportForm = () => {
           duration: 3000,
         });
 
-        // Generate new case ID for next submission
         const newCaseId = generateNewCaseId();
         setCaseId(newCaseId);
-        
-        // Reset form
+
         setSelectedFiles([]);
         setFileDetails([]);
       } else {
         throw new Error(result.error);
       }
     } catch (error) {
-      console.error('Report generation failed:', error);
+      console.error("Report generation failed:", error);
       clearInterval(progressIntervalRef.current);
       toast.dismiss(newToastId);
       setProgress(0);
@@ -399,253 +380,272 @@ const GenerateReportForm = () => {
                               setIsDropdownOpen(false);
                             }}
                             className="w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
-                            >
-                              {u}
-                            </button>
-                          ))}
-                        </div>
+                          >
+                            {u}
+                          </button>
+                        ))}
                       </div>
-                    )}
-                  </div>
-                )}
-  
-                {forAts && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Serial Number
-                    </label>
-                    <input
-                      type="text"
-                      value={serialNumber}
-                      onChange={(e) => setSerialNumber(e.target.value)}
-                      placeholder="00009"
-                      className="w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm hover:border-gray-300 dark:hover:border-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all"
-                    />
-                  </div>
-                )}
-  
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {forAts && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Report Name
+                    Serial Number
                   </label>
                   <input
-                    ref={caseIdRef}
                     type="text"
-                    value={caseId}
-                    className="w-full px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm disabled:cursor-not-allowed"
+                    value={serialNumber}
+                    onChange={(e) => setSerialNumber(e.target.value)}
+                    placeholder="00009"
+                    className="w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm hover:border-gray-300 dark:hover:border-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all"
                   />
                 </div>
-              </div>
-  
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Bank Statements
+                  Report Name
                 </label>
+                <input
+                  ref={caseIdRef}
+                  type="text"
+                  value={caseId}
+                  className="w-full px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm disabled:cursor-not-allowed"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Bank Statements
+              </label>
+              <div
+                className={`relative ${
+                  isDragging ? "ring-2 ring-[#3498db] dark:ring-blue-500" : ""
+                }`}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+              >
                 <div
-                  className={`relative ${
-                    isDragging ? "ring-2 ring-[#3498db] dark:ring-blue-500" : ""
-                  }`}
-                  onDragEnter={handleDragEnter}
-                  onDragLeave={handleDragLeave}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex cursor-pointer flex-col items-center justify-center p-5 border-2 border-dashed border-gray-200 dark:border-white rounded-lg hover:border-gray-300 dark:hover:border-gray-500 transition-all bg-gray-50 dark:bg-black"
                 >
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex cursor-pointer flex-col items-center justify-center p-5 border-2 border-dashed border-gray-200 dark:border-white rounded-lg hover:border-gray-300 dark:hover:border-gray-500 transition-all bg-gray-50 dark:bg-black"
-                  >
-                    <div className="flex flex-col items-center justify-center w-full">
-                      {selectedFiles.length > 0 ? (
-                        <div className="w-full space-y-4">
-                          {fileDetails.map((detail, index) => (
-                            <div
-                              key={index}
-                              className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-4 space-y-4"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
-                                  <FileText className="w-5 h-5 text-[#3498db] dark:text-blue-500" />
-                                  <div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                                      {detail.file.name}
-                                    </p>
-                                    <p className="text-xs text-gray-400 dark:text-gray-500">
-                                      {formatFileSize(detail.file.size)}
-                                    </p>
-                                  </div>
-                                </div>
-  
-                                <div className="flex items-center space-x-2">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handlePreviewFile(
-                                        detail.previewUrl,
-                                        detail.file.type
-                                      )
-                                    }
-                                    className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-[#3498db] dark:hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                                    title="Preview file"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => removeFile(index)}
-                                    className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                                    title="Remove file"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
+                  <div className="flex flex-col items-center justify-center w-full">
+                    {selectedFiles.length > 0 ? (
+                      <div className="w-full space-y-4">
+                        {fileDetails.map((detail, index) => (
+                          <div
+                            key={index}
+                            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-4 space-y-4"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <FileText className="w-5 h-5 text-[#3498db] dark:text-blue-500" />
+                                <div>
+                                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                                    {detail.file.name}
+                                  </p>
+                                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                                    {formatFileSize(detail.file.size)}
+                                  </p>
                                 </div>
                               </div>
-  
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Password
-                                  </label>
-                                  <input
-                                    type="password"
-                                    value={detail.password || ""}
-                                    onChange={(e) =>
-                                      handleFileDetailChange(
-                                        index,
-                                        "password",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="Enter password"
-                                    className="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Start Date
-                                  </label>
-                                  <input
-                                    type="date"
-                                    value={detail.start_date || ""}
-                                    onChange={(e) => {
-                                      const newDate = e.target.value;
-                                      handleFileDetailChange(index, "start_date", newDate);
-                                      if (!validateDateRange(newDate, detail.end_date)) {
-                                        // toast({
-                                        //   title: "Invalid Date Range",
-                                        //   description: "Start date must be before end date",
-                                        //   variant: "destructive",
-                                        //   duration: 3000,
-                                        // });
-                                      }
-                                    }}
-                                    className="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    End Date
-                                  </label>
-                                  <input
-                                    type="date"
-                                    value={detail.end_date || ""}
-                                    onChange={(e) => {
-                                      const newDate = e.target.value;
-                                      handleFileDetailChange(index, "end_date", newDate);
-                                      if (!validateDateRange(detail.start_date, newDate)) {
-                                        toast({
-                                          title: "Invalid Date Range",
-                                          description: "End date must be after start date",
-                                          variant: "destructive",
-                                          duration: 3000,
-                                        });
-                                      }
-                                    }}
-                                    className="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Bank Name
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={detail.bankName || ""}
-                                    onChange={(e) =>
-                                      handleFileDetailChange(
-                                        index,
-                                        "bankName",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="Enter bank name"
-                                    className="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all"
-                                  />
-                                </div>
+
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handlePreviewFile(
+                                      detail.previewUrl,
+                                      detail.file.type
+                                    )
+                                  }
+                                  className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-[#3498db] dark:hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                                  title="Preview file"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeFile(index)}
+                                  className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                                  title="Remove file"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <>
-                          <Upload className="w-8 h-8 text-gray-400 dark:text-gray-300 mb-2" />
-                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1 text-center">
-                            Drag and drop your files here, or
-                          </p>
-                        </>
-                      )}
-                    </div>
-  
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        fileInputRef.current?.click();
-                      }}
-                      className="mt-4 px-6 py-2.5 text-sm font-medium"
-                    >
-                      {selectedFiles.length > 0
-                        ? "Add More Files"
-                        : "Browse Files"}
-                    </Button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      multiple
-                      accept=".pdf,.xls,.xlsx"
-                    />
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Password
+                                </label>
+                                <input
+                                  type="password"
+                                  value={detail.password || ""}
+                                  onChange={(e) =>
+                                    handleFileDetailChange(
+                                      index,
+                                      "password",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Enter password"
+                                  className="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Start Date
+                                </label>
+                                <input
+                                  type="date"
+                                  value={detail.start_date || ""}
+                                  onChange={(e) => {
+                                    const newDate = e.target.value;
+                                    handleFileDetailChange(
+                                      index,
+                                      "start_date",
+                                      newDate
+                                    );
+                                    if (
+                                      !validateDateRange(
+                                        newDate,
+                                        detail.end_date
+                                      )
+                                    ) {
+                                      // toast({
+                                      //   title: "Invalid Date Range",
+                                      //   description: "Start date must be before end date",
+                                      //   variant: "destructive",
+                                      //   duration: 3000,
+                                      // });
+                                    }
+                                  }}
+                                  className="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  End Date
+                                </label>
+                                <input
+                                  type="date"
+                                  value={detail.end_date || ""}
+                                  onChange={(e) => {
+                                    const newDate = e.target.value;
+                                    handleFileDetailChange(
+                                      index,
+                                      "end_date",
+                                      newDate
+                                    );
+                                    if (
+                                      !validateDateRange(
+                                        detail.start_date,
+                                        newDate
+                                      )
+                                    ) {
+                                      toast({
+                                        title: "Invalid Date Range",
+                                        description:
+                                          "End date must be after start date",
+                                        variant: "destructive",
+                                        duration: 3000,
+                                      });
+                                    }
+                                  }}
+                                  className="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Bank Name
+                                </label>
+                                <input
+                                  type="text"
+                                  value={detail.bankName || ""}
+                                  onChange={(e) =>
+                                    handleFileDetailChange(
+                                      index,
+                                      "bankName",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Enter bank name"
+                                  className="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-gray-400 dark:text-gray-300 mb-2" />
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1 text-center">
+                          Drag and drop your files here, or
+                        </p>
+                      </>
+                    )}
                   </div>
-  
-                  {isDragging && (
-                    <div className="absolute inset-0 bg-[#3498db]/10 dark:bg-blue-500/10 rounded-lg pointer-events-none" />
-                  )}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
+                    className="mt-4 px-6 py-2.5 text-sm font-medium"
+                  >
+                    {selectedFiles.length > 0
+                      ? "Add More Files"
+                      : "Browse Files"}
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    multiple
+                    accept=".pdf,.xls,.xlsx"
+                  />
                 </div>
+
+                {isDragging && (
+                  <div className="absolute inset-0 bg-[#3498db]/10 dark:bg-blue-500/10 rounded-lg pointer-events-none" />
+                )}
               </div>
-  
-              <div className="flex justify-center pt-4">
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="relative inline-flex items-center px-4 py-2"
-                >
-                  {loading ? (
-                    <>
-                      {/* <Loader2 className="w-4 h-4 mr-2 animate-spin" /> */}
-                      {/* <span>Processing...</span> */}
-                    </>
-                  ) : (
-                    "Generate Report"
-                  )}
-                </Button>
-              </div>
-            </form>
-          </div>
+            </div>
+
+            <div className="flex justify-center pt-4">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="relative inline-flex items-center px-4 py-2"
+              >
+                {loading ? (
+                  <>
+                    {/* <Loader2 className="w-4 h-4 mr-2 animate-spin" /> */}
+                    {/* <span>Processing...</span> */}
+                  </>
+                ) : (
+                  "Generate Report"
+                )}
+              </Button>
+            </div>
+          </form>
         </div>
       </div>
-    );
-  };
-  
-  export default GenerateReportForm;
+    </div>
+  );
+};
+
+export default GenerateReportForm;
