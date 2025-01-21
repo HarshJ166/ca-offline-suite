@@ -3,7 +3,7 @@ const log = require("electron-log");
 const db = require("../db/db");
 const { statements } = require("../db/schema/Statement");
 const { transactions } = require("../db/schema/Transactions");
-const { eq, and } = require("drizzle-orm"); // Add this import
+const { eq, and, inArray } = require("drizzle-orm"); // Add this import
 
 function registerIndividualDashboardIpc() {
   ipcMain.handle("get-transactions", async (event, caseId) => {
@@ -14,6 +14,14 @@ function registerIndividualDashboardIpc() {
         .from(statements)
         .where(eq(statements.caseId, caseId));
 
+      if (allStatements.length === 0) {
+        log.info("No statements found for case:", caseId);
+        return [];
+      }
+
+      // Log statements for debugging
+      log.info("Found statements:", allStatements);
+
       // Get all transactions for these statements
       const allTransactions = await db
         .select()
@@ -21,9 +29,11 @@ function registerIndividualDashboardIpc() {
         .where(
           inArray(
             transactions.statementId,
-            allStatements.map((stmt) => stmt.id)
+            allStatements.map((stmt) => stmt.id.toString()) // Convert integer ID to string
           )
         );
+
+      log.info("Transactions fetched successfully:", allTransactions);
       return allTransactions;
     } catch (error) {
       log.error("Error fetching transactions:", error);
@@ -38,7 +48,7 @@ function registerIndividualDashboardIpc() {
         .from(statements)
         .where(eq(statements.caseId, caseId));
 
-      const statementIds = allStatements.map((stmt) => stmt.id);
+      const statementIds = allStatements.map((stmt) => stmt.id.toString());
 
       const result = await db
         .select()
@@ -57,14 +67,14 @@ function registerIndividualDashboardIpc() {
     }
   });
 
-  ipcMain.handle("get-transactions-by-creditor", async (event, statementId) => {
+  ipcMain.handle("get-transactions-by-creditor", async (event, caseId) => {
     try {
       const allStatements = await db
         .select()
         .from(statements)
         .where(eq(statements.caseId, caseId));
 
-      const statementIds = allStatements.map((stmt) => stmt.id);
+      const statementIds = allStatements.map((stmt) => stmt.id.toString());
 
       const result = await db
         .select()
@@ -92,7 +102,7 @@ function registerIndividualDashboardIpc() {
           .from(statements)
           .where(eq(statements.caseId, caseId));
 
-        const statementIds = allStatements.map((stmt) => stmt.id);
+        const statementIds = allStatements.map((stmt) => stmt.id.toString());
 
         const result = await db
           .select()
@@ -100,9 +110,11 @@ function registerIndividualDashboardIpc() {
           .where(
             and(
               inArray(transactions.statementId, statementIds), // Check if statementId is in the list
-              eq(transactions.category, "Cash withdrawal") // Filter by category
+              eq(transactions.category, "Cash Withdrawal") // Filter by category
             )
           ); // Apply both filters
+
+        log.info("Transactions with category 'Cash withdrawal':", result);
 
         return result;
       } catch (error) {
@@ -122,7 +134,7 @@ function registerIndividualDashboardIpc() {
         .from(statements)
         .where(eq(statements.caseId, caseId));
 
-      const statementIds = allStatements.map((stmt) => stmt.id);
+      const statementIds = allStatements.map((stmt) => stmt.id.toString());
 
       const result = await db
         .select()
@@ -130,7 +142,7 @@ function registerIndividualDashboardIpc() {
         .where(
           and(
             inArray(transactions.statementId, statementIds), // Check if statementId is in the list
-            eq(transactions.category, "Cash deposits") // Filter by category
+            eq(transactions.category, "Cash Deposits") // Filter by category
           )
         ); // Apply both filters
 
@@ -154,7 +166,7 @@ function registerIndividualDashboardIpc() {
           .from(statements)
           .where(eq(statements.caseId, caseId));
 
-        const statementIds = allStatements.map((stmt) => stmt.id);
+        const statementIds = allStatements.map((stmt) => stmt.id.toString());
 
         const result = await db
           .select()
@@ -163,9 +175,10 @@ function registerIndividualDashboardIpc() {
             and(
               inArray(transactions.statementId, statementIds), // Check if statementId is in the list
               eq(transactions.category, "Suspense"),
-              eq(transactions.type, "Credit") // Filter by category
+              eq(transactions.type, "credit") // Filter by category
             )
           ); // Apply both filters
+        return result;
       } catch (error) {
         log.error("Error fetching Suspense Credit transactions:", error);
         throw error;
@@ -180,7 +193,7 @@ function registerIndividualDashboardIpc() {
         .from(statements)
         .where(eq(statements.caseId, caseId));
 
-      const statementIds = allStatements.map((stmt) => stmt.id);
+      const statementIds = allStatements.map((stmt) => stmt.id.toString());
 
       const result = await db
         .select()
@@ -189,9 +202,10 @@ function registerIndividualDashboardIpc() {
           and(
             inArray(transactions.statementId, statementIds), // Check if statementId is in the list
             eq(transactions.category, "Suspense"), // Filter by category
-            eq(transactions.type, "Debit")
+            eq(transactions.type, "debit")
           )
         ); // Apply both filters
+      return result;
     } catch (error) {
       log.error("Error fetching Suspense Debit transactions:", error);
       throw error;
@@ -206,7 +220,7 @@ function registerIndividualDashboardIpc() {
         .from(statements)
         .where(eq(statements.caseId, caseId));
 
-      const statementIds = allStatements.map((stmt) => stmt.id);
+      const statementIds = allStatements.map((stmt) => stmt.id.toString());
 
       const result = await db
         .select()
@@ -214,7 +228,7 @@ function registerIndividualDashboardIpc() {
         .where(
           and(
             inArray(transactions.statementId, statementIds), // Check if statementId is in the list
-            eq(transactions.category, "Probable emi") // Filter by category
+            eq(transactions.category, "Probable EMI") // Filter by category
           )
         ); // Apply both filters
 
@@ -234,7 +248,7 @@ function registerIndividualDashboardIpc() {
         .from(statements)
         .where(eq(statements.caseId, caseId));
 
-      const statementIds = allStatements.map((stmt) => stmt.id);
+      const statementIds = allStatements.map((stmt) => stmt.id.toString());
 
       const result = await db
         .select()
@@ -266,7 +280,7 @@ function registerIndividualDashboardIpc() {
         .from(statements)
         .where(eq(statements.caseId, caseId));
 
-      const statementIds = allStatements.map((stmt) => stmt.id);
+      const statementIds = allStatements.map((stmt) => stmt.id.toString());
 
       const result = await db
         .select()
@@ -274,7 +288,7 @@ function registerIndividualDashboardIpc() {
         .where(
           and(
             inArray(transactions.statementId, statementIds), // Check if statementId is in the list
-            eq(transactions.category, "Refund/reversal") // Filter by category
+            eq(transactions.category, "Refund/Reversal") // Filter by category
           )
         ); // Apply both filters
 
