@@ -81,10 +81,10 @@ const CaseDashboard = () => {
           <div className="flex-1 flex flex-col overflow-hidden">
             <main className="flex-1">
               {activeTab === "Acc No and Acc Name" && (
-                <AccountNumNameManager caseId="1" />
+                <AccountNumNameManager caseId={caseId} />
               )}
               {activeTab === "Individual Table" && (
-                <IndividualTable caseId="1" />
+                <IndividualTable caseId={caseId} />
               )}
               {activeTab === "Combined Table" && <CombinedTable />}
             </main>
