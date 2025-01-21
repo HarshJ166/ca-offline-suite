@@ -3,7 +3,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import BarLineChart from "../charts/BarLineChart";
 import DataTable from "./TableData";
 
-const Cash = () => {
+const Cash = ({ caseId }) => {
   const [withdrawalData, setWithdrawalData] = useState([]);
   const [depositData, setDepositData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -12,10 +12,10 @@ const Cash = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const withdrawalResponse =  
-          await window.electron.getTransactionsByCashWithdrawal();
+        const withdrawalResponse =
+          await window.electron.getTransactionsByCashWithdrawal(caseId);
         const depositResponse =
-          await window.electron.getTransactionsByCashDeposit();
+          await window.electron.getTransactionsByCashDeposit(caseId);
 
         // Transform withdrawal data
         const transformedWithdrawalData = withdrawalResponse.map((item) => ({

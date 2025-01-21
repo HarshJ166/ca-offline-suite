@@ -62,10 +62,13 @@ const IndividualTable = ({ caseId }) => {
     const name = item.customerName || "";
     const accountNumber = item.accountNumber || "";
     const filePath = item.filePath || "";
+    const individualId = item.id || "";
+
     return (
       name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       accountNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      filePath.toLowerCase().includes(searchTerm.toLowerCase())
+      filePath.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      individualId.toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
 
@@ -76,10 +79,14 @@ const IndividualTable = ({ caseId }) => {
     startIndex + ITEMS_PER_PAGE
   );
 
-  const handleRowClick = async (name, accountNumber, rowId) => {
+  console.log("currentData", currentData);
+
+  const handleRowClick = async (name, accountNumber, individualId) => {
+    console.log("name", name);
+    console.log("indivivdual table", individualId);
     setIsLoading(true);
     try {
-      navigate(`/individual-dashboard/${caseId}/${rowId}/defaultTab`, {
+      navigate(`/individual-dashboard/${caseId}/${individualId}/defaultTab`, {
         state: { name, accountNumber },
       });
     } finally {
@@ -190,7 +197,7 @@ const IndividualTable = ({ caseId }) => {
                       handleRowClick(
                         item.customerName,
                         item.accountNumber,
-                        index
+                        item.id
                       )
                     }
                   >

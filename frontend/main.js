@@ -2,7 +2,9 @@ const { app, BrowserWindow, protocol, ipcMain, shell } = require("electron");
 const { registerOpenFileIpc } = require("./ipc/fileHandler.js");
 require("dotenv").config();
 const path = require("path");
-const { registerIndividualDashboardIpc } = require("./ipc/individualDashboard.js");
+const {
+  registerIndividualDashboardIpc,
+} = require("./ipc/individualDashboard.js");
 const { registerCaseDashboardIpc } = require("./ipc/caseDashboard.js");
 const { registerReportHandlers } = require("./ipc/reportHandlers.js");
 const { registerAuthHandlers } = require("./ipc/authHandlers.js");
@@ -99,7 +101,7 @@ function createUser() {
 app.setName("CypherSol Dev");
 
 app.whenReady().then(async () => {
-  console.log("App is ready", app.getPath('userData'));
+  console.log("App is ready", app.getPath("userData"));
   try {
     try{
       await sessionManager.init();

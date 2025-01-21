@@ -1,52 +1,53 @@
-import React, {useState, useEffect} from "react";
+import React, { useState, useEffect } from "react";
 import BarLineChart from "../charts/BarLineChart";
 import DataTable from "./TableData";
 // import investementData from "../../data/investment.json";
 
-const Investment = () => {
+const Investment = ({ caseId }) => {
   const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
+  useEffect(() => {
     const fetchData = async () => {
-        try {  
+      try {
         setLoading(true);
         // Fetch transactions filtered by "debtor"
-        const result = await window.electron.getTransactionsByInvestment();
+        const result = await window.electron.getTransactionsByInvestment(
+          caseId
+        );
         console.log("Investment transactions:", result);
         // Transform data to include only required fields
         const transformedData = result.map((item) => ({
-            date: new Date(item.date).toLocaleDateString("en-GB", {
+          date: new Date(item.date).toLocaleDateString("en-GB", {
             day: "2-digit",
             month: "2-digit",
             year: "numeric",
-            }),
-            description: item.description,
-            debit: item.amount,
-            category: item.category,
-            balance: item.balance,
+          }),
+          description: item.description,
+          debit: item.amount,
+          category: item.category,
+          balance: item.balance,
         }));
         setData(transformedData);
-        } catch (error) {
+      } catch (error) {
         console.error("Error fetching emi transactions:", error);
-        } finally {
+      } finally {
         setLoading(false);
-        }
+      }
     };
 
     fetchData();
-    }, []);
+  }, []);
 
-    if (loading) {
+  if (loading) {
     return (
-        <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
+      <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
         <p className="text-gray-800 text-center mt-3 font-medium text-lg">
-            Loading...
+          Loading...
         </p>
-        </div>
+      </div>
     );
-    }
-  
+  }
 
   return (
     <div className="rounded-lg m-8 mt-2 space-y-6">
