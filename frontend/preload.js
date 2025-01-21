@@ -40,7 +40,7 @@ contextBridge.exposeInMainWorld("electron", {
 
   user: {
     getData: (userId) => ipcRenderer.invoke("user:get-data", userId),
-    updateData: (userData) => ipcRenderer.send("user:update-data", userData),   
+    updateData: (userData) => ipcRenderer.send("user:update-data", userData),
   },
 
   file: {
@@ -50,6 +50,7 @@ contextBridge.exposeInMainWorld("electron", {
   },
 
   auth: {
+    signUp: (credentials) => ipcRenderer.invoke('auth:signUp', credentials),
     login: (userData) => ipcRenderer.invoke('auth:login', userData),
     logout: () => ipcRenderer.invoke('auth:logout'),
     getUser: () => ipcRenderer.invoke('auth:getUser'),

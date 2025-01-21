@@ -1,9 +1,11 @@
 const keytar = require('keytar');
 const axios = require('axios');
 
-const SERVICE_NAME = 'Cyphersol';
+const SERVICE_NAME = 'Cyphersol-dumm';
 const LICENSE_KEY_ACCOUNT = 'license-key';
-const API_URL = 'http://43.204.61.215/validate-offline-license/';
+const API_URL = 'http://43.204.61.215/validate-offline-login/';
+// username : 2-32e6d741
+// licensekey : SOMEX4Y4ZLicenseKEYForCAOffline
 
 class LicenseManager {
     // Static instance to hold the single instance of the class
@@ -29,6 +31,7 @@ class LicenseManager {
     async init() {
         try {
             const licenseKey = await keytar.getPassword(SERVICE_NAME, LICENSE_KEY_ACCOUNT);
+            console.log('Init licenseKey:', licenseKey);
             this.isActivated = !!licenseKey;
             console.log('Init isActivated:', this.isActivated);
             return this.isActivated;
@@ -41,10 +44,11 @@ class LicenseManager {
     // Method to validate and store license key
     async validateAndStoreLicense(credentials) {
         try {
-            const isValid = await this.validateLicense(credentials.licenseKey, credentials.username);
+            console.log('Credentials:', credentials);
+            const isValid = await this.validateLicense(credentials.licenseKey, credentials.email);
 
-            if (isValid) {
-                // await keytar.setPassword(SERVICE_NAME, LICENSE_KEY_ACCOUNT, licenseKey);
+            if (isValid.success) {
+                await keytar.setPassword(SERVICE_NAME, LICENSE_KEY_ACCOUNT, credentials.licenseKey);
                 this.isActivated = true;
                 return { success: true };
             }
@@ -54,6 +58,7 @@ class LicenseManager {
                 error: 'Invalid license key'
             };
         } catch (error) {
+            console.log('License activation error:', error);
             return {
                 success: false,
                 error: 'License activation failed'
@@ -64,23 +69,23 @@ class LicenseManager {
     // Placeholder method for validating the license key
     async validateLicense(licenseKey, username) {
         try {
-            const timestamp = Date.now();
+            const timestamp = Date.now() / 1000;
 
             const apiKey = 'U08fir-OsEXdgMZKARdgz5oPvyRT6cIZioOeV_kZdLMeXsAc46_x.CAgICAgICAo=';
 
             const response = await axios.post(API_URL, {
-                username,
+                username: username,
                 license_key: licenseKey,
-                timestamp,
+                timestamp: timestamp,
             }, {
                 headers: {
                     'X-API-Key': apiKey,
                 }
             });
-            
-            console.log("Response : ", response);
-            const { data } = response;
 
+            // console.log("License Validation Response : ", response);
+            const { data } = response;
+            console.log("Response Status : ", response.status)
             console.log("Data : ", data);
 
             // Handle successful response
@@ -93,13 +98,13 @@ class LicenseManager {
                     throw new Error('License key has expired');
                 }
 
-                return true;
+                return { success: true, data: data };
             } else {
                 // Handle invalid license or username
                 throw new Error(data.detail || 'License validation failed');
             }
         } catch (error) {
-            console.error('License validation error:', error);
+            console.error('License validation error: ', error.status, error.response.data);
             // Handle different error cases based on API response
             if (error.response) {
                 // The API returned an error response
