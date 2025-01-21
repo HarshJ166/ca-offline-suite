@@ -154,6 +154,20 @@ app.whenReady().then(async () => {
       console.log("LicenseManager initialization failed:", error);
     }
 
+    try{
+      await sessionManager.init();
+    }
+    catch(error){
+      console.log("SessionManager initialization failed:", error);
+    }
+
+    try{
+      await licenseManager.init();
+    }
+    catch(error){
+      console.log("LicenseManager initialization failed:", error);
+    }
+
 
     // Proceed with the window creation and other tasks after initialization
     createProtocol();
@@ -165,6 +179,7 @@ app.whenReady().then(async () => {
     //   console.error("User creation error:", dbError);
     // }
   } catch (error) {
+    console.error("Failed to initialize App:", error);
     console.error("Failed to initialize App:", error);
     // Optionally handle the error, e.g., show an error dialog or quit the app
     app.quit();
