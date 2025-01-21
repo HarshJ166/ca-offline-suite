@@ -1,4 +1,5 @@
 const { contextBridge, ipcRenderer, shell } = require("electron");
+const { generateReportIpc } = require("./ipc/generateReport");
 
 // Expose a secure API for opening files to the renderer process
 contextBridge.exposeInMainWorld("electron", {
@@ -38,9 +39,16 @@ contextBridge.exposeInMainWorld("electron", {
 
   getCombinedStatements: (case_id) =>
     ipcRenderer.invoke("get-combine-statements", case_id),
+  
+
+  saveFileToTemp: (fileBuffer) => ipcRenderer.invoke('save-file-to-temp', fileBuffer),
+  cleanupTempFiles: () => ipcRenderer.invoke('cleanup-temp-files'),
+  generateReportIpc: (result) => ipcRenderer.invoke("generate-report", result),
+  
 
   user: {
     getData: (userId) => ipcRenderer.invoke("user:get-data", userId),
+    updateData: (userData) => ipcRenderer.send("user:update-data", userData),   
     updateData: (userData) => ipcRenderer.send("user:update-data", userData),   
   },
 
@@ -61,6 +69,10 @@ contextBridge.exposeInMainWorld("electron", {
   },
 
   getRecentReports: () => ipcRenderer.invoke("get-recent-reports"),
+
+  shell: {
+    openExternal: (url) => shell.openExternal(url),
+  },
 
   shell: {
     openExternal: (url) => shell.openExternal(url),
