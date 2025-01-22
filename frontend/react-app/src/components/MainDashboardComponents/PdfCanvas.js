@@ -21,7 +21,10 @@ const COLUMN_TYPES = [
   { id: 'description', label: '📝 Description' },
   { id: 'credit', label: '💰 Credit' },
   { id: 'debit', label: '💸 Debit' },
-  { id: 'balance', label: '🏦 Balance' }
+  { id: 'balance', label: '🏦 Balance' },
+  {id:'dr/cr',label:'💰 DR/CR'},
+  {id:'amount (dr/cr)',label:'💰 Amount (DR/CR)'},
+  {id:'amount',label:'💰 Amount'},
 ];
 
 const COLUMN_COLORS = [
@@ -33,11 +36,16 @@ const COLUMN_COLORS = [
 ];
 
 const initialConfigTest = {
-  bounds: { start: 100, end: 500 },
+  // bounds: { start: 100, end: 500 },
   lines: [
-    { x: 150 },
-    { x: 250 },
-    { x: 350 }
+    { x: 71.70364379882812 },
+    { x: 448.39697265625 },
+    { x: 368.84112548828125 },
+    { x: 522.9741821289062 },
+    { x: 129.44998168945312 },
+    { x: 272.2314758300781 },
+    { x: 19.830726623535156 },
+    { x: 582.7577514648438 },
   ],
   // labels: [
   //   { x: 200, type: 'date', label: '📅 Date' },
@@ -45,7 +53,7 @@ const initialConfigTest = {
   // ]
 }
 
-const PDFColumnMarker = ({ initialConfig = initialConfigTest }) => {
+const PDFColumnMarker = ({setPdfColMarkerData,initialConfig=initialConfigTest}) => {
   const [tableBounds, setTableBounds] = useState({ start: null, end: null });
   const [columnLines, setColumnLines] = useState([]); // Array of {id, x}
   const [columnLabels, setColumnLabels] = useState([]); // Array of {id, x, type, label, colorIndex}
@@ -57,81 +65,60 @@ const PDFColumnMarker = ({ initialConfig = initialConfigTest }) => {
   const [draggingLineIndex, setDraggingLineIndex] = useState(null);
   const [draggingLabelIndex, setDraggingLabelIndex] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [currentStep, setCurrentStep] = useState('boundaries');
+  const [currentStep, setCurrentStep] = useState('lines');
 
   const pdfContainerRef = useRef(null);
   const STEPS = [
-    { id: 'boundaries', label: "Mark Table Boundaries" },
     { id: 'lines', label: "Add Column Lines" },
     { id: 'labels', label: "Label Columns" }
   ];
 
   useEffect(() => {
     if (initialConfig && pdfFile) {
-      const { bounds, lines, labels } = initialConfig;
-
-      if (bounds) {
-        setTableBounds(bounds);
-        setCurrentStep('lines'); // Move to lines step since boundaries are set
-      }
-
-      if (lines) {
-        setColumnLines(lines.map(line => ({
-          id: Date.now() + Math.random(), // Generate unique IDs
+      if (initialConfig.lines) {
+        setColumnLines(initialConfig.lines.map(line => ({
+          id: Date.now() + Math.random(),
           x: line.x
         })));
       }
-
-      if (labels) {
-        setColumnLabels(labels.map((label, index) => ({
+      
+      if (initialConfig.labels) {
+        setColumnLabels(initialConfig.labels.map((label, index) => ({
           id: Date.now() + Math.random(),
           x: label.x,
           type: label.type,
           label: label.label || COLUMN_TYPES.find(t => t.id === label.type)?.label || '',
           colorIndex: index % COLUMN_COLORS.length
         })));
-
-        if (labels.length > 0) {
-          setCurrentStep('labels'); // Move to labels step if labels exist
-        }
+        setCurrentStep('labels');
       }
     }
   }, [initialConfig, pdfFile]);
-
+    
   const getStepNumber = (stepId) => {
     return STEPS.findIndex(step => step.id === stepId) + 1;
   };
-
-  const moveToNextStep = () => {
-    const currentIndex = STEPS.findIndex(step => step.id === currentStep);
-    if (currentIndex < STEPS.length - 1) {
-      setCurrentStep(STEPS[currentIndex + 1].id);
-    }
-  };
-
-  const handleClick = (e) => {
-    if (!pdfFile || isDragging) return;
-
-    if (draggingLineIndex !== null || draggingLabelIndex !== null) {
-      return;
-    }
-
-    const rect = pdfContainerRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / scale;
-
-    if (currentStep === 'boundaries') {
-      if (!tableBounds.start) {
-        setTableBounds(prev => ({ ...prev, start: x }));
-      } else if (!tableBounds.end) {
-        setTableBounds(prev => ({ ...prev, end: x }));
-        moveToNextStep();
+  
+    const moveToNextStep = () => {
+      const currentIndex = STEPS.findIndex(step => step.id === currentStep);
+      if (currentIndex < STEPS.length - 1) {
+        setCurrentStep(STEPS[currentIndex + 1].id);
       }
-    } else if (currentStep === 'lines') {
-      if (x > tableBounds.start && x < tableBounds.end) {
+    };
+  
+    const handleClick = (e) => {
+      if (!pdfFile || isDragging) return;
+      
+      if (draggingLineIndex !== null || draggingLabelIndex !== null) {
+        return;
+      }
+      
+      const rect = pdfContainerRef.current.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / scale;
+      
+      if (currentStep === 'lines') {
         setColumnLines(prev => [...prev, { id: Date.now(), x }]);
-      }
-    } else if (currentStep === 'labels') {
-      if (x > tableBounds.start && x < tableBounds.end) {
+      } else if (currentStep === 'labels') {
         setColumnLabels(prev => [...prev, {
           id: Date.now(),
           x,
@@ -140,8 +127,7 @@ const PDFColumnMarker = ({ initialConfig = initialConfigTest }) => {
           colorIndex: prev.length % COLUMN_COLORS.length
         }]);
       }
-    }
-  };
+    };
 
 
   const handleDragStart = (e, index, type) => {
@@ -238,32 +224,46 @@ const PDFColumnMarker = ({ initialConfig = initialConfigTest }) => {
   };
 
   const getInstructionText = () => {
-    if (currentStep === 'boundaries') {
-      if (!tableBounds.start) {
-        return "Click to mark the left boundary of your table";
-      }
-      return "Click to mark the right boundary of your table";
-    }
     if (currentStep === 'lines') {
-      return "Click between the boundaries to add column divider lines";
+      return "Click to add column dividers and table boundaries - make sure to mark both edges of the table!";
     }
     return "Click between the lines to add column labels";
   };
-
   const handleSubmit = () => {
+    // Sort all lines from left to right
+    const sortedLines = [...columnLines].sort((a, b) => a.x - b.x);
+    
+    // Create columns array with their boundaries and labels
+    const columns = [];
+    for (let i = 0; i < sortedLines.length - 1; i++) {
+      const startX = sortedLines[i].x;
+      const endX = sortedLines[i + 1].x;
+      
+      // Find label for this column
+      const label = columnLabels.find(label => 
+        label.x >= startX && label.x <= endX
+      );
+
+      columns.push({
+        index: i,
+        bounds: {
+          start: startX,
+          end: endX
+        },
+        type: label?.type || null,
+      });
+    }
+
+
+    // TODO - add this config to a array of configs in the parent component to be able to save multiple configs and submit them at once
     const config = {
-      page: currentPage,
-      tableBounds,
-      columnLines: columnLines.map(line => ({ x: line.x })),
-      columnLabels: columnLabels.map(label => ({
-        x: label.x,
-        type: label.type,
-        label: label.label
-      }))
+      columns
     };
 
     console.log(config);
-  }
+    setPdfColMarkerData((prevData) => [...prevData,config.columns]);
+    // Send config to backend
+  };
 
   const handleReset = () => {
     if (initialConfig) {
@@ -289,50 +289,51 @@ const PDFColumnMarker = ({ initialConfig = initialConfigTest }) => {
       setCurrentStep('boundaries');
     }
   };
+  
 
   return (
     <>
       <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader className="space-y-6">
-          <CardTitle>PDF Column Marker</CardTitle>
-
-          {/* Steps Progress Bar */}
-          <div className="w-full flex items-center justify-between relative">
-            {/* Progress Line */}
-            <div className="absolute h-0.5 bg-gray-200 w-full -z-10" />
-            <div
-              className="absolute h-0.5 bg-blue-500 transition-all -z-10"
-              style={{
-                width: `${(getStepNumber(currentStep) - 1) * 50}%`
-              }}
-            />
-
-            {/* Step Indicators */}
-            {STEPS.map((step, index) => {
-              const isActive = currentStep === step.id;
-              const isCompleted = getStepNumber(currentStep) > index + 1;
-
-              return (
-                <div
-                  key={step.id}
-                  className="flex flex-col items-center gap-2"
+      <CardHeader className="space-y-6">
+        <CardTitle>PDF Column Marker</CardTitle>
+        
+        {/* Steps Progress Bar */}
+        <div className="w-full flex items-center justify-between relative">
+          {/* Progress Line */}
+          <div className="absolute h-0.5 bg-gray-200 w-full -z-10" />
+          <div 
+            className="absolute h-0.5 bg-blue-500 transition-all -z-10" 
+            style={{ 
+              width: `${(getStepNumber(currentStep) - 1) * 100}%`
+            }} 
+          />
+          
+          {/* Step Indicators */}
+          {STEPS.map((step, index) => {
+            const isActive = currentStep === step.id;
+            const isCompleted = getStepNumber(currentStep) > index + 1;
+            
+            return (
+              <div 
+                key={step.id}
+                className="flex flex-col items-center gap-2"
+              >
+                <div 
+                  className={`w-8 h-8 rounded-full flex items-center justify-center 
+                    ${isCompleted ? 'bg-blue-500 text-white' : 
+                      isActive ? 'bg-blue-500 text-white' : 
+                      'bg-gray-200 text-gray-600'}`}
                 >
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center 
-                    ${isCompleted ? 'bg-blue-500 text-white' :
-                        isActive ? 'bg-blue-500 text-white' :
-                          'bg-gray-200 text-gray-600'}`}
-                  >
-                    {isCompleted ? '✓' : index + 1}
-                  </div>
-                  <span className={`text-sm font-medium ${isActive ? 'text-blue-500' : 'text-gray-600'}`}>
-                    {step.label}
-                  </span>
+                  {isCompleted ? '✓' : index + 1}
                 </div>
-              );
-            })}
-          </div>
-        </CardHeader>
+                <span className={`text-sm font-medium ${isActive ? 'text-blue-500' : 'text-gray-600'}`}>
+                  {step.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </CardHeader>
         <CardContent className="space-y-6">
 
           <div className="bg-gray-50 p-4 rounded-lg">
@@ -578,24 +579,23 @@ const PDFColumnMarker = ({ initialConfig = initialConfigTest }) => {
               </div>
 
               <div className="flex justify-between">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setCurrentStep('boundaries');
-                    setTableBounds({ start: null, end: null });
-                    setColumnLines([]);
-                    setColumnLabels([]);
-                  }}
-                >
-                  Start Over
-                </Button>
-                <Button
-                  className="ml-auto"
-                  onClick={handleSubmit}
-                  disabled={!tableBounds.start || !tableBounds.end}
-                >
-                  Save Column Mapping
-                </Button>
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  setCurrentStep('boundaries');
+                  setTableBounds({ start: null, end: null });
+                  setColumnLines([]);
+                  setColumnLabels([]);
+                }}
+              >
+                Start Over
+              </Button>
+              <Button 
+                className="ml-auto"
+                onClick={handleSubmit}
+              >
+                Save Column Mapping
+              </Button>
               </div>
             </>
           )}

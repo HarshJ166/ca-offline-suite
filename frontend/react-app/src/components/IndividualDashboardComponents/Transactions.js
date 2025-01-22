@@ -4,10 +4,9 @@ import SingleBarChart from "../charts/BarChart";
 import PieCharts from "../charts/PieCharts";
 import DataTable from "./TableData";
 import { Maximize2, Minimize2 } from "lucide-react";
-// import transactionData from "../../data/Transaction.json";
 import { Card, CardHeader, CardTitle } from "../ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import ToggleStrip from "./ToggleStrip"; // Import the ToggleStrip component
+import ToggleStrip from "./ToggleStrip";
 
 const MaximizableChart = ({ children, title, isMaximized, setIsMaximized }) => {
   const toggleMaximize = () => setIsMaximized(!isMaximized);
@@ -59,7 +58,7 @@ const Transactions = ({ caseId }) => {
     const fetchTransactions = async () => {
       try {
         console.log("Fetching transactions for statementId:", caseId);
-        const data = await window.electron.getTransactions(caseId); // Ensure proper communication
+        const data = await window.electron.getTransactions(caseId);
         setTransactionData(data);
         console.log("Fetched transactions:", data);
       } catch (err) {
@@ -75,51 +74,110 @@ const Transactions = ({ caseId }) => {
 
   const monthsData = React.useMemo(() => {
     return transactionData.reduce((acc, transaction) => {
-      const date = new Date(transaction.date * 1000); // Adjust property name based on your DB schema
-      console.log("Date:", date);
-      const monthKey = `${date.getFullYear()}-${String(
-        date.getMonth() + 1
-      ).padStart(2, "0")}`;
-      if (!acc[monthKey]) acc[monthKey] = [];
-      acc[monthKey].push(transaction);
+      const date = new Date(transaction.date);
+      const monthKey = `${date.toLocaleString("en-GB", {
+        month: "short",
+      })}-${date.getFullYear()}`;
+
+      if (!acc[monthKey]) {
+        acc[monthKey] = [];
+      }
+
+      const standardizedTransaction = {
+        date: date,
+        description: transaction.description,
+        amount: transaction.amount,
+        balance: transaction.balance,
+        category: transaction.category,
+        entity: transaction.entity,
+        type: transaction.type,
+      };
+
+      acc[monthKey].push(standardizedTransaction);
       return acc;
     }, {});
   }, [transactionData]);
 
+  const getMonthDate = (monthStr) => {
+    const [month, year] = monthStr.split("-");
+    const monthIndex = new Date(Date.parse(month + " 1, 2000")).getMonth();
+    return new Date(parseInt(year), monthIndex);
+  };
+
+  const availableMonths = Object.keys(monthsData).sort((a, b) => {
+    const dateA = getMonthDate(a);
+    const dateB = getMonthDate(b);
+    return dateA - dateB;
+  });
+
   const processDailyData = (transactions) => {
     return transactions.reduce((acc, transaction) => {
-      const date = new Date(transaction.date * 1000)
-        .toISOString()
-        .split("T")[0]; // Adjust property names based on your DB schema
-      console.log("Date:", date);
-      if (!acc[date]) {
-        acc[date] = {
-          date,
+      const date = transaction.date;
+      const dateKey = date.toISOString().split("T")[0];
+
+      if (!acc[dateKey]) {
+        acc[dateKey] = {
+          date: date.toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          }),
           description: transaction.description,
-          credit: transaction.credit || 0,
-          debit: transaction.debit || 0,
+          credit: 0,
+          debit: 0,
           balance: transaction.balance,
           category: transaction.category,
           entity: transaction.entity,
         };
       }
-      if (transaction.type === "Credit") {
-        acc[date].credit += transaction.amount;
-      } else if (transaction.type === "Debit") {
-        acc[date].debit += transaction.amount;
+
+      // Add credit or debit based on transaction type
+      if (transaction.type.toLowerCase() === "credit") {
+        acc[dateKey].credit += transaction.amount;
+      } else if (transaction.type.toLowerCase() === "debit") {
+        acc[dateKey].debit += transaction.amount;
       }
+
       return acc;
     }, {});
   };
 
+  const processCreditDebitData = (transactions) => {
+    return transactions.reduce((acc, transaction) => {
+      const date = new Date(transaction.date * 1000); // Convert Unix timestamp to JS Date
+      const dateKey = date.toISOString().split("T")[0];
+
+      if (!acc[dateKey]) {
+        acc[dateKey] = {
+          date: date.toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          }),
+          credit: 0,
+          debit: 0,
+          balance: transaction.balance, // Assuming balance is latest for the day
+        };
+      }
+
+      // Add credit or debit based on transaction type
+      if (transaction.type.toLowerCase() === "credit") {
+        acc[dateKey].credit += transaction.amount;
+      } else if (transaction.type.toLowerCase() === "debit") {
+        acc[dateKey].debit += transaction.amount;
+      }
+
+      return acc;
+    }, {});
+  };
   const processCategoryData = (transactions) => {
     const categoryTotals = transactions.reduce((acc, transaction) => {
-      if (transaction.type === "Debit") {
+      if (transaction.type === "debit") {
         const category = transaction.category || "Uncategorized";
         if (!acc[category]) {
-          acc[category] = { name: category, value: 0 }; // Changed to match PieChart expected format
+          acc[category] = { name: category, value: 0 };
         }
-        acc[category].value += Math.abs(transaction.amount); // Ensure positive values
+        acc[category].value += Math.abs(transaction.amount);
       }
       return acc;
     }, {});
@@ -127,48 +185,23 @@ const Transactions = ({ caseId }) => {
     return Object.values(categoryTotals);
   };
 
-  const availableMonths = Object.keys(monthsData).sort();
   const [selectedMonths, setSelectedMonths] = useState(availableMonths);
-
-  if (isLoading) {
-    return (
-      <div className="rounded-lg space-y-6 m-8 mt-2">
-        <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
-          <p className="text-gray-800 text-center mt-3 font-medium text-lg">
-            Loading...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-lg space-y-6 m-8 mt-2">
-        <div className="bg-red-100 p-4 rounded-md w-full h-[10vh]">
-          <p className="text-red-800 text-center mt-3 font-medium text-lg">
-            {error}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (transactionData.length === 0) {
-    return (
-      <div className="rounded-lg space-y-6 m-8 mt-2">
-        <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
-          <p className="text-gray-800 text-center mt-3 font-medium text-lg">
-            No Data Available
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // useEffect(() => {
+  //   if (availableMonths.length > 0) {
+  //     setSelectedMonths(availableMonths);
+  //   }
+  // }, [availableMonths]);
 
   const filteredData = selectedMonths
     .flatMap((month) => {
       const dailyData = processDailyData(monthsData[month]);
+      return Object.values(dailyData);
+    })
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  const creditVsdebit = selectedMonths
+    .flatMap((month) => {
+      const dailyData = processCreditDebitData(monthsData[month]);
       return Object.values(dailyData);
     })
     .sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -179,77 +212,99 @@ const Transactions = ({ caseId }) => {
 
   return (
     <div className="rounded-lg space-y-6 m-8 mt-2">
-      <ToggleStrip
-        columns={availableMonths}
-        selectedColumns={selectedMonths}
-        setSelectedColumns={setSelectedMonths} // Use the state setter directly
-      />
-
-      {selectedMonths.length === 0 ? (
-        <div className="text-center text-gray-600 dark:text-gray-400 my-6">
-          Select months to display the graphs
+      {isLoading ? (
+        <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
+          <p className="text-gray-800 text-center mt-3 font-medium text-lg">
+            Loading...
+          </p>
+        </div>
+      ) : error ? (
+        <div className="bg-red-100 p-4 rounded-md w-full h-[10vh]">
+          <p className="text-red-800 text-center mt-3 font-medium text-lg">
+            {error}
+          </p>
+        </div>
+      ) : transactionData.length === 0 ? (
+        <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
+          <p className="text-gray-800 text-center mt-3 font-medium text-lg">
+            No Data Available
+          </p>
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap -mx-2">
-            <MaximizableChart
-              title="Daily Balance Trend"
-              isMaximized={isDailyBalanceMaximized}
-              setIsMaximized={setIsDailyBalanceMaximized}
-            >
-              <div className="w-full h-full">
-                <SingleLineChart
-                  data={filteredData}
-                  xAxisKey="date"
-                  selectedColumns={["balance"]}
-                  showLegends={isDailyBalanceMaximized}
-                />
-              </div>
-            </MaximizableChart>
+          <ToggleStrip
+            columns={availableMonths}
+            selectedColumns={selectedMonths}
+            setSelectedColumns={setSelectedMonths}
+          />
 
-            <MaximizableChart
-              title="Credit vs Debit"
-              isMaximized={isCreditDebitMaximized}
-              setIsMaximized={setIsCreditDebitMaximized}
-            >
-              <div className="w-full h-full">
-                <SingleBarChart
-                  data={filteredData}
-                  xAxis={{ key: "date" }}
-                  yAxis={[
-                    {
-                      key: "credit",
-                      type: "bar",
-                      color: "hsl(var(--chart-3))",
-                    },
-                    {
-                      key: "debit",
-                      type: "line",
-                      color: "hsl(var(--chart-5))",
-                    },
-                  ]}
-                  showLegends={isCreditDebitMaximized}
-                />
-              </div>
-            </MaximizableChart>
+          {selectedMonths.length === 0 ? (
+            <div className="text-center text-gray-600 dark:text-gray-400 my-6">
+              Select months to display the graphs
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-wrap -mx-2">
+                <MaximizableChart
+                  title="Daily Balance Trend"
+                  isMaximized={isDailyBalanceMaximized}
+                  setIsMaximized={setIsDailyBalanceMaximized}
+                >
+                  <div className="w-full h-full">
+                    <SingleLineChart
+                      data={filteredData}
+                      xAxisKey="date"
+                      selectedColumns={["balance"]}
+                      showLegends={isDailyBalanceMaximized}
+                    />
+                  </div>
+                </MaximizableChart>
 
-            <MaximizableChart
-              title="Debit Distribution by Category"
-              isMaximized={isCategoryMaximized}
-              setIsMaximized={setIsCategoryMaximized}
-            >
-              <div className="w-full h-full">
-                <PieCharts
-                  data={categoryData}
-                  nameKey="name" // Changed from "Category" to "name"
-                  valueKey="value"
-                  showLegends={isCategoryMaximized}
-                />
-              </div>
-            </MaximizableChart>
-          </div>
+                <MaximizableChart
+                  title="Credit vs Debit"
+                  isMaximized={isCreditDebitMaximized}
+                  setIsMaximized={setIsCreditDebitMaximized}
+                >
+                  <div className="w-full h-full">
+                    <SingleBarChart
+                      data={creditVsdebit}
+                      xAxis={{ key: "date" }}
+                      yAxis={[
+                        {
+                          key: "credit",
+                          type: "bar",
+                          color: "hsl(var(--chart-3))",
+                        },
+                        {
+                          key: "debit",
+                          type: "line",
+                          color: "hsl(var(--chart-5))",
+                        },
+                      ]}
+                      showLegends={isCreditDebitMaximized}
+                    />
+                  </div>
+                </MaximizableChart>
 
-          <DataTable data={filteredData} />
+                <MaximizableChart
+                  title="Debit Distribution by Category"
+                  isMaximized={isCategoryMaximized}
+                  setIsMaximized={setIsCategoryMaximized}
+                >
+                  <div className="w-full h-full">
+                    <PieCharts
+                      data={categoryData}
+                      nameKey="name"
+                      valueKey="value"
+                      showLegends={isCategoryMaximized}
+                    />
+                  </div>
+                </MaximizableChart>
+              </div>
+
+              <DataTable data={filteredData} />
+            </>
+          )}
         </>
       )}
     </div>
