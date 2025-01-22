@@ -13,7 +13,7 @@ import { Button } from "../ui/button";
 import { useToast } from "../../hooks/use-toast";
 import { CircularProgress } from "../ui/circularprogress";
 
-const GenerateReportForm = () => {
+const GenerateReportForm = ({ handleReportSubmit }) => {
   const [unit, setUnit] = useState("Unit 1");
   const [units, setUnits] = useState(["Unit 1", "Unit 2"]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -174,95 +174,97 @@ const GenerateReportForm = () => {
 
     const validationErrors = [];
 
-    if (selectedFiles.length === 0) {
-      toast({
-        title: "Error",
-        description: "Please select at least one file",
-        variant: "destructive",
-        duration: 3000,
-      });
-      return;
-    }
+    handleReportSubmit(setProgress, setLoading, setToastId, selectedFiles, fileDetails, setSelectedFiles, setFileDetails, setCaseId, toast, progressIntervalRef, simulateProgress, convertDateFormat, caseId);
 
-    setLoading(true);
-    const newToastId = toast({
-      title: "Initializing Report Generation",
-      description: (
-        <div className="mt-2 w-full flex flex-col gap-2">
-          <div className="flex items-center gap-4">
-            <CircularProgress value={0} className="w-full" />
-            <span className="text-sm font-medium">0%</span>
-          </div>
-          <p className="text-sm text-gray-500">Preparing to process files...</p>
-        </div>
-      ),
-      duration: Infinity,
-    });
-    setToastId(newToastId);
+    // if (selectedFiles.length === 0) {
+    //   toast({
+    //     title: "Error",
+    //     description: "Please select at least one file",
+    //     variant: "destructive",
+    //     duration: 3000,
+    //   });
+    //   return;
+    // }
 
-    progressIntervalRef.current = simulateProgress();
+    // setLoading(true);
+    // const newToastId = toast({
+    //   title: "Initializing Report Generation",
+    //   description: (
+    //     <div className="mt-2 w-full flex flex-col gap-2">
+    //       <div className="flex items-center gap-4">
+    //         <CircularProgress value={0} className="w-full" />
+    //         <span className="text-sm font-medium">0%</span>
+    //       </div>
+    //       <p className="text-sm text-gray-500">Preparing to process files...</p>
+    //     </div>
+    //   ),
+    //   duration: Infinity,
+    // });
+    // setToastId(newToastId);
 
-    try {
-      const filesWithContent = await Promise.all(
-        selectedFiles.map(async (file, index) => {
-          const fileContent = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsBinaryString(file);
-          });
+    // progressIntervalRef.current = simulateProgress();
 
-          const detail = fileDetails[index];
+    // try {
+    //   const filesWithContent = await Promise.all(
+    //     selectedFiles.map(async (file, index) => {
+    //       const fileContent = await new Promise((resolve, reject) => {
+    //         const reader = new FileReader();
+    //         reader.onload = () => resolve(reader.result);
+    //         reader.onerror = reject;
+    //         reader.readAsBinaryString(file);
+    //       });
 
-          return {
-            fileContent,
-            pdf_paths: file.name,
-            bankName: detail.bankName,
-            passwords: detail.password || "",
-            start_date: convertDateFormat(detail.start_date), // Convert date format
-            end_date: convertDateFormat(detail.end_date), // Convert date format
-            ca_id: caseId,
-          };
-        })
-      );
+    //       const detail = fileDetails[index];
 
-      const result = await window.electron.generateReportIpc({
-        files: filesWithContent,
-      });
+    //       return {
+    //         fileContent,
+    //         pdf_paths: file.name,
+    //         bankName: detail.bankName,
+    //         passwords: detail.password || "",
+    //         start_date: convertDateFormat(detail.start_date), // Convert date format
+    //         end_date: convertDateFormat(detail.end_date), // Convert date format
+    //         ca_id: caseId,
+    //       };
+    //     })
+    //   );
 
-      if (result.success) {
-        clearInterval(progressIntervalRef.current);
-        setProgress(100);
-        toast.dismiss(newToastId);
-        toast({
-          title: "Success",
-          description: "Report generated successfully!",
-          duration: 3000,
-        });
+    //   const result = await window.electron.generateReportIpc({
+    //     files: filesWithContent,
+    //   });
 
-        const newCaseId = generateNewCaseId();
-        setCaseId(newCaseId);
+    //   if (result.success) {
+    //     clearInterval(progressIntervalRef.current);
+    //     setProgress(100);
+    //     toast.dismiss(newToastId);
+    //     toast({
+    //       title: "Success",
+    //       description: "Report generated successfully!",
+    //       duration: 3000,
+    //     });
 
-        setSelectedFiles([]);
-        setFileDetails([]);
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      console.error("Report generation failed:", error);
-      clearInterval(progressIntervalRef.current);
-      toast.dismiss(newToastId);
-      setProgress(0);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to generate report",
-        variant: "destructive",
-        duration: 5000,
-      });
-    } finally {
-      setLoading(false);
-      progressIntervalRef.current = null;
-    }
+    //     const newCaseId = generateNewCaseId();
+    //     setCaseId(newCaseId);
+
+    //     setSelectedFiles([]);
+    //     setFileDetails([]);
+    //   } else {
+    //     throw new Error(result.error);
+    //   }
+    // } catch (error) {
+    //   console.error("Report generation failed:", error);
+    //   clearInterval(progressIntervalRef.current);
+    //   toast.dismiss(newToastId);
+    //   setProgress(0);
+    //   toast({
+    //     title: "Error",
+    //     description: error.message || "Failed to generate report",
+    //     variant: "destructive",
+    //     duration: 5000,
+    //   });
+    // } finally {
+    //   setLoading(false);
+    //   progressIntervalRef.current = null;
+    // }
   };
 
   const formatFileSize = (bytes) => {
