@@ -1,19 +1,22 @@
-import React, { useState } from "react";
-import {
-  Bell,
-} from "lucide-react";
+import React, { useState, useCallback } from "react";
+import { Bell } from "lucide-react";
 import GenerateReportForm from "../Elements/ReportForm";
 import RecentReports from "./RecentReports";
 
 export default function GenerateReport() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const notifications = [
     { id: 1, message: "You have a new message." },
     { id: 2, message: "Your report is ready to download." },
     { id: 3, message: "New comment on your post." },
   ];
+
+  // Function to trigger refresh
+  const refreshPage = useCallback(() => {
+    setRefreshTrigger((prev) => prev + 1);
+  }, []);
 
   return (
     <div className="p-8 pt-0 space-y-8 bg-white dark:bg-black min-h-screen">
@@ -22,29 +25,6 @@ export default function GenerateReport() {
           Report Generator
         </h2>
         <div className="flex items-center space-x-4">
-          {/* <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search reports..."
-              className="pl-10 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 
-                       bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
-                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div> */}
-          {/* <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 
-                     text-gray-600 dark:text-gray-300"
-          >
-            {darkMode ? (
-              <Sun className="w-5 h-5" />
-            ) : (
-              <Moon className="w-5 h-5" />
-            )}
-          </button> */}
           <button
             onClick={() => setNotificationsOpen(!notificationsOpen)}
             className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 
@@ -76,11 +56,10 @@ export default function GenerateReport() {
       </div>
 
       <div>
-        <GenerateReportForm />
+        <GenerateReportForm onReportGenerated={refreshPage} />
       </div>
 
-      {/* Recent reports */}
-      <RecentReports />
+      <RecentReports key={refreshTrigger} />
     </div>
   );
 }

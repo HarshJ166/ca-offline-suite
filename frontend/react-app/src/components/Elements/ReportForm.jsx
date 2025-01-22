@@ -13,7 +13,7 @@ import { Button } from "../ui/button";
 import { useToast } from "../../hooks/use-toast";
 import { CircularProgress } from "../ui/circularprogress";
 
-const GenerateReportForm = () => {
+const GenerateReportForm = ({ onReportGenerated }) => {
   const [unit, setUnit] = useState("Unit 1");
   const [units, setUnits] = useState(["Unit 1", "Unit 2"]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -169,9 +169,20 @@ const GenerateReportForm = () => {
     return `${day}-${month}-${year}`;
   };
 
+  // In GenerateReportForm.js, modify the handleSubmit function:
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (caseName === null) {
+      toast({
+        title: "Error",
+        description: "Please enter a Case Name",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
     const validationErrors = [];
 
     if (selectedFiles.length === 0) {
@@ -219,8 +230,8 @@ const GenerateReportForm = () => {
             pdf_paths: file.name,
             bankName: detail.bankName,
             passwords: detail.password || "",
-            start_date: convertDateFormat(detail.start_date), // Convert date format
-            end_date: convertDateFormat(detail.end_date), // Convert date format
+            start_date: convertDateFormat(detail.start_date),
+            end_date: convertDateFormat(detail.end_date),
             ca_id: caseName,
           };
         })
@@ -245,6 +256,11 @@ const GenerateReportForm = () => {
 
         setSelectedFiles([]);
         setFileDetails([]);
+
+        // Call the refresh callback
+        if (onReportGenerated) {
+          onReportGenerated();
+        }
       } else {
         throw new Error(result.error);
       }
