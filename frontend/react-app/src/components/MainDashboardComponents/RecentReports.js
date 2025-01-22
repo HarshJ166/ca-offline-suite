@@ -42,7 +42,7 @@ import {
   PaginationPrevious,
 } from "../ui/pagination";
 import CategoryEditModal from "./CategoryEditModal";
-import GenerateReportForm from "./ReportForm";
+import GenerateReportForm from "../Elements/ReportForm";
 
 const RecentReports = () => {
   const { toast } = useToast();
@@ -442,7 +442,7 @@ const RecentReports = () => {
                     className={cn(
                       "cursor-pointer",
                       currentPage === totalPages &&
-                        "pointer-events-none opacity-50"
+                      "pointer-events-none opacity-50"
                     )}
                   />
                 </PaginationItem>

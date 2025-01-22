@@ -99,8 +99,8 @@ const GenerateReportForm = () => {
               {progress < 90
                 ? "Processing your bank statements..."
                 : progress < 100
-                ? "Finalizing report generation..."
-                : "Report generated successfully!"}
+                  ? "Finalizing report generation..."
+                  : "Report generated successfully!"}
             </p>
           </div>
         ),
@@ -423,9 +423,8 @@ const GenerateReportForm = () => {
                 Bank Statements
               </label>
               <div
-                className={`relative ${
-                  isDragging ? "ring-2 ring-[#3498db] dark:ring-blue-500" : ""
-                }`}
+                className={`relative ${isDragging ? "ring-2 ring-[#3498db] dark:ring-blue-500" : ""
+                  }`}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}

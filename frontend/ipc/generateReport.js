@@ -179,7 +179,7 @@ const createStatement = async (fileDetail, caseId = "DEFAULT_CASE") => {
     };
 
     const result = await db.insert(statements).values(statementData);
-    log.info("Created statement record:", result);
+    log.info("Created statement record");
     return result.lastInsertRowid.toString();
   } catch (error) {
     log.error("Error creating statement record:", error);
