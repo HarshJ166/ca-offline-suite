@@ -301,14 +301,16 @@ function generateReportIpc() {
       log.info("Received response from analysis server");
 
       // Parse and sanitize response data
-      const sanitizedJsonString = sanitizeJSONString(response.data.data);
       let parsedData;
+      console.log("response.data.data :", response.data);
+      console.log("response :", response.data.data);
       try {
+        const sanitizedJsonString = sanitizeJSONString(response.data.data);
         parsedData = JSON.parse(sanitizedJsonString);
       } catch (error) {
         log.error("JSON parsing error:", error);
-        log.error("Problematic JSON string:", sanitizedJsonString);
-        throw new Error("Failed to parse response data: " + error.message);
+        // log.error("Problematic JSON string:", sanitizedJsonString);
+        // throw new Error("Failed to parse response data: " + error.message);
       }
 
       // Filter and validate transactions
