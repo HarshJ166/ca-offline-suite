@@ -38,7 +38,6 @@ function App() {
               />
             </Routes> */}
 
-
             <Routes>
               {/* Public route */}
               <Route path="/login" element={<Login />} />
@@ -64,7 +63,7 @@ function App() {
                 path="/case-dashboard/:caseId/:defaultTab"
                 element={
                   <PrivateRoute>
-                    <CaseDashboard />
+                    <IndividualDashboard />
                   </PrivateRoute>
                 }
               />

@@ -97,12 +97,20 @@ const ensureCaseExists = async (caseId, userId = 1) => {
 
     if (existingCase.length === 0) {
       // Create new case if it doesn't exist
-      await db.insert(cases).values({
-        id: caseId,
-        userId: userId,
-        status: "active",
-        createdAt: new Date(),
-      });
+      const newCase = await db
+        .insert(cases)
+        .values({
+          // id: caseId,
+          name: caseId,
+          userId: userId,
+          status: "active",
+          createdAt: new Date(),
+        })
+        .returning();
+
+      if (newCase.length > 0) {
+        return newCase[0].id;
+      }
       log.info(`Created new case with ID: ${caseId}`);
     }
   } catch (error) {
@@ -163,13 +171,13 @@ const storeTransactionsBatch = async (transformedTransactions) => {
 };
 
 // Helper function to create statement record
-const createStatement = async (fileDetail, caseId = "DEFAULT_CASE") => {
+const createStatement = async (fileDetail, caseId) => {
   try {
     // Ensure case exists before creating statement
-    await ensureCaseExists(caseId);
+    const caseName = await ensureCaseExists(caseId);
 
     const statementData = {
-      caseId: caseId,
+      caseId: caseName,
       accountNumber: fileDetail.accountNumber || "UNKNOWN",
       customerName: fileDetail.customerName || "UNKNOWN",
       ifscCode: fileDetail.ifscCode || null,
@@ -221,7 +229,7 @@ const processTransactions = async (transactions, fileDetail, statementId) => {
 
 // Main IPC handler function
 function generateReportIpc() {
-  ipcMain.handle("generate-report", async (event, result) => {
+  ipcMain.handle("generate-report", async (event, result, reportName) => {
     log.info("IPC handler invoked for generate-report");
     const tempDir = path.join(__dirname, "..", "tmp");
 

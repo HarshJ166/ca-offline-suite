@@ -34,6 +34,15 @@
 //   const [toastId, setToastId] = useState(null);
 //   const [analysisResults, setAnalysisResults] = useState(null);
 
+  // const filteredUnits = units.filter((u) =>
+  //   u.toLowerCase().includes(searchTerm.toLowerCase())
+  // );
+
+  // useEffect(()=>{
+  //   setForAts(false);
+  //   console.log("analysisResults",analysisResults);
+
+  // },[analysisResults])
 //   const filteredUnits = units.filter((u) =>
 //     u.toLowerCase().includes(searchTerm.toLowerCase())
 //   );
@@ -62,6 +71,14 @@
 //     });
 //     setFileDetails(newFileDetails);
 
+  //   return () => {
+  //     fileDetails.forEach((detail) => {
+  //       if (detail.previewUrl) {
+  //         URL.revokeObjectURL(detail.previewUrl);
+  //       }
+  //     });
+  //   };
+  // }, [selectedFiles,fileDetails]);
 //     return () => {
 //       fileDetails.forEach((detail) => {
 //         if (detail.previewUrl) {

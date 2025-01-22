@@ -148,8 +148,8 @@ const RecentReports = () => {
   // Filter reports based on search query
   const filteredReports = recentReports.filter(
     (report) =>
-      report.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.id.toLowerCase().includes(searchQuery.toLowerCase())
+      report.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      report.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
@@ -389,7 +389,7 @@ const RecentReports = () => {
             {currentReports.map((report, index) => (
               <TableRow key={report.id}>
                 <TableCell>{report.createdAt}</TableCell>
-                <TableCell>{report.id}</TableCell>
+                <TableCell>{report.name}</TableCell>
                 <TableCell>
                   <StatusBadge status={report.status} />
                 </TableCell>
@@ -536,7 +536,7 @@ const RecentReports = () => {
                     className={cn(
                       "cursor-pointer",
                       currentPage === totalPages &&
-                      "pointer-events-none opacity-50"
+                        "pointer-events-none opacity-50"
                     )}
                   />
                 </PaginationItem>

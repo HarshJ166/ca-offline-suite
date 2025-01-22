@@ -19,7 +19,7 @@ const GenerateReportForm = ({ handleReportSubmit }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [serialNumber, setSerialNumber] = useState("00009");
-  const [caseId, setCaseId] = useState(null);
+  const [caseName, setCaseName] = useState(null);
   const [lastCaseNumber, setLastCaseNumber] = useState(9); // Track the last used number
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [fileDetails, setFileDetails] = useState([]);
@@ -52,12 +52,12 @@ const GenerateReportForm = ({ handleReportSubmit }) => {
   };
 
   // Set initial case ID
-  useEffect(() => {
-    if (!caseId) {
-      const newCaseId = generateNewCaseId();
-      setCaseId(newCaseId);
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (!caseId) {
+  //     const newCaseId = generateNewCaseId();
+  //     setCaseId(newCaseId);
+  //   }
+  // }, []);
 
   const filteredUnits = units.filter((u) =>
     u.toLowerCase().includes(searchTerm.toLowerCase())
@@ -174,7 +174,7 @@ const GenerateReportForm = ({ handleReportSubmit }) => {
 
     const validationErrors = [];
 
-    handleReportSubmit(setProgress, setLoading, setToastId, selectedFiles, fileDetails, setSelectedFiles, setFileDetails, setCaseId, toast, progressIntervalRef, simulateProgress, convertDateFormat, caseId);
+    handleReportSubmit(setProgress, setLoading, setToastId, selectedFiles, fileDetails, setSelectedFiles, setFileDetails, setCaseName, toast, progressIntervalRef, simulateProgress, convertDateFormat, caseName);
 
     // if (selectedFiles.length === 0) {
     //   toast({
@@ -214,7 +214,6 @@ const GenerateReportForm = ({ handleReportSubmit }) => {
     //         reader.readAsBinaryString(file);
     //       });
 
-    //       const detail = fileDetails[index];
 
     //       return {
     //         fileContent,
@@ -231,16 +230,6 @@ const GenerateReportForm = ({ handleReportSubmit }) => {
     //   const result = await window.electron.generateReportIpc({
     //     files: filesWithContent,
     //   });
-
-    //   if (result.success) {
-    //     clearInterval(progressIntervalRef.current);
-    //     setProgress(100);
-    //     toast.dismiss(newToastId);
-    //     toast({
-    //       title: "Success",
-    //       description: "Report generated successfully!",
-    //       duration: 3000,
-    //     });
 
     //     const newCaseId = generateNewCaseId();
     //     setCaseId(newCaseId);
@@ -414,8 +403,9 @@ const GenerateReportForm = ({ handleReportSubmit }) => {
                 <input
                   ref={caseIdRef}
                   type="text"
-                  value={caseId}
-                  className="w-full px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm disabled:cursor-not-allowed"
+                  placeholder="Enter report name"
+                  onChange={(e) => setCaseName(e.target.value)} // Update caseId on user input
+                  className="w-full px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm"
                 />
               </div>
             </div>
