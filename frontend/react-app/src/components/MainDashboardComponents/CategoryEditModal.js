@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Button } from "../ui/button";
 import {
   Dialog,
   DialogContent,
@@ -22654,7 +22653,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":12266.0,
         "Bank":"a",
-        "Category":"Food expense\/hotel",
+        "Category":"Food expense hotel",
         "Entity":"",
         "Month":"Apr-2023",
         "Date":7
@@ -22966,7 +22965,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":11002.0,
         "Bank":"a",
-        "Category":"Food expense\/hotel",
+        "Category":"Food expense hotel",
         "Entity":"",
         "Month":"Apr-2023",
         "Date":11
@@ -23974,7 +23973,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":18125.52,
         "Bank":"a",
-        "Category":"Food expense\/hotel",
+        "Category":"Food expense hotel",
         "Entity":"",
         "Month":"Apr-2023",
         "Date":27
@@ -24689,7 +24688,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
     },
     {
         "Value Date":1683590400000,
-        "Description":"fee-atmcash(1txn)22\/04\/23-aor2412909517080",
+        "Description":"fee-atmcash(1txn)22 04 23-aor2412909517080",
         "Debit":24.78,
         "Credit":null,
         "Balance":2049.74,
@@ -24910,7 +24909,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":1299.0,
         "Balance":3437.74,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"May-2023",
         "Date":10
@@ -24941,7 +24940,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
     },
     {
         "Value Date":1683763200000,
-        "Description":"fee-atmcash(1txn)29\/04\/23-aor2413128191403",
+        "Description":"fee-atmcash(1txn)29 04 23-aor2413128191403",
         "Debit":24.78,
         "Credit":null,
         "Balance":3377.54,
@@ -25102,7 +25101,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":27.54,
         "Bank":"a",
-        "Category":"Food expense\/hotel",
+        "Category":"Food expense hotel",
         "Entity":"",
         "Month":"May-2023",
         "Date":18
@@ -25342,7 +25341,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":10447.54,
         "Bank":"a",
-        "Category":"Food expense\/hotel",
+        "Category":"Food expense hotel",
         "Entity":"",
         "Month":"May-2023",
         "Date":21
@@ -25642,7 +25641,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":244.0,
         "Balance":926.2,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"May-2023",
         "Date":31
@@ -25654,7 +25653,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":360.0,
         "Balance":1286.2,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"May-2023",
         "Date":31
@@ -25666,7 +25665,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":217.0,
         "Balance":1503.2,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"May-2023",
         "Date":31
@@ -26338,7 +26337,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":2.0,
         "Balance":7055.28,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"Jun-2023",
         "Date":11
@@ -26422,7 +26421,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":1.0,
         "Balance":5903.28,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"Jun-2023",
         "Date":12
@@ -27538,7 +27537,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":358.96,
         "Balance":5246.93,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"Jul-2023",
         "Date":2
@@ -27574,7 +27573,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":4956.93,
         "Bank":"a",
-        "Category":"Food expense\/hotel",
+        "Category":"Food expense hotel",
         "Entity":"",
         "Month":"Jul-2023",
         "Date":3
@@ -27898,7 +27897,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":43115.93,
         "Bank":"a",
-        "Category":"Food expense\/hotel",
+        "Category":"Food expense hotel",
         "Entity":"",
         "Month":"Jul-2023",
         "Date":8
@@ -28498,7 +28497,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":19431.93,
         "Bank":"a",
-        "Category":"Subscription \/ entertainment",
+        "Category":"Subscription   entertainment",
         "Entity":"",
         "Month":"Jul-2023",
         "Date":15
@@ -28522,7 +28521,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":2.0,
         "Balance":19189.93,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"Jul-2023",
         "Date":15
@@ -28666,7 +28665,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":40.0,
         "Balance":7657.93,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"Jul-2023",
         "Date":16
@@ -28702,7 +28701,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":1479.0,
         "Balance":8885.93,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"Jul-2023",
         "Date":17
@@ -28714,7 +28713,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":2.0,
         "Balance":8887.93,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"Jul-2023",
         "Date":17
@@ -28846,7 +28845,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":5232.93,
         "Bank":"a",
-        "Category":"Food expense\/hotel",
+        "Category":"Food expense hotel",
         "Entity":"",
         "Month":"Jul-2023",
         "Date":18
@@ -30286,7 +30285,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":540.0,
         "Balance":10080.76,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"Aug-2023",
         "Date":7
@@ -30754,7 +30753,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":73.67,
         "Bank":"a",
-        "Category":"Food expense\/hotel",
+        "Category":"Food expense hotel",
         "Entity":"",
         "Month":"Aug-2023",
         "Date":12
@@ -30790,7 +30789,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":99.67,
         "Bank":"a",
-        "Category":"Food expense\/hotel",
+        "Category":"Food expense hotel",
         "Entity":"",
         "Month":"Aug-2023",
         "Date":14
@@ -32086,7 +32085,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":272.96,
         "Balance":330.67,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"Sep-2023",
         "Date":1
@@ -33425,7 +33424,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
     },
     {
         "Value Date":1694563200000,
-        "Description":".impsp2p322109372263#09\/08\/2023090823-mir2425699241345",
+        "Description":".impsp2p322109372263#09 08 2023090823-mir2425699241345",
         "Debit":4.14,
         "Credit":null,
         "Balance":972.04,
@@ -33845,7 +33844,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
     },
     {
         "Value Date":1694995200000,
-        "Description":".impsp2p322900314482#17\/08\/2023170823-mir2426011595026",
+        "Description":".impsp2p322900314482#17 08 2023170823-mir2426011595026",
         "Debit":4.14,
         "Credit":null,
         "Balance":3097.9,
@@ -34877,7 +34876,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
     },
     {
         "Value Date":1695859200000,
-        "Description":"mhtcvv2nfcymkt\/zestmoney",
+        "Description":"mhtcvv2nfcymkt zestmoney",
         "Debit":1.0,
         "Credit":null,
         "Balance":69.9,
@@ -35177,7 +35176,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
     },
     {
         "Value Date":1696032000000,
-        "Description":"revmhtcvv2nfcymkt\/zestmoney",
+        "Description":"revmhtcvv2nfcymkt zestmoney",
         "Debit":null,
         "Credit":1.0,
         "Balance":127.9,
@@ -36089,7 +36088,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
     },
     {
         "Value Date":1696809600000,
-        "Description":".impsp2p325314331777#10\/09\/2023100923-mir2428059665529",
+        "Description":".impsp2p325314331777#10 09 2023100923-mir2428059665529",
         "Debit":4.14,
         "Credit":null,
         "Balance":6195.16,
@@ -37618,7 +37617,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":3096.94,
         "Bank":"a",
-        "Category":"Food expense\/hotel",
+        "Category":"Food expense hotel",
         "Entity":"",
         "Month":"Oct-2023",
         "Date":27
@@ -39094,7 +39093,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":39307.41,
         "Bank":"a",
-        "Category":"Food expense\/hotel",
+        "Category":"Food expense hotel",
         "Entity":"",
         "Month":"Nov-2023",
         "Date":9
@@ -39766,7 +39765,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":108.86,
         "Balance":9722.74,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"Nov-2023",
         "Date":16
@@ -39946,7 +39945,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":6819.74,
         "Bank":"a",
-        "Category":"Food expense\/hotel",
+        "Category":"Food expense hotel",
         "Entity":"",
         "Month":"Nov-2023",
         "Date":19
@@ -40402,7 +40401,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":237.15,
         "Balance":27032.12,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"Nov-2023",
         "Date":23
@@ -40606,7 +40605,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":1633.9,
         "Balance":31128.97,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"Nov-2023",
         "Date":24
@@ -40678,7 +40677,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":237.15,
         "Balance":16195.42,
         "Bank":"a",
-        "Category":"Refund\/reversal",
+        "Category":"Refund reversal",
         "Entity":"",
         "Month":"Nov-2023",
         "Date":25
@@ -40786,7 +40785,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":16798.58,
         "Bank":"a",
-        "Category":"Food expense\/hotel",
+        "Category":"Food expense hotel",
         "Entity":"",
         "Month":"Nov-2023",
         "Date":27
@@ -41938,7 +41937,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":3306.91,
         "Bank":"a",
-        "Category":"Food expense\/hotel",
+        "Category":"Food expense hotel",
         "Entity":"",
         "Month":"Dec-2023",
         "Date":8
@@ -42454,7 +42453,7 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
         "Credit":null,
         "Balance":2291.91,
         "Bank":"a",
-        "Category":"Food expense\/hotel",
+        "Category":"Food expense hotel",
         "Entity":"",
         "Month":"Dec-2023",
         "Date":14

@@ -5,8 +5,6 @@ import {
   CreditCard,
   LogOut,
   Sparkles,
-  ChevronDown,
-  ChevronUp,
   // ChevronRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -41,7 +39,6 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
     email: "rajsingh08471@gmail.com",
     avatar: "#",
   });
-  const [openMenus, setOpenMenus] = React.useState({});
 
   useEffect(() => {
     console.log({ isCollapsed });
@@ -54,18 +51,6 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
   //   }));
   // };
 
-  const handleMenuClick = (hasSubmenu, item) => {
-    if (hasSubmenu) {
-      // Toggle open state for this menu item
-      setOpenMenus((prev) => ({
-        ...prev,
-        [item.title]: !prev[item.title],
-      }));
-    } else {
-      // Set active tab for non-submenu items
-      setActiveTab(item.title);
-    }
-  };
 
   const MenuItem = ({ item, level = 0 }) => {
     const hasSubmenu = item.items?.length > 0;
