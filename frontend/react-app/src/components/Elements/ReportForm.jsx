@@ -19,7 +19,7 @@ const GenerateReportForm = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [serialNumber, setSerialNumber] = useState("00009");
-  const [caseId, setCaseId] = useState(null);
+  const [caseName, setCaseName] = useState(null);
   const [lastCaseNumber, setLastCaseNumber] = useState(9); // Track the last used number
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [fileDetails, setFileDetails] = useState([]);
@@ -52,12 +52,12 @@ const GenerateReportForm = () => {
   };
 
   // Set initial case ID
-  useEffect(() => {
-    if (!caseId) {
-      const newCaseId = generateNewCaseId();
-      setCaseId(newCaseId);
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (!caseId) {
+  //     const newCaseId = generateNewCaseId();
+  //     setCaseId(newCaseId);
+  //   }
+  // }, []);
 
   const filteredUnits = units.filter((u) =>
     u.toLowerCase().includes(searchTerm.toLowerCase())
@@ -99,8 +99,8 @@ const GenerateReportForm = () => {
               {progress < 90
                 ? "Processing your bank statements..."
                 : progress < 100
-                  ? "Finalizing report generation..."
-                  : "Report generated successfully!"}
+                ? "Finalizing report generation..."
+                : "Report generated successfully!"}
             </p>
           </div>
         ),
@@ -221,7 +221,7 @@ const GenerateReportForm = () => {
             passwords: detail.password || "",
             start_date: convertDateFormat(detail.start_date), // Convert date format
             end_date: convertDateFormat(detail.end_date), // Convert date format
-            ca_id: caseId,
+            ca_id: caseName,
           };
         })
       );
@@ -241,7 +241,7 @@ const GenerateReportForm = () => {
         });
 
         const newCaseId = generateNewCaseId();
-        setCaseId(newCaseId);
+        setCaseName(newCaseId);
 
         setSelectedFiles([]);
         setFileDetails([]);
@@ -412,8 +412,9 @@ const GenerateReportForm = () => {
                 <input
                   ref={caseIdRef}
                   type="text"
-                  value={caseId}
-                  className="w-full px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm disabled:cursor-not-allowed"
+                  placeholder="Enter report name"
+                  onChange={(e) => setCaseName(e.target.value)} // Update caseId on user input
+                  className="w-full px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm"
                 />
               </div>
             </div>
@@ -423,8 +424,9 @@ const GenerateReportForm = () => {
                 Bank Statements
               </label>
               <div
-                className={`relative ${isDragging ? "ring-2 ring-[#3498db] dark:ring-blue-500" : ""
-                  }`}
+                className={`relative ${
+                  isDragging ? "ring-2 ring-[#3498db] dark:ring-blue-500" : ""
+                }`}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}

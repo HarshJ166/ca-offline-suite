@@ -19,7 +19,7 @@ const Cash = ({ caseId }) => {
 
         // Transform withdrawal data
         const transformedWithdrawalData = withdrawalResponse.map((item) => ({
-          date: new Date(item.date * 1000).toLocaleDateString("en-GB", {
+          date: new Date(item.date).toLocaleDateString("en-GB", {
             day: "2-digit",
             month: "2-digit",
             year: "numeric",
@@ -30,7 +30,7 @@ const Cash = ({ caseId }) => {
 
         // Transform deposit data
         const transformedDepositData = depositResponse.map((item) => ({
-          date: new Date(item.date * 1000).toLocaleDateString("en-GB", {
+          date: new Date(item.date).toLocaleDateString("en-GB", {
             day: "2-digit",
             month: "2-digit",
             year: "numeric",

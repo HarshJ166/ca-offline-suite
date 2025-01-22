@@ -3,7 +3,7 @@ const { cases } = require("./Cases");
 
 const statements = sqliteTable("statements", {
   id: integer("id").primaryKey({ autoIncrement: true }).notNull(),
-  caseId: text("case_id")
+  caseId: integer("case_id")
     .notNull()
     .references(() => cases.id, { onDelete: "CASCADE" }),
   accountNumber: text("account_number").notNull(),

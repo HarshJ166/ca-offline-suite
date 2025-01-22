@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Breadcrumb,
   BreadcrumbEllipsis,
@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
-import { useNavigate, useLocation, matchPath } from 'react-router-dom';
+import { useNavigate, useLocation, matchPath } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "../components/ui/button";
 
@@ -40,7 +40,7 @@ export function BreadcrumbDynamic({ items, className = "py-4 px-8" }) {
   };
 
   const handleBack = () => {
-    const currentIndex = currentItems.findIndex(item => item.isCurrentPage);
+    const currentIndex = currentItems.findIndex((item) => item.isCurrentPage);
     if (currentIndex > 0) {
       const previousItem = currentItems[currentIndex - 1];
       handleNavigation(previousItem.path);
@@ -48,8 +48,14 @@ export function BreadcrumbDynamic({ items, className = "py-4 px-8" }) {
   };
 
   const isBackButtonVisible = () => {
-    const caseDashboardMatch = matchPath('/case-dashboard/:caseId/:defaultTab', location.pathname);
-    const individualDashboardMatch = matchPath('/individual-dashboard/:caseId/:individualId/:defaultTab', location.pathname);
+    const caseDashboardMatch = matchPath(
+      "/case-dashboard/:caseId/:defaultTab",
+      location.pathname
+    );
+    const individualDashboardMatch = matchPath(
+      "/individual-dashboard/:caseId/:defaultTab",
+      location.pathname
+    );
     return caseDashboardMatch || individualDashboardMatch;
   };
 
@@ -76,10 +82,10 @@ export function BreadcrumbDynamic({ items, className = "py-4 px-8" }) {
         <BreadcrumbList>
           {currentItems.map((item, index) => (
             <React.Fragment key={index}>
-              <BreadcrumbItem className={isLoading ? 'opacity-50' : ''}>
+              <BreadcrumbItem className={isLoading ? "opacity-50" : ""}>
                 {item.dropdown ? (
                   <DropdownMenu>
-                    <DropdownMenuTrigger 
+                    <DropdownMenuTrigger
                       className="flex items-center gap-1"
                       disabled={isLoading}
                     >
@@ -88,7 +94,7 @@ export function BreadcrumbDynamic({ items, className = "py-4 px-8" }) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
                       {item.dropdown.map((dropdownItem, dropdownIndex) => (
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           key={dropdownIndex}
                           onClick={() => handleNavigation(dropdownItem.path)}
                           disabled={isLoading}
@@ -101,7 +107,7 @@ export function BreadcrumbDynamic({ items, className = "py-4 px-8" }) {
                 ) : item.isCurrentPage ? (
                   <BreadcrumbPage>{item.label}</BreadcrumbPage>
                 ) : (
-                  <BreadcrumbLink 
+                  <BreadcrumbLink
                     as="button"
                     className="cursor-pointer hover:underline"
                     onClick={() => handleNavigation(item.path)}

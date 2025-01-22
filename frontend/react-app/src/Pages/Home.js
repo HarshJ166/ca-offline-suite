@@ -29,6 +29,7 @@ import PdfColumnMarker from "../components/MainDashboardComponents/PdfCanvas";
 const Dashboard = () => {
   const { breadcrumbs, setMainDashboard } = useBreadcrumb();
   const [activeTab, setActiveTab] = useState("Dashboard");
+  const[pdfColMarkerData,setPdfColMarkerData] = useState([]);
   const { defaultTab } = useParams();
 
   const navItems = [
@@ -103,6 +104,33 @@ const Dashboard = () => {
     }
   };
 
+  const handleFinalSubmitPDFMarker = () => {
+    const data = {
+      bank_names:["HDFC","ICICI"],
+      pdf_paths:["/home/Downloads/ICICI.pdf","/home/Downloads/HDFC.pdf"],
+      passwords:["1234","1234"],
+      start_dates:["01-01-2021","01-01-2021"],
+      end_dates:["31-12-2021","31-12-2021"],
+      CA_ID:1,
+      columns:pdfColMarkerData
+    }
+    console.log(data)
+  }
+
+
+  useEffect(() => {
+ const data = {
+      bank_names:["HDFC","ICICI"],
+      pdf_paths:["/home/Downloads/ICICI.pdf","/home/Downloads/HDFC.pdf"],
+      passwords:["1234","1234"],
+      start_dates:["01-01-2021","01-01-2021"],
+      end_dates:["31-12-2021","31-12-2021"],
+      CA_ID:1,
+      columns:pdfColMarkerData
+    }
+    console.log(data)
+    }, [pdfColMarkerData]);
+
   return (
     <>
       <div className={cn("h-full w-full flex h-screen bg-background")}>
@@ -120,8 +148,8 @@ const Dashboard = () => {
               {activeTab === "Opportunity to Earn" && <Eligibility />}
               {activeTab === "Billing" && <Billing />}
 
-              {activeTab === "Analytics" && <Analytics />}
-              {activeTab === "Marker" && <PdfColumnMarker />}
+              {activeTab === "Reports" && <Analytics />}
+              {activeTab === "Marker" && <PdfColumnMarker setPdfColMarkerData={setPdfColMarkerData} />}
               {/* {activeTab === "Import to Tally" && <ImportToTally />} */}
               {activeTab === "TallyPrime" && <ExcelViewer />}
               {activeTab === "TallyERP" && <ExcelERP />}

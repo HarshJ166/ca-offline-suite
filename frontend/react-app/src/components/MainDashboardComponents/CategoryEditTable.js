@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search, Loader2, Save } from "lucide-react";
+import { Search, Loader2, Save,Plus } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -38,8 +38,9 @@ import {
   SelectValue,
 } from "../ui/select";
 import { useToast } from "../../hooks/use-toast";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
-const CategoryEditTable = ({ data = [], categoryOptions }) => {
+const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [transactions, setTransactions] = useState([]);
   const [filteredData, setFilteredData] = useState(data);
@@ -55,8 +56,6 @@ const CategoryEditTable = ({ data = [], categoryOptions }) => {
   const [isLoading, setIsLoading] = useState(false);
   const rowsPerPage = 10;
   const { toast } = useToast();
-  const [pendingChanges, setPendingChanges] = useState({});
-  const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [currentData, setCurrentdata] = useState([]);
   const [modifiedData, setModifiedData] = useState([]);
@@ -71,6 +70,19 @@ const CategoryEditTable = ({ data = [], categoryOptions }) => {
   const [selectedBulkCategory, setSelectedBulkCategory] = useState("");
   const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
   const [globalSelectedRows, setGlobalSelectedRows] = useState(new Set());
+
+  // New states for classification modal
+  const [selectedType, setSelectedType] = useState("");
+  const [showClassificationModal, setShowClassificationModal] = useState(false);
+  const [newCategoryToClassify, setNewCategoryToClassify] = useState("");
+  const [isSearchInputFocused, setIsSearchInputFocused] = useState(false);
+
+  // Add new state for reasoning dialog
+  const [reasoningModalOpen, setReasoningModalOpen] = useState(false);
+  const [currentTransaction, setCurrentTransaction] = useState(null);
+  const [reasoning, setReasoning] = useState("");
+  const [pendingCategoryChange, setPendingCategoryChange] = useState(null);
+  const [bulkReasoning, setBulkReasoning] = useState("");
 
   useEffect(() => {
     setTransactions(data);
@@ -88,6 +100,22 @@ const CategoryEditTable = ({ data = [], categoryOptions }) => {
       return !isNaN(parseFloat(value)) && !value.includes("-");
     })
   );
+  const handleCategoryClassification = (category, classificationType) => {
+    // Here you can store the classification mapping
+    // You might want to save this to your backend or state management system
+    console.log(`Category: ${category}, Type: ${classificationType}`);
+    
+    toast({
+      title: "Category Classified",
+      description: `${category} has been classified as ${classificationType.replace('_', ' ')}`,
+    });
+  };
+
+  const handleClassificationSubmit = () => {
+    handleCategoryClassification(newCategoryToClassify, selectedType);
+    setShowClassificationModal(false)
+    setSelectedType(""); // Reset for next use
+  };
 
   const handleSearch = (searchValue) => {
     setSearchTerm(searchValue);
@@ -116,51 +144,72 @@ const CategoryEditTable = ({ data = [], categoryOptions }) => {
 
   const handleCategoryChange = (rowIndex, newCategory) => {
     const dataOnUi = [...currentData];
-    const oldCategory = dataOnUi[rowIndex].category;
-    dataOnUi[rowIndex].category = newCategory;
+    const oldCategory = dataOnUi[rowIndex].Category;
+    
+    // Store pending change and show reasoning dialog
+    setPendingCategoryChange({
+      rowIndex,
+      newCategory,
+      oldCategory,
+      transaction: dataOnUi[rowIndex]
+    });
+    setCurrentTransaction(dataOnUi[rowIndex]);
+    setReasoningModalOpen(true);
+  };
+
+  const confirmCategoryChange = () => {
+    if (!pendingCategoryChange) return;
+    
+    const { rowIndex, newCategory, oldCategory } = pendingCategoryChange;
+    const dataOnUi = [...currentData];
+    dataOnUi[rowIndex].Category = newCategory;
     setCurrentdata(dataOnUi);
 
-    const modifiedObject = { ...dataOnUi[rowIndex], oldCategory: oldCategory };
+    const modifiedObject = { 
+      ...dataOnUi[rowIndex], 
+      oldCategory,
+      keyword:reasoning 
+    };
     setModifiedData([...modifiedData, modifiedObject]);
     setHasChanges(true);
+    
+    // Reset states
+    setReasoningModalOpen(false);
+    setPendingCategoryChange(null);
+    setReasoning("");
   };
 
   // New function to handle bulk category change
   // Modify bulk category update to work with global selection
   const handleBulkCategoryChange = () => {
-    setFilteredData(prevData => {
-      const updatedData = [...prevData];
-      const newModifiedData = [...modifiedData];
-      
-      globalSelectedRows.forEach(globalIndex => {
-        const oldCategory = updatedData[globalIndex].category;
-        updatedData[globalIndex] = {
-          ...updatedData[globalIndex],
-          category: selectedBulkCategory
-        };
+    const dataOnUi = [...filteredData];
+    const newModifiedData = [...modifiedData];
+    
+    globalSelectedRows.forEach(globalIndex => {
+      const oldCategory = dataOnUi[globalIndex].Category;
+      dataOnUi[globalIndex].Category = selectedBulkCategory;
 
-        const modifiedObject = {
-          ...updatedData[globalIndex],
-          oldCategory: oldCategory
-        };
+      const modifiedObject = {
+        ...dataOnUi[globalIndex],
+        oldCategory,
+        reasoning: bulkReasoning
+      };
 
-        newModifiedData.push(modifiedObject);
-      });
+      newModifiedData.push(modifiedObject);
+    });
 
-      // Update modified data in a separate state update
-      setModifiedData(newModifiedData);
-      setHasChanges(true);
-      setGlobalSelectedRows(new Set());
-      setBulkCategoryModalOpen(false);
-      setConfirmationModalOpen(false);
-      setSelectedBulkCategory("");
+    setFilteredData(dataOnUi);
+    setModifiedData(newModifiedData);
+    setHasChanges(true);
+    setGlobalSelectedRows(new Set());
+    setBulkCategoryModalOpen(false);
+    setConfirmationModalOpen(false);
+    setSelectedBulkCategory("");
+    setBulkReasoning("");
 
-      toast({
-        title: "Categories updated",
-        description: `Updated ${globalSelectedRows.size} transactions`,
-      });
-
-      return updatedData;
+    toast({
+      title: "Categories updated",
+      description: `Updated ${globalSelectedRows.size} transactions`,
     });
   };
 
@@ -207,6 +256,11 @@ const CategoryEditTable = ({ data = [], categoryOptions }) => {
         : [...prev, category]
     );
   };
+    // Filter categories based on search term
+    const filteredCategories = categoryOptions.filter((category) =>
+      category.toLowerCase().includes(categorySearchTerm.toLowerCase())
+    );
+  
 
   const handleSelectAll = () => {
     const visibleCategories = getFilteredUniqueValues(currentFilterColumn);
@@ -263,6 +317,25 @@ const CategoryEditTable = ({ data = [], categoryOptions }) => {
       value.toLowerCase().includes(categorySearchTerm.toLowerCase())
     );
   };
+
+  const handleCategorySearch = (e) => {
+    e.preventDefault();
+    e.stopPropagation(); // Prevent event bubbling
+    setCategorySearchTerm(e.target.value);
+  };
+
+  // Function to add new category
+ const handleAddCategory = (newCategory) => {
+  if (newCategory && !categoryOptions.includes(newCategory)) {
+    setNewCategoryToClassify(newCategory);
+    setShowClassificationModal(true);
+    const updatedOptions = [...categoryOptions, newCategory].sort();
+    setCategoryOptions(updatedOptions);
+    return true;
+  }
+  return false;
+};
+
 
   useEffect(() => {
     const totalPagesTemp = Math.ceil(filteredData.length / rowsPerPage);
@@ -434,12 +507,76 @@ const CategoryEditTable = ({ data = [], categoryOptions }) => {
                             <SelectTrigger className="w-full">
                               <SelectValue>{row[column]}</SelectValue>
                             </SelectTrigger>
-                            <SelectContent>
-                              {categoryOptions.map((category) => (
-                                <SelectItem key={category} value={category}>
-                                  {category}
-                                </SelectItem>
-                              ))}
+                            <SelectContent
+                              onCloseAutoFocus={(e) => {
+                                // Prevent the default focus behavior
+                                e.preventDefault();
+                              }}                            
+                              >
+                              <div className="p-2 border-b flex gap-2">
+                                <div className="relative flex-1">
+                                  <Input
+                                    placeholder="Search categories..."
+                                    value={categorySearchTerm}
+                                    onChange={(e) =>
+                                      handleCategorySearch(e)
+                                    }
+                                    // Add these handlers
+                                    onFocus={() => setIsSearchInputFocused(true)}
+                                    onBlur={() => setIsSearchInputFocused(false)}
+                                    // Prevent the select's keyboard navigation from interfering
+                                    onKeyDown={(e) => {
+                                      e.stopPropagation();
+                                    }}
+                                    // Prevent any click events from bubbling up to the Select
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                    }}
+                                  />
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="px-2 h-10"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (categorySearchTerm.trim()) {
+                                      const added = handleAddCategory(
+                                        categorySearchTerm.trim()
+                                      );
+                                      if (added) {
+                                        handleCategoryChange(
+                                          index,
+                                          categorySearchTerm.trim()
+                                        );
+                                        setCategorySearchTerm("");
+                                        toast({
+                                          title: "Category Added",
+                                          description: `Added new category: ${categorySearchTerm.trim()}`,
+                                        });
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              <div className="max-h-[200px] overflow-y-auto">
+                                {filteredCategories.length > 0 ? (
+                                  filteredCategories.map((category) => (
+                                    <SelectItem key={category} value={category}>
+                                      {category}
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <div className="p-4 max-w-[300px] text-center text-muted-foreground">
+                                    <p className="text-md">No matching categories found</p>
+                                    <p className="text-sm mt-1">Click the <Plus className="h-3 w-3 inline-block mx-1" /> icon above to add "{categorySearchTerm}" as a new category</p>
+                                  </div>
+                                )}
+                              </div>
                             </SelectContent>
                           </Select>
                         ) : (
@@ -508,6 +645,8 @@ const CategoryEditTable = ({ data = [], categoryOptions }) => {
           </div>
         )}
       </CardContent>
+
+      
 
 
       {/* Category Filter Modal */}
@@ -612,28 +751,43 @@ const CategoryEditTable = ({ data = [], categoryOptions }) => {
 
       {/* Bulk Category Update Modal */}
       <Dialog open={bulkCategoryModalOpen} onOpenChange={setBulkCategoryModalOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Update Multiple Categories</DialogTitle>
             <DialogDescription>
               Select a new category for the {globalSelectedRows.size} selected transactions
             </DialogDescription>
           </DialogHeader>
-          <Select
-            value={selectedBulkCategory}
-            onValueChange={setSelectedBulkCategory}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select new category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categoryOptions.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          
+          <div className="space-y-4">
+            <Select
+              value={selectedBulkCategory}
+              onValueChange={setSelectedBulkCategory}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select new category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categoryOptions.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="space-y-2">
+              <Label>
+                What common keywords in these transactions made you choose "{selectedBulkCategory}" as their category?
+              </Label>
+              <Input
+                value={bulkReasoning}
+                onChange={(e) => setBulkReasoning(e.target.value)}
+                placeholder="Enter keyword..."
+              />
+            </div>
+          </div>
+
           <DialogFooter>
             <Button
               variant="ghost"
@@ -647,7 +801,7 @@ const CategoryEditTable = ({ data = [], categoryOptions }) => {
                 setBulkCategoryModalOpen(false);
                 setConfirmationModalOpen(true);
               }}
-              disabled={!selectedBulkCategory}
+              disabled={!selectedBulkCategory || !bulkReasoning}
             >
               Update Categories
             </Button>
@@ -681,6 +835,93 @@ const CategoryEditTable = ({ data = [], categoryOptions }) => {
         </DialogContent>
       </Dialog>
 
+      {/* Classification modal */}
+      <Dialog open={showClassificationModal} onOpenChange={() => setShowClassificationModal(false)}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>Classify New Category</DialogTitle>
+          <DialogDescription>
+            Please classify "{newCategoryToClassify}" into one of the following types
+          </DialogDescription>
+        </DialogHeader>
+        
+        <RadioGroup value={selectedType} onValueChange={setSelectedType} className="space-y-3">
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="income" id="income" />
+            <Label htmlFor="income">Income</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="important_expenses" id="important_expenses" />
+            <Label htmlFor="important_expenses">Important Expenses</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="other_expenses" id="other_expenses" />
+            <Label htmlFor="other_expenses">Other Expenses</Label>
+          </div>
+        </RadioGroup>
+
+        <DialogFooter>
+          <Button
+            variant="default"
+            onClick={handleClassificationSubmit}
+            disabled={!selectedType}
+          >
+            Save Classification
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Reasoning Modal for Single Category Change */}
+    <Dialog open={reasoningModalOpen} onOpenChange={setReasoningModalOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Category Change Reasoning</DialogTitle>
+            <DialogDescription>
+              Transaction Details:
+              {currentTransaction && (
+                <div className="mt-2 p-3 bg-muted rounded-md">
+                  <p><strong>Description:</strong> {currentTransaction.Description}</p>
+                  <p><strong>Amount:</strong> {currentTransaction.Amount}</p>
+                  <p><strong>Category Change:</strong> {pendingCategoryChange?.oldCategory} → {pendingCategoryChange?.newCategory}</p>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <Label>
+              What keywords from the description made you change the category from "{pendingCategoryChange?.oldCategory}" to "{pendingCategoryChange?.newCategory}"?
+            </Label>
+            <Input
+              value={reasoning}
+              onChange={(e) => setReasoning(e.target.value)}
+              placeholder="Enter Keyword..."
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setReasoningModalOpen(false);
+                setPendingCategoryChange(null);
+                setReasoning("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              onClick={confirmCategoryChange}
+              disabled={!reasoning}
+            >
+              Confirm Change
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    
       {/* Loading Overlay */}
       {isLoading && (
         <div className="fixed inset-0 bg-white bg-opacity-80 backdrop-blur-sm flex items-center justify-center">
