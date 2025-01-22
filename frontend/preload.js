@@ -46,6 +46,8 @@ contextBridge.exposeInMainWorld("electron", {
   generateReportIpc: (result, reportName) =>
     ipcRenderer.invoke("generate-report", result, reportName),
 
+  addPdfIpc: (result) => ipcRenderer.invoke("add-pdf", result),
+
   user: {
     getData: (userId) => ipcRenderer.invoke("user:get-data", userId),
     updateData: (userData) => ipcRenderer.send("user:update-data", userData),
