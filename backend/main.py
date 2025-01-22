@@ -4,6 +4,7 @@ import logging
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
+from fastapi.responses import HTMLResponse
 
 # If you have other custom imports:
 from tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf
@@ -13,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Bank Statement Analyzer API")
 
-
 class BankStatementRequest(BaseModel):
     bank_names: List[str]
     pdf_paths: List[str]
@@ -22,11 +22,17 @@ class BankStatementRequest(BaseModel):
     end_date: List[str]
     ca_id: str
 
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    return "<h1>Yes, I am alive!</h1>"
 
 @app.post("/analyze-statements/")
 async def analyze_bank_statements(request: BankStatementRequest):
     try:
         logger.info(f"Received request with banks: {request.bank_names}")
+        print("Start Date : ", request.start_date)
+        print("End Date : ", request.end_date)
+        print("PDF Paths : ", request.pdf_paths)
 
         # Create a progress tracking function
         def progress_tracker(current: int, total: int, info: str) -> None:
@@ -88,4 +94,4 @@ if __name__ == "__main__":
     port = int(os.getenv("API_PORT", "7500"))
 
     # IMPORTANT: reload=False for production usage
-    uvicorn.run("main:app", host=host, port=port, reload=False)
+    uvicorn.run("main:app", host=host, port=port, reload=True)

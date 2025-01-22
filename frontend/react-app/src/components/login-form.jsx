@@ -15,14 +15,14 @@ import { useAuth } from "../contexts/AuthContext";
 import { Alert, AlertDescription } from "./ui/alert";
 
 export function LoginForm({ className, ...props }) {
-  const { login, loading, error, isActivated, activateLicense } = useAuth();
+  const { login, loading, error, isActivated, signUp } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   // const [needsLicense, setNeedsLicense] = useState(true);
   const [credentials, setCredentials] = useState({
-    email: "",
-    password: "",
-    licenseKey: "",
+    email: "2-32e6d741",
+    password: "rajaa",
+    licenseKey: "SOMEX4Y4ZLicenseKEYForCAOffline",
   });
 
   // useEffect(() => {
@@ -37,21 +37,24 @@ export function LoginForm({ className, ...props }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    let success = false;
     if (!isActivated) {
       // First handle license activation
-      const success = await activateLicense(credentials.licenseKey);
+      console.log("Inside Signup..")
+      success = await signUp(credentials);
       if (!success) {
         return;
       }
-      // setNeedsLicense(false);
+    }
+    else {
+      console.log("Inside Login")
+      success = await login({
+        email: credentials.email,
+        password: credentials.password,
+      });
     }
 
-    // Proceed with login regardless of whether we just activated a license or not
-    const success = await login({
-      email: credentials.email,
-      password: credentials.password,
-    });
-
+    console.log("License activation result:", success);
     if (success) {
       const from = location.state?.from?.pathname || "/";
       navigate(from, { replace: true });
@@ -97,8 +100,8 @@ export function LoginForm({ className, ...props }) {
                     required
                     value={credentials.licenseKey}
                     onChange={handleInputChange}
-                    pattern="^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$"
-                    title="Please enter a valid license key in the format: XXXX-XXXX-XXXX-XXXX"
+                  // pattern="^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$"
+                  // title="Please enter a valid license key in the format: XXXX-XXXX-XXXX-XXXX"
                   />
                 </div>
               )}
@@ -107,7 +110,7 @@ export function LoginForm({ className, ...props }) {
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
-                  type="email"
+                  type="text"
                   placeholder="m@example.com"
                   required
                   value={credentials.email}

@@ -39,17 +39,16 @@ contextBridge.exposeInMainWorld("electron", {
 
   getCombinedStatements: (case_id) =>
     ipcRenderer.invoke("get-combine-statements", case_id),
-  
+
 
   saveFileToTemp: (fileBuffer) => ipcRenderer.invoke('save-file-to-temp', fileBuffer),
   cleanupTempFiles: () => ipcRenderer.invoke('cleanup-temp-files'),
   generateReportIpc: (result) => ipcRenderer.invoke("generate-report", result),
-  
+
 
   user: {
     getData: (userId) => ipcRenderer.invoke("user:get-data", userId),
-    updateData: (userData) => ipcRenderer.send("user:update-data", userData),   
-    updateData: (userData) => ipcRenderer.send("user:update-data", userData),   
+    updateData: (userData) => ipcRenderer.send("user:update-data", userData),
   },
 
   file: {
@@ -59,9 +58,10 @@ contextBridge.exposeInMainWorld("electron", {
   },
 
   auth: {
-    login: (userData) => ipcRenderer.invoke("auth:login", userData),
-    logout: () => ipcRenderer.invoke("auth:logout"),
-    getUser: () => ipcRenderer.invoke("auth:getUser"),
+    signUp: (credentials) => ipcRenderer.invoke('auth:signUp', credentials),
+    login: (userData) => ipcRenderer.invoke('auth:login', userData),
+    logout: () => ipcRenderer.invoke('auth:logout'),
+    getUser: () => ipcRenderer.invoke('auth:getUser'),
     // updateUser: (userData) => ipcRenderer.invoke('auth:updateUser', userData)
     checkLicense: () => ipcRenderer.invoke("license:check"),
     activateLicense: (credentials) =>
