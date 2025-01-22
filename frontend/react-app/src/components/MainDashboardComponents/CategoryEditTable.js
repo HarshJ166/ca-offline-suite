@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search, Loader2, Save } from "lucide-react";
+import { Search, Loader2, Save,Plus } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -40,7 +40,7 @@ import {
 import { useToast } from "../../hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
-const CategoryEditTable = ({ data = [], categoryOptions }) => {
+const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [transactions, setTransactions] = useState([]);
   const [filteredData, setFilteredData] = useState(data);
@@ -256,6 +256,11 @@ const CategoryEditTable = ({ data = [], categoryOptions }) => {
         : [...prev, category]
     );
   };
+    // Filter categories based on search term
+    const filteredCategories = categoryOptions.filter((category) =>
+      category.toLowerCase().includes(categorySearchTerm.toLowerCase())
+    );
+  
 
   const handleSelectAll = () => {
     const visibleCategories = getFilteredUniqueValues(currentFilterColumn);
