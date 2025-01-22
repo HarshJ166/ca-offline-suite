@@ -57,6 +57,7 @@ const RecentReports = () => {
   const [isFirstInfo, setIsFirstInfo] = useState();
   const [isLastInfo, setIsLastInfo] = useState();
   const itemsPerPage = 10;
+  const [currentCaseName, setCurrentCaseName] = useState("");
 
   const [recentReports, setRecentReports] = useState([]);
 
@@ -342,7 +343,9 @@ const RecentReports = () => {
     console.log("Clicked on edit");
     setIsCategoryEditOpen(!isCategoryEditOpen);
   };
-  const handleAddReport = () => {
+  const handleAddReport = (caseName) => {
+    console.log("Case name clicked on add report:", caseName);
+    setCurrentCaseName(caseName);
     setIsAddPdfModalOpen(true);
   };
 
@@ -408,7 +411,7 @@ const RecentReports = () => {
                       variant="outline"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => handleAddReport()}
+                      onClick={() => handleAddReport(report.name)}
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -561,7 +564,7 @@ const RecentReports = () => {
               </button>
             </header>
             <div className="mt-4">
-              <GenerateReportForm source="add pdf" handleReportSubmit={handleAddPdfSubmit} />
+              <GenerateReportForm source="add pdf" handleReportSubmit={handleAddPdfSubmit} currentCaseName={currentCaseName} />
             </div>
           </div>
         </div>

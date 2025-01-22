@@ -13,7 +13,7 @@ import { Button } from "../ui/button";
 import { useToast } from "../../hooks/use-toast";
 import { CircularProgress } from "../ui/circularprogress";
 
-const GenerateReportForm = ({ handleReportSubmit }) => {
+const GenerateReportForm = ({ currentCaseName, handleReportSubmit }) => {
   const [unit, setUnit] = useState("Unit 1");
   const [units, setUnits] = useState(["Unit 1", "Unit 2"]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -33,6 +33,7 @@ const GenerateReportForm = ({ handleReportSubmit }) => {
   const [progress, setProgress] = useState(0);
   const [toastId, setToastId] = useState(null);
   const progressIntervalRef = useRef(null);
+  console.log("Case Name: ", currentCaseName);
 
   // Load the last case number from localStorage on component mount
   useEffect(() => {
@@ -404,8 +405,11 @@ const GenerateReportForm = ({ handleReportSubmit }) => {
                   ref={caseIdRef}
                   type="text"
                   placeholder="Enter report name"
-                  onChange={(e) => setCaseName(e.target.value)} // Update caseId on user input
-                  className="w-full px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm"
+                  value={currentCaseName || ""} // Set the current value, fallback to empty if undefined
+                  onChange={(e) => setCaseName(e.target.value)} // Update caseName state
+                  disabled={currentCaseName ? false : true}
+                  className={`w-full px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 focus:outline-none ${currentCaseName ? "focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500" : "cursor-not-allowed"
+                    } transition-all border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm`}
                 />
               </div>
             </div>
