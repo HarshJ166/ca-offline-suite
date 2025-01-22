@@ -17,8 +17,7 @@ import {
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { cn } from "../../lib/utils";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import {
   AlertDialog,
@@ -31,7 +30,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
-
 import {
   Pagination,
   PaginationContent,
@@ -42,57 +40,125 @@ import {
   PaginationPrevious,
 } from "../ui/pagination";
 
-const AccountNumNameManager = () => {
-  const navigate = useNavigate();
+const AccountNumNameManager = ({ caseId }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [statements, setStatements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [modifiedStatements, setModifiedStatements] = useState(new Set()); // Track modified statements
   const itemsPerPage = 10;
 
-  const [reports, setReports] = useState([
-    {
-      id: 1,
-      name: "MR AIYAZ ANWAR QURESHI",
-      accNumber: "50100575475699",
-      fileName:
-        "C:/Users/qures/Downloads/ATS_TESTING_BANK_PDF/ATS_TESTING_BANK_PDF/Aiyaz hdf 23.pdf",
-    },
-    {
-      id: 2,
-      name: "POOJAN VIG",
-      accNumber: "50100575475700",
-      fileName:
-        "C:/Users/qures/Downloads/ATS_TESTING_BANK_PDF/ATS_TESTING_BANK_PDF/hdfc poojan.pdf",
-    },
-  ]);
+  // Fetch statements when component mounts
+  useEffect(() => {
+    fetchStatements();
+  }, [caseId]);
+
+  const fetchStatements = async () => {
+    try {
+      setLoading(true);
+      const data = await window.electron.getStatements(caseId);
+      setStatements(data);
+      setError(null);
+      setModifiedStatements(new Set()); // Reset modified statements
+    } catch (err) {
+      setError("Failed to fetch statements");
+      console.error("Error fetching statements:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleNameChange = (id, newName) => {
-    setReports((prevReports) =>
-      prevReports.map((report) =>
-        report.id === id ? { ...report, name: newName } : report
+    setStatements((prevStatements) =>
+      prevStatements.map((statement) =>
+        statement.id === id
+          ? { ...statement, customerName: newName }
+          : statement
       )
     );
+    setModifiedStatements((prev) => new Set(prev.add(id)));
   };
 
   const handleAccNumberChange = (id, newAccNumber) => {
-    setReports((prevReports) =>
-      prevReports.map((report) =>
-        report.id === id ? { ...report, accNumber: newAccNumber } : report
+    setStatements((prevStatements) =>
+      prevStatements.map((statement) =>
+        statement.id === id
+          ? { ...statement, accountNumber: newAccNumber }
+          : statement
       )
     );
+    setModifiedStatements((prev) => new Set(prev.add(id)));
   };
 
-  // Filter reports based on search query
-  const filteredReports = reports.filter(
-    (report) =>
-      report.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.accNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.fileName.toLowerCase().includes(searchQuery.toLowerCase())
+  const handleSaveChanges = async () => {
+    if (modifiedStatements.size === 0) {
+      alert("No changes to save");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      let successCount = 0;
+      let failCount = 0;
+
+      // Save each modified statement
+      for (const id of modifiedStatements) {
+        const statement = statements.find((s) => s.id === id);
+        if (!statement) continue;
+
+        try {
+          await window.electron.updateStatement({
+            id: statement.id,
+            customerName: statement.customerName,
+            accountNumber: statement.accountNumber,
+          });
+          successCount++;
+        } catch (err) {
+          console.error(`Failed to update statement ${id}:`, err);
+          failCount++;
+        }
+      }
+
+      // Show summary alert
+      if (successCount > 0) {
+        alert(
+          `Successfully updated ${successCount} statement${
+            successCount !== 1 ? "s" : ""
+          }${failCount > 0 ? `. Failed to update ${failCount}.` : ""}`
+        );
+      } else if (failCount > 0) {
+        alert("Failed to save changes. Please try again.");
+      }
+
+      // Refresh the statements after saving
+      await fetchStatements();
+    } catch (err) {
+      setError("Failed to save changes");
+      console.error("Error saving changes:", err);
+      alert("Failed to save changes. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Filter statements based on search query
+  const filteredStatements = statements.filter(
+    (statement) =>
+      statement.customerName
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      statement.accountNumber
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      statement.filePath?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredStatements.length / itemsPerPage);
 
-  // Get current page reports
-  const currentReports = filteredReports.slice(
+  // Get current page statements
+  const currentStatements = filteredStatements.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -138,10 +204,21 @@ const AccountNumNameManager = () => {
     }
   };
 
-  const handleSaveChanges = () => {
-    // Here you would typically make an API call to save the changes
-    console.log("Saving changes:", reports);
-  };
+  if (loading) {
+    return (
+      <div className="p-8 flex justify-center items-center">
+        <p>Loading statements...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 flex justify-center items-center">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-8">
@@ -151,13 +228,13 @@ const AccountNumNameManager = () => {
             <div>
               <CardTitle>Account Number & Name Manager</CardTitle>
               <CardDescription>
-                A list of recent reports from all projects
+                Manage statement details for case #{caseId}
               </CardDescription>
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search reports..."
+                placeholder="Search statements..."
                 className="pl-10 w-[400px]"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -176,36 +253,48 @@ const AccountNumNameManager = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentReports.map((report, index) => (
-                <TableRow key={report.id}>
+              {currentStatements.map((statement, index) => (
+                <TableRow
+                  key={statement.id}
+                  className={
+                    modifiedStatements.has(statement.id) ? "bg-muted/50" : ""
+                  }
+                >
                   <TableCell>
                     {(currentPage - 1) * itemsPerPage + index + 1}
                   </TableCell>
                   <TableCell>
                     <div
                       className="truncate max-w-full"
-                      title={report.fileName}
+                      title={statement.filePath}
                     >
-                      {report.fileName}
+                      {statement.filePath}
                     </div>
                   </TableCell>
                   <TableCell>
                     <Input
-                      value={report.name}
+                      value={statement.customerName || ""}
                       onChange={(e) =>
-                        handleNameChange(report.id, e.target.value)
+                        handleNameChange(statement.id, e.target.value)
                       }
                       className="max-w-[200px]"
                     />
                   </TableCell>
                   <TableCell>
                     <Input
-                      value={report.accNumber}
+                      value={statement.accountNumber || ""}
                       onChange={(e) =>
-                        handleAccNumberChange(report.id, e.target.value)
+                        handleAccNumberChange(statement.id, e.target.value)
                       }
                       className="max-w-[200px]"
                     />
+                  </TableCell>
+                  <TableCell>
+                    {modifiedStatements.has(statement.id) && (
+                      <span className="text-sm text-muted-foreground">
+                        Modified
+                      </span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -261,23 +350,29 @@ const AccountNumNameManager = () => {
                 <Button
                   variant="default"
                   className="mt-12"
-                  onClick={handleSaveChanges}
+                  disabled={modifiedStatements.size === 0 || isSaving}
                 >
-                  Save Changes
+                  {isSaving ? "Saving..." : "Save Changes"}
                 </Button>
               </AlertDialogTrigger>
             </div>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Confirm</AlertDialogTitle>
+                <AlertDialogTitle>Confirm Changes</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to save these changes?
+                  Are you sure you want to save changes to{" "}
+                  {modifiedStatements.size} statement
+                  {modifiedStatements.size !== 1 ? "s" : ""}? This action cannot
+                  be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleSaveChanges}>
-                  Save
+                <AlertDialogAction
+                  onClick={handleSaveChanges}
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Saving..." : "Save Changes"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

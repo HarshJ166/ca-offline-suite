@@ -10,7 +10,7 @@ import CategoryEditTable from "../MainDashboardComponents/CategoryEditTable"
 
 const CategoryEditModal = ({ open, onOpenChange }) => {
   // Sample entity options
-  const [categoryOptions, setCategoryOptions] = useState([
+  const categoryOptions = [
     "Bank Charges",
     "Bank Interest Received",
     "Bonus Paid",
@@ -58,8 +58,9 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
     "Travelling Expense",
     "UPI-Cr",
     "UPI-Dr",
-    "Utility Bills",
-  ]);
+    "Utility Bills"
+  ];
+
   // const handleEntityChange = (transactionId, newEntity) => {
   //   setTransactions(prevTransactions =>
   //     prevTransactions.map(transaction =>
@@ -45052,7 +45053,7 @@ transactionData2.forEach((transaction) => {
           <DialogTitle>Transactions</DialogTitle>
         </DialogHeader>
           <div className="overflow-auto flex-1">
-            <CategoryEditTable data={transactionData2} categoryOptions={categoryOptions} setCategoryOptions={setCategoryOptions}/>
+            <CategoryEditTable data={transactionData} categoryOptions={categoryOptions}/>
           </div>
       </DialogContent>
     </Dialog>
