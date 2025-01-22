@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search, Loader2, Save,Plus } from "lucide-react";
+import { Search, Loader2, Save } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -40,7 +40,7 @@ import {
 import { useToast } from "../../hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
-const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) => {
+const CategoryEditTable = ({ data = [], categoryOptions }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [transactions, setTransactions] = useState([]);
   const [filteredData, setFilteredData] = useState(data);
@@ -256,11 +256,6 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
         : [...prev, category]
     );
   };
-
-  // Filter categories based on search term
-  const filteredCategories = categoryOptions.filter((category) =>
-    category.toLowerCase().includes(categorySearchTerm.toLowerCase())
-  );
 
   const handleSelectAll = () => {
     const visibleCategories = getFilteredUniqueValues(currentFilterColumn);
@@ -498,12 +493,11 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
                         className="max-w-[200px] group relative"
                       >
                         {column.toLowerCase() === "category" ? (
-                          
-                            <Select
+                          <Select
                             value={row[column]}
-                            onValueChange={(value) =>
-                              handleCategoryChange(index, value)
-                            }
+                            onValueChange={(value) => handleCategoryChange(index, value)}
+                            className="w-full"
+                            disabled={globalSelectedRows.has(startIndex + index)}
                           >
                             <SelectTrigger className="w-full">
                               <SelectValue>{row[column]}</SelectValue>

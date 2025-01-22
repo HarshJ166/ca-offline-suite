@@ -12,15 +12,15 @@ import {
 import { Button } from "../ui/button";
 import { useToast } from "../../hooks/use-toast";
 import { CircularProgress } from "../ui/circularprogress";
-import axios from "axios";
 
 const GenerateReportForm = () => {
   const [unit, setUnit] = useState("Unit 1");
-  const [units, setUnits] = useState(["Unit 1", "Unit 2"]); // TODO - get units from API
+  const [units, setUnits] = useState(["Unit 1", "Unit 2"]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [serialNumber, setSerialNumber] = useState("00009"); // TODO - get serial number from somewhere
+  const [serialNumber, setSerialNumber] = useState("00009");
   const [caseId, setCaseId] = useState(null);
+  const [lastCaseNumber, setLastCaseNumber] = useState(9); // Track the last used number
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [fileDetails, setFileDetails] = useState([]);
   const dropdownRef = useRef(null);
@@ -33,29 +33,62 @@ const GenerateReportForm = () => {
   const [progress, setProgress] = useState(0);
   const [toastId, setToastId] = useState(null);
   const progressIntervalRef = useRef(null);
+
+  // Load the last case number from localStorage on component mount
+  useEffect(() => {
+    const savedLastNumber = localStorage.getItem("lastCaseNumber");
+    if (savedLastNumber) {
+      setLastCaseNumber(parseInt(savedLastNumber));
+    }
+  }, []);
+
+  // Generate new case ID when component mounts or after form submission
+  const generateNewCaseId = () => {
+    const newNumber = lastCaseNumber + 1;
+    const paddedNumber = newNumber.toString().padStart(4, "0");
+    setLastCaseNumber(newNumber);
+    localStorage.setItem("lastCaseNumber", newNumber.toString());
+    return `CASE_${paddedNumber}`;
+  };
+
+  // Set initial case ID
+  useEffect(() => {
+    if (!caseId) {
+      const newCaseId = generateNewCaseId();
+      setCaseId(newCaseId);
+    }
+  }, []);
+
   const filteredUnits = units.filter((u) =>
     u.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const validateDateRange = (startDate, endDate) => {
+    if (!startDate || !endDate) return true;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    return start <= end;
+  };
 
   const simulateProgress = () => {
     setProgress(0);
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 90) {
-          return prev; // Hold at 90% until completion
+          return prev;
         }
-        // Non-linear progress simulation for more realistic feel
         const increment = Math.max(1, Math.floor((90 - prev) / 10));
         return Math.min(90, prev + increment);
       });
     }, 300);
     return interval;
   };
+
   useEffect(() => {
-    if (toastId && progress >= 0) {
+    if (toastId && progress >= 0 && loading) {
       toast({
         id: toastId,
-        title: loading ? "Generating Report" : "Report Status",
+        title: "Generating Report",
         description: (
           <div className="mt-2 w-full flex flex-col gap-2">
             <div className="flex items-center gap-4">
@@ -66,8 +99,8 @@ const GenerateReportForm = () => {
               {progress < 90
                 ? "Processing your bank statements..."
                 : progress < 100
-                ? "Finalizing report generation..."
-                : "Report generated successfully!"}
+                  ? "Finalizing report generation..."
+                  : "Report generated successfully!"}
             </p>
           </div>
         ),
@@ -75,15 +108,6 @@ const GenerateReportForm = () => {
       });
     }
   }, [progress, toastId, loading, toast]);
-  useEffect(() => {
-    if (forAts) {
-      setCaseId(`ATS_${unit.replace(/\s+/g, "_")}_${serialNumber}`);
-      caseIdRef.current.disabled = true;
-    } else {
-      setCaseId(`CASE_${serialNumber}`);
-      caseIdRef.current.disabled = false;
-    }
-  }, [unit, serialNumber, forAts]);
 
   useEffect(() => {
     const newFileDetails = selectedFiles.map((file, index) => {
@@ -92,9 +116,9 @@ const GenerateReportForm = () => {
         file,
         previewUrl: URL.createObjectURL(file),
         password: existing.password || "",
-        startDate: existing.startDate || "",
-        endDate: existing.endDate || "",
-        bankName: existing.bankName || "",
+        start_date: existing.start_date || "",
+        end_date: existing.end_date || "",
+        bankName: existing.bankName || "", // Empty string for bank name
       };
     });
     setFileDetails(newFileDetails);
@@ -108,16 +132,27 @@ const GenerateReportForm = () => {
     };
   }, [selectedFiles]);
 
+  const handleFileDetailChange = (index, field, value) => {
+    setFileDetails((prev) => {
+      const updated = prev.map((detail, i) => {
+        if (i === index) {
+          const updatedDetail = { ...detail, [field]: value };
+          console.log(`Updated ${field} for file ${index}:`, {
+            previous: detail[field],
+            new: value,
+            fullDetail: updatedDetail,
+          });
+          return updatedDetail;
+        }
+        return detail;
+      });
+
+      console.log("Updated fileDetails:", updated);
+      return updated;
+    });
+  };
   const handlePreviewFile = (previewUrl, fileType) => {
     window.open(previewUrl, "_blank");
-  };
-
-  const handleFileDetailChange = (index, field, value) => {
-    setFileDetails((prev) =>
-      prev.map((detail, i) =>
-        i === index ? { ...detail, [field]: value } : detail
-      )
-    );
   };
 
   const handleAddUnit = () => {
@@ -128,116 +163,29 @@ const GenerateReportForm = () => {
     }
   };
 
-  // const simulateProgress = () => {
-  //   setProgress(0);
-  //   const interval = setInterval(() => {
-  //     setProgress((prev) => {
-  //       if (prev >= 99) {
-  //         clearInterval(interval); // Stop at 95%
-  //         return 99;
-  //       }
-  //       return prev + 5; // Increment progress
-  //     });
-  //   }, 200); // Adjust interval speed as needed
-  //   return interval;
-  // };
-  // const simulateProgress = () => {
-  //   setProgress(0);
-  //   const interval = setInterval(() => {
-  //     setProgress((prev) => {
-  //       if (prev >= 99) {
-  //         clearInterval(interval); // Stop at 95%
-  //         return 99;
-  //       }
-  //       return prev + 5; // Increment progress
-  //     });
-  //   }, 200); // Adjust interval speed as needed
-  //   return interval;
-  // };
-
-  useEffect(() => {
-    if (toastId && progress > 0 && progress < 100) {
-      toast({
-        id: toastId,
-        title: "Processing Files",
-        description: (
-          <div className="mt-2 w-full flex flex-row gap-5 items-center space-y-2">
-            <CircularProgress value={progress} size={38} />
-            <p className="text-sm text-gray-500">
-              {progress < 100 ? "Processing your files..." : "Finalizing..."}
-            </p>
-          </div>
-        ),
-        duration: Infinity,
-      });
-    }
-  }, [progress, toastId]);
-
-  // const simulateProgress = () => {
-  //   const interval = setInterval(() => {
-  //     setProgress((prev) => (prev < 100 ? prev + 10 : prev));
-  //   }, 500);
-  //   return interval;
-  // };
-
-  const analyzeBankStatements = async (fileDetails) => {
-    // Construct the payload dynamically from fileDetails
-    const payload = {
-      bank_names: fileDetails.map((detail) => detail.bankName),
-      pdf_paths: fileDetails.map(
-        (detail) =>
-          `C:/Users/Harsh Jajal/Documents/coding/CypherSol Fintech India Pvt Ltd/clone--fork/ca-offline-suite/frontend/data/${detail.file.name}`
-      ),
-      passwords: fileDetails.map((detail) => detail.password || ""),
-      start_date: fileDetails.map((detail) => detail.startDate || ""),
-      end_date: fileDetails.map((detail) => detail.endDate || ""),
-      ca_id: "CASE_00009", // You can make this dynamic as well if needed
-    };
-
-    // const payload = {
-    //   bank_names: ["HDFC"],
-    //   pdf_paths: fileDetails.map((detail) => `C:/Users/Harsh Jajal/Documents/coding/CypherSol Fintech India Pvt Ltd/clone--fork/ca-offline-suite/frontend/data/${detail.file.name}`),
-    //   passwords: [""],
-    //     start_date: ["26-01-2024"],
-    //     end_date: ["22-02-2024"],
-    //     ca_id: "HDFC",
-    //   };
-
-    try {
-      const response = await axios.post(
-        "http://localhost:7500/analyze-statements/",
-        payload,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      console.log("API Response:", response.data);
-      return response.data;
-    } catch (error) {
-      console.error("Error during API call:", error);
-      throw error;
-    }
+  const convertDateFormat = (dateStr) => {
+    if (!dateStr) return "";
+    const [year, month, day] = dateStr.split("-");
+    return `${day}-${month}-${year}`;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+
+    const validationErrors = [];
 
     if (selectedFiles.length === 0) {
       toast({
         title: "Error",
-        description: "Please select at least one file to generate the report.",
+        description: "Please select at least one file",
         variant: "destructive",
+        duration: 3000,
       });
-      setLoading(false);
       return;
     }
 
-    // Create initial progress toast
-    const id = toast({
+    setLoading(true);
+    const newToastId = toast({
       title: "Initializing Report Generation",
       description: (
         <div className="mt-2 w-full flex flex-col gap-2">
@@ -250,42 +198,73 @@ const GenerateReportForm = () => {
       ),
       duration: Infinity,
     });
-    setToastId(id);
+    setToastId(newToastId);
 
-    const progressInterval = simulateProgress();
+    progressIntervalRef.current = simulateProgress();
 
     try {
-      const result = await analyzeBankStatements(fileDetails);
+      const filesWithContent = await Promise.all(
+        selectedFiles.map(async (file, index) => {
+          const fileContent = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsBinaryString(file);
+          });
 
-      // Complete the progress
-      clearInterval(progressInterval);
-      setProgress(100);
+          const detail = fileDetails[index];
 
-      // Show success message
-      toast({
-        title: "Success",
-        description: "Report generated successfully!",
-        duration: 3000,
+          return {
+            fileContent,
+            pdf_paths: file.name,
+            bankName: detail.bankName,
+            passwords: detail.password || "",
+            start_date: convertDateFormat(detail.start_date), // Convert date format
+            end_date: convertDateFormat(detail.end_date), // Convert date format
+            ca_id: caseId,
+          };
+        })
+      );
+
+      const result = await window.electron.generateReportIpc({
+        files: filesWithContent,
       });
 
-      // Reset form state
-      setSelectedFiles([]);
-      setFileDetails([]);
+      if (result.success) {
+        clearInterval(progressIntervalRef.current);
+        setProgress(100);
+        toast.dismiss(newToastId);
+        toast({
+          title: "Success",
+          description: "Report generated successfully!",
+          duration: 3000,
+        });
+
+        const newCaseId = generateNewCaseId();
+        setCaseId(newCaseId);
+
+        setSelectedFiles([]);
+        setFileDetails([]);
+      } else {
+        throw new Error(result.error);
+      }
     } catch (error) {
-      clearInterval(progressInterval);
+      console.error("Report generation failed:", error);
+      clearInterval(progressIntervalRef.current);
+      toast.dismiss(newToastId);
+      setProgress(0);
       toast({
         title: "Error",
-        description: `Failed to generate report: ${error.message}`,
+        description: error.message || "Failed to generate report",
         variant: "destructive",
         duration: 5000,
       });
     } finally {
       setLoading(false);
-      setProgress(0);
-      setToastId(null);
-     
+      progressIntervalRef.current = null;
     }
   };
+
   const formatFileSize = (bytes) => {
     if (bytes < 1024 * 1024) {
       return `${(bytes / 1024).toFixed(2)} KB`;
@@ -333,10 +312,6 @@ const GenerateReportForm = () => {
 
   const handleFileChange = (e) => {
     if (e.target.files) {
-      // console.log("Fikles",e.target.get_webkitRelativePath());
-
-      console.log("Fikles", e.target.files[0]);
-
       const files = Array.from(e.target.files);
       setSelectedFiles((prevFiles) => [...prevFiles, ...files]);
     }
@@ -448,9 +423,8 @@ const GenerateReportForm = () => {
                 Bank Statements
               </label>
               <div
-                className={`relative ${
-                  isDragging ? "ring-2 ring-[#3498db] dark:ring-blue-500" : ""
-                }`}
+                className={`relative ${isDragging ? "ring-2 ring-[#3498db] dark:ring-blue-500" : ""
+                  }`}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}
@@ -514,7 +488,7 @@ const GenerateReportForm = () => {
                                 </label>
                                 <input
                                   type="password"
-                                  value={detail.password}
+                                  value={detail.password || ""}
                                   onChange={(e) =>
                                     handleFileDetailChange(
                                       index,
@@ -532,25 +506,28 @@ const GenerateReportForm = () => {
                                 </label>
                                 <input
                                   type="date"
-                                  value={
-                                    detail.startDate
-                                      ? detail.startDate
-                                          .split("-")
-                                          .reverse()
-                                          .join("-")
-                                      : "" // Ensure correct initial value
-                                  }
+                                  value={detail.start_date || ""}
                                   onChange={(e) => {
-                                    const date = e.target.value; // Get the date in YYYY-MM-DD format
-                                    const [year, month, day] = date.split("-"); // Split into components
-                                    const formattedDate = `${day}-${month}-${year}`; // Format to DD-MM-YYYY
+                                    const newDate = e.target.value;
                                     handleFileDetailChange(
                                       index,
-                                      "startDate",
-                                      formattedDate
+                                      "start_date",
+                                      newDate
                                     );
+                                    if (
+                                      !validateDateRange(
+                                        newDate,
+                                        detail.end_date
+                                      )
+                                    ) {
+                                      // toast({
+                                      //   title: "Invalid Date Range",
+                                      //   description: "Start date must be before end date",
+                                      //   variant: "destructive",
+                                      //   duration: 3000,
+                                      // });
+                                    }
                                   }}
-                                  placeholder="DD-MM-YYYY"
                                   className="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all"
                                 />
                               </div>
@@ -560,25 +537,29 @@ const GenerateReportForm = () => {
                                 </label>
                                 <input
                                   type="date"
-                                  value={
-                                    detail.endDate
-                                      ? detail.endDate
-                                          .split("-")
-                                          .reverse()
-                                          .join("-")
-                                      : "" // Ensure correct initial value
-                                  }
+                                  value={detail.end_date || ""}
                                   onChange={(e) => {
-                                    const date = e.target.value; // Get the date in YYYY-MM-DD format
-                                    const [year, month, day] = date.split("-"); // Split into components
-                                    const formattedDate = `${day}-${month}-${year}`; // Format to DD-MM-YYYY
+                                    const newDate = e.target.value;
                                     handleFileDetailChange(
                                       index,
-                                      "endDate",
-                                      formattedDate
+                                      "end_date",
+                                      newDate
                                     );
+                                    if (
+                                      !validateDateRange(
+                                        detail.start_date,
+                                        newDate
+                                      )
+                                    ) {
+                                      toast({
+                                        title: "Invalid Date Range",
+                                        description:
+                                          "End date must be after start date",
+                                        variant: "destructive",
+                                        duration: 3000,
+                                      });
+                                    }
                                   }}
-                                  placeholder="DD-MM-YYYY"
                                   className="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all"
                                 />
                               </div>
@@ -588,7 +569,7 @@ const GenerateReportForm = () => {
                                 </label>
                                 <input
                                   type="text"
-                                  value={detail.bankName}
+                                  value={detail.bankName || ""}
                                   onChange={(e) =>
                                     handleFileDetailChange(
                                       index,
@@ -643,7 +624,6 @@ const GenerateReportForm = () => {
               </div>
             </div>
 
-            {/* Submit Button */}
             <div className="flex justify-center pt-4">
               <Button
                 type="submit"
@@ -652,8 +632,8 @@ const GenerateReportForm = () => {
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    <span>Processing...</span>
+                    {/* <Loader2 className="w-4 h-4 mr-2 animate-spin" /> */}
+                    {/* <span>Processing...</span> */}
                   </>
                 ) : (
                   "Generate Report"

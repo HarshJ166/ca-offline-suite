@@ -18,7 +18,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { useToast } from "../../hooks/use-toast";
 import { Badge } from "../ui/badge";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "../../lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Eye, Plus, Trash2, Info, Search, Edit2, X } from "lucide-react";
@@ -42,7 +42,7 @@ import {
   PaginationPrevious,
 } from "../ui/pagination";
 import CategoryEditModal from "./CategoryEditModal";
-import GenerateReportForm from "./ReportForm";
+import GenerateReportForm from "../Elements/ReportForm";
 
 const RecentReports = () => {
   const { toast } = useToast();
@@ -50,139 +50,105 @@ const RecentReports = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [currentInfoIndex, setCurrentInfoIndex] = useState(0);
+  // const [currentInfoIndex, setCurrentInfoIndex] = useState(0);
   const [isCategoryEditOpen, setIsCategoryEditOpen] = useState(false);
   const [isAddPdfModalOpen, setIsAddPdfModalOpen] = useState(false);
+  const [isFirstInfo, setIsFirstInfo] = useState();
+  const [isLastInfo, setIsLastInfo] = useState();
   const itemsPerPage = 10;
 
-  const [recentReports, setRecentReports] = useState([
-    {
-      date: "13-12-2024",
-      reportName: "Report_ATS_unit_1_00008",
-      status: "Completed",
-    },
-    {
-      date: "13-12-2024",
-      reportName: "Report_ATS_unit_1_00007",
-      status: "Completed",
-    },
-    {
-      date: "12-12-2024",
-      reportName: "Report_ATS_unit_1_00003",
-      status: "In Progress",
-    },
-    {
-      date: "12-12-2024",
-      reportName: "Report_ATS_unit_1_00002",
-      status: "Failed",
-    },
-    {
-      date: "12-12-2024",
-      reportName: "Report_ATS_unit_1_00001",
-      status: "Completed",
-    },
-    {
-      date: "11-12-2024",
-      reportName: "Report_ATS_unit_1_00006",
-      status: "In Progress",
-    },
-    {
-      date: "11-12-2024",
-      reportName: "Report_ATS_unit_1_00005",
-      status: "Completed",
-    },
-    {
-      date: "11-12-2024",
-      reportName: "Report_ATS_unit_1_00004",
-      status: "Failed",
-    },
-    {
-      date: "10-12-2024",
-      reportName: "Report_ATS_unit_1_00009",
-      status: "Completed",
-    },
-    {
-      date: "10-12-2024",
-      reportName: "Report_ATS_unit_1_00010",
-      status: "In Progress",
-    },
-    {
-      date: "10-12-2024",
-      reportName: "Report_ATS_unit_1_00011",
-      status: "Completed",
-    },
-    {
-      date: "10-12-2024",
-      reportName: "Report_ATS_unit_1_00012",
-      status: "Completed",
-    },
-  ]);
+  const [recentReports, setRecentReports] = useState([]);
 
-  const reportInfoData = [
-    {
-      id: 1,
-      reportName: "Report_ATS_unit_1_00008",
-      documents: [
-        {
-          path: "C:/Users/documents/Reports/2024/January/Statement_Analysis_1.pdf",
-          type: "Bank Statement",
-        },
-        {
-          path: "C:/Users/documents/Reports/2024/January/Transaction_Report_1.pdf",
-          type: "Transaction Report",
-        },
-      ],
-    },
-    {
-      id: 2,
-      reportName: "Report_ATS_unit_1_00007",
-      documents: [
-        {
-          path: "C:/Users/documents/Reports/2024/February/Client_Statement.pdf",
-          type: "Bank Statement",
-        },
-        {
-          path: "C:/Users/documents/Reports/2024/February/Analysis_Summary.pdf",
-          type: "Analysis Report",
-        },
-      ],
-    },
-    {
-      id: 3,
-      reportName: "Report_ATS_unit_1_00006",
-      documents: [
-        {
-          path: "C:/Users/documents/Reports/2024/March/Corporate_Statement.pdf",
-          type: "Corporate Statement",
-        },
-        {
-          path: "C:/Users/documents/Reports/2024/March/Transaction_Analysis.pdf",
-          type: "Analysis Report",
-        },
-      ],
-    },
-  ];
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const result = await window.electron.getRecentReports();
+        console.log("Fetched reports:", result);
 
-  const isFirstInfo = currentInfoIndex === 0;
-  const isLastInfo = currentInfoIndex === reportInfoData.length - 1;
+        const formattedReports = result.map((report) => ({
+          ...report,
+          createdAt: new Date(report.createdAt).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          }),
+          statements: report.statements.map((statement) => ({
+            ...statement,
+            createdAt: new Date(statement.createdAt).toLocaleDateString(
+              "en-GB",
+              {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              }
+            ),
+          })),
+        }));
 
-  const handlePrevInfo = () => {
-    if (!isFirstInfo) {
-      setCurrentInfoIndex((prev) => prev - 1);
+        setRecentReports(formattedReports);
+        // toast({ title: "Success", description: "Reports loaded successfully." });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: `Failed to load reports: ${error.message}`,
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, []);
+
+  const handleDetails = (statements_length) => {
+    console.log("Clicked on details");
+    if (statements_length > 0) {
+      setIsFirstInfo(true);
+      setIsLastInfo(statements_length - 1 === 0);
     }
   };
 
-  const handleNextInfo = () => {
-    if (!isLastInfo) {
-      setCurrentInfoIndex((prev) => prev + 1);
+  const handlePrevInfo = (statements_length, currentInfoIndex) => {
+    console.log(
+      "Clicked on prev",
+      "statements_length",
+      statements_length,
+      "currentInfoIndex",
+      currentInfoIndex
+    );
+
+    if (currentInfoIndex === 0) {
+      setIsFirstInfo(true);
+    }
+
+    if (currentInfoIndex < statements_length - 1) {
+      setIsLastInfo(false);
+    }
+  };
+
+  const handleNextInfo = (statements_length, currentInfoIndex) => {
+    console.log(
+      "Clicked on next",
+      "statements_length",
+      statements_length,
+      "currentInfoIndex",
+      currentInfoIndex
+    );
+
+    if (currentInfoIndex === statements_length - 1) {
+      setIsLastInfo(true);
+    }
+    if (currentInfoIndex > 0) {
+      setIsFirstInfo(false);
     }
   };
 
   // Filter reports based on search query
   const filteredReports = recentReports.filter(
     (report) =>
-      report.reportName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.reportName.toLowerCase().includes(searchQuery.toLowerCase())
+      report.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      report.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
@@ -271,6 +237,7 @@ const RecentReports = () => {
   };
 
   const handleView = (caseId) => {
+    console.log("case", caseId);
     console.log({ isLoading });
     setIsLoading(true);
     navigate(`/case-dashboard/${caseId}/defaultTab`);
@@ -325,10 +292,10 @@ const RecentReports = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {currentReports.map((report) => (
-              <TableRow key={report.reportName}>
-                <TableCell>{report.date}</TableCell>
-                <TableCell>{report.reportName}</TableCell>
+            {currentReports.map((report, index) => (
+              <TableRow key={report.id}>
+                <TableCell>{report.createdAt}</TableCell>
+                <TableCell>{report.id}</TableCell>
                 <TableCell>
                   <StatusBadge status={report.status} />
                 </TableCell>
@@ -337,7 +304,7 @@ const RecentReports = () => {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => handleView(report.caseId)}
+                      onClick={() => handleView(report.id)}
                       className="h-8 w-8"
                     >
                       <Eye className="h-4 w-4" />
@@ -354,7 +321,7 @@ const RecentReports = () => {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => toggleEdit(report.caseId)}
+                      onClick={() => toggleEdit(report.id)}
                       className="h-8 w-8"
                     >
                       <Edit2 className="h-4 w-4" />
@@ -363,7 +330,7 @@ const RecentReports = () => {
                       variant="outline"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => handleDeleteReport(report.reportName)}
+                      onClick={() => handleDeleteReport(report.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -375,7 +342,8 @@ const RecentReports = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 hover:bg-black/5 "
+                        className="h-8 w-8 hover:bg-black/5"
+                        onClick={() => handleDetails(report.statements.length)}
                       >
                         <Info className="h-4 w-4 " />
                       </Button>
@@ -387,50 +355,48 @@ const RecentReports = () => {
                         </AlertDialogTitle>
                         <div className="py-6">
                           <h3 className="text-base font-medium text-black dark:text-slate-400">
-                            {reportInfoData[currentInfoIndex].reportName}
+                            {report.id}
                           </h3>
                           <div className="mt-6 space-y-4 ">
-                            {reportInfoData[currentInfoIndex].documents.map(
-                              (doc, idx) => (
-                                <div
-                                  key={idx}
-                                  className="bg-black/[0.02] hover:bg-black/[0.04] transition-colors p-4 rounded-md border border-black/5 dark:bg-slate-800"
-                                >
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-sm font-medium text-black/40 dark:text-white">
-                                      Path:
-                                    </span>
-                                    <span className="text-sm text-black/70 dark:text-white">
-                                      {doc.path}
-                                    </span>
-                                  </div>
+                            {report.statements.map((doc, idx) => (
+                              <div
+                                key={idx}
+                                className="bg-black/[0.02] hover:bg-black/[0.04] transition-colors p-4 rounded-md border border-black/5 dark:bg-slate-800"
+                              >
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm font-medium text-black/40 dark:text-white">
+                                    Path:
+                                  </span>
+                                  <span className="text-sm text-black/70 dark:text-white">
+                                    {doc.ifscCode}
+                                  </span>
                                 </div>
-                              )
-                            )}
+                              </div>
+                            ))}
                           </div>
                         </div>
                       </AlertDialogHeader>
                       <AlertDialogFooter className="border-t border-black/10 pt-6">
                         <div className="flex justify-between w-full gap-3">
-                          <Button
+                          {/* <Button
                             variant="outline"
-                            onClick={handlePrevInfo}
+                            onClick={() => handlePrevInfo(report.statements.length, index)}
                             disabled={isFirstInfo}
                             className="px-6 bg-transparent border-black/10 text-black/70 hover:bg-black/[0.03] hover:border-black/20 hover:text-black disabled:opacity-30 dark:text-white dark:border-white/10 dark:bg-slate-900"
                           >
                             Previous
-                          </Button>
+                          </Button> */}
                           <AlertDialogCancel className="px-8 bg-black text-white hover:bg-black/90 hover:text-white dark:bg-white dark:text-black">
                             Close
                           </AlertDialogCancel>
-                          <Button
+                          {/* <Button
                             variant="outline"
-                            onClick={handleNextInfo}
+                            onClick={() => handleNextInfo(report.statements.length, index)}
                             disabled={isLastInfo}
                             className="px-6 bg-transparent border-black/10 text-black/70 hover:bg-black/[0.03] hover:border-black/20 hover:text-black disabled:opacity-30 dark:text-white dark:border-white/10 dark:bg-slate-900"
                           >
                             Next
-                          </Button>
+                          </Button> */}
                         </div>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -476,7 +442,7 @@ const RecentReports = () => {
                     className={cn(
                       "cursor-pointer",
                       currentPage === totalPages &&
-                        "pointer-events-none opacity-50"
+                      "pointer-events-none opacity-50"
                     )}
                   />
                 </PaginationItem>

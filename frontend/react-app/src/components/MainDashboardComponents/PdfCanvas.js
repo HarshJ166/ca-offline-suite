@@ -3,7 +3,7 @@ import { Button } from "../ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/card";
 import { X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Upload, GripVertical } from "lucide-react";
 import { pdfjs, Document, Page } from 'react-pdf';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -143,13 +143,13 @@ const PDFColumnMarker = ({setPdfColMarkerData,initialConfig=initialConfigTest}) 
 
   const handleDrag = (e) => {
     if ((draggingLineIndex === null && draggingLabelIndex === null) || !pdfContainerRef.current) return;
-    
+
     e.preventDefault();
     e.stopPropagation();
-    
+
     const rect = pdfContainerRef.current.getBoundingClientRect();
     const currentX = (e.clientX - rect.left) / scale;
-    
+
     if (draggingLineIndex !== null) {
       setColumnLines(prev => prev.map((line, i) => {
         if (i === draggingLineIndex && currentX > tableBounds.start && currentX < tableBounds.end) {
@@ -173,20 +173,20 @@ const PDFColumnMarker = ({setPdfColMarkerData,initialConfig=initialConfigTest}) 
       e.preventDefault();
       e.stopPropagation();
     }
-    
+
     // Add a small delay before resetting isDragging to prevent immediate click handling
     setTimeout(() => {
       setIsDragging(false);
     }, 100);
-    
+
     setDraggingLineIndex(null);
     setDraggingLabelIndex(null);
   };
 
   const handleColumnTypeSelect = (labelIndex, typeId) => {
-    setColumnLabels(prev => prev.map((label, i) => 
-      i === labelIndex ? { 
-        ...label, 
+    setColumnLabels(prev => prev.map((label, i) =>
+      i === labelIndex ? {
+        ...label,
         type: typeId,
         label: COLUMN_TYPES.find(t => t.id === typeId)?.label || ''
       } : label
@@ -206,7 +206,7 @@ const PDFColumnMarker = ({setPdfColMarkerData,initialConfig=initialConfigTest}) 
     const file = event.target.files[0];
     if (file) {
       setPdfFile(file);
-      
+
       // Only reset if there's no initial configuration
       if (!initialConfig) {
         setColumnLines([]);
@@ -214,7 +214,7 @@ const PDFColumnMarker = ({setPdfColMarkerData,initialConfig=initialConfigTest}) 
         setTableBounds({ start: null, end: null });
         setCurrentStep('boundaries');
       }
-      
+
       setCurrentPage(1);
     }
   };
@@ -259,7 +259,7 @@ const PDFColumnMarker = ({setPdfColMarkerData,initialConfig=initialConfigTest}) 
     const config = {
       columns
     };
-    
+
     console.log(config);
     setPdfColMarkerData((prevData) => [...prevData,config.columns]);
     // Send config to backend
@@ -336,108 +336,108 @@ const PDFColumnMarker = ({setPdfColMarkerData,initialConfig=initialConfigTest}) 
       </CardHeader>
         <CardContent className="space-y-6">
 
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <p className="text-sm text-gray-600">{getInstructionText()}</p>
-          <div className="text-xs text-gray-500 flex gap-x-4 mt-2">
-            <p>• Drag <GripVertical className="inline h-3 w-3" /> to move items</p>
-            <p>• Click <X className="inline h-3 w-3" /> to delete items</p>
-          </div>
-        </div>
-
-        {!pdfFile ? (
-          <div className="flex justify-center">
-            <label className="relative cursor-pointer bg-gray-50 rounded-lg p-6 border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors w-full">
-              <div className="text-center">
-                <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                <div className="mt-2">
-                  <span className="text-sm font-medium text-gray-900">
-                    Drop PDF here or click to upload
-                  </span>
-                </div>
-              </div>
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-            </label>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center justify-between bg-gray-50 p-2 rounded-lg">
-              <div className="flex items-center gap-2 text-nowrap">
-                {/* Page Navigation */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage <= 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span>Page {currentPage} of {numPages || '?'}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, numPages || prev))}
-                  disabled={currentPage >= (numPages || 1)}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <div className="flex items-center gap-4 w-full">
-                <div className='w-full flex justify-center gap-2'>
-
-                {currentStep !== 'boundaries' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const prevStepIndex = Math.max(0, getStepNumber(currentStep) - 2);
-                      setCurrentStep(STEPS[prevStepIndex].id);
-                    }}
-                  >
-                    Back
-                  </Button>
-                )}
-
-                {currentStep === 'lines' && columnLines.length > 0 && (
-                  <Button
-                    size="sm"
-                    onClick={() => moveToNextStep()}
-                  >
-                    Next: Label Columns
-                  </Button>
-                )}
-
-</div>
-
-                <div className="flex items-center gap-2 text-nowrap">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setScale(prev => Math.max(0.1, prev - 0.1))}
-                  >
-                    <ZoomOut className="h-4 w-4" />
-                  </Button>
-                  <span>{Math.round(scale * 100)}%</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setScale(prev => prev + 0.1)}
-                  >
-                    <ZoomIn className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <p className="text-sm text-gray-600">{getInstructionText()}</p>
+            <div className="text-xs text-gray-500 flex gap-x-4 mt-2">
+              <p>• Drag <GripVertical className="inline h-3 w-3" /> to move items</p>
+              <p>• Click <X className="inline h-3 w-3" /> to delete items</p>
             </div>
+          </div>
 
-              <div 
+          {!pdfFile ? (
+            <div className="flex justify-center">
+              <label className="relative cursor-pointer bg-gray-50 rounded-lg p-6 border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors w-full">
+                <div className="text-center">
+                  <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                  <div className="mt-2">
+                    <span className="text-sm font-medium text-gray-900">
+                      Drop PDF here or click to upload
+                    </span>
+                  </div>
+                </div>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between bg-gray-50 p-2 rounded-lg">
+                <div className="flex items-center gap-2 text-nowrap">
+                  {/* Page Navigation */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage <= 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span>Page {currentPage} of {numPages || '?'}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, numPages || prev))}
+                    disabled={currentPage >= (numPages || 1)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-4 w-full">
+                  <div className='w-full flex justify-center gap-2'>
+
+                    {currentStep !== 'boundaries' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const prevStepIndex = Math.max(0, getStepNumber(currentStep) - 2);
+                          setCurrentStep(STEPS[prevStepIndex].id);
+                        }}
+                      >
+                        Back
+                      </Button>
+                    )}
+
+                    {currentStep === 'lines' && columnLines.length > 0 && (
+                      <Button
+                        size="sm"
+                        onClick={() => moveToNextStep()}
+                      >
+                        Next: Label Columns
+                      </Button>
+                    )}
+
+                  </div>
+
+                  <div className="flex items-center gap-2 text-nowrap">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setScale(prev => Math.max(0.1, prev - 0.1))}
+                    >
+                      <ZoomOut className="h-4 w-4" />
+                    </Button>
+                    <span>{Math.round(scale * 100)}%</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setScale(prev => prev + 0.1)}
+                    >
+                      <ZoomIn className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div
                 ref={pdfContainerRef}
                 className="relative bg-gray-50 rounded-lg overflow-hidden"
-                style={{ cursor: 'crosshair'  }}
+                style={{ cursor: 'crosshair' }}
                 onClick={handleClick}
                 onMouseMove={handleDrag}
                 onMouseUp={handleDragEnd}
@@ -447,8 +447,8 @@ const PDFColumnMarker = ({setPdfColMarkerData,initialConfig=initialConfigTest}) 
                   file={pdfFile}
                   onLoadSuccess={onDocumentLoadSuccess}
                 >
-                  <Page 
-                    pageNumber={currentPage} 
+                  <Page
+                    pageNumber={currentPage}
                     scale={scale}
                     renderTextLayer={false}
                     renderAnnotationLayer={false}
@@ -456,7 +456,7 @@ const PDFColumnMarker = ({setPdfColMarkerData,initialConfig=initialConfigTest}) 
 
                   {/* Table boundaries */}
                   {tableBounds.start !== null && (
-                    <div 
+                    <div
                       className="absolute top-0 h-full border-l-2 border-red-500"
                       style={{ left: `${tableBounds.start * scale}px` }}
                     >
@@ -466,7 +466,7 @@ const PDFColumnMarker = ({setPdfColMarkerData,initialConfig=initialConfigTest}) 
                     </div>
                   )}
                   {tableBounds.end !== null && (
-                    <div 
+                    <div
                       className="absolute top-0 h-full border-l-2 border-red-500"
                       style={{ left: `${tableBounds.end * scale}px` }}
                     >
@@ -478,13 +478,13 @@ const PDFColumnMarker = ({setPdfColMarkerData,initialConfig=initialConfigTest}) 
 
                   {/* Column lines */}
                   {columnLines.map((line, index) => (
-                    <div 
-                      key={line.id} 
-                      className="absolute top-0 h-full" 
+                    <div
+                      key={line.id}
+                      className="absolute top-0 h-full"
                       style={{ left: `${line.x * scale}px` }}
                     >
                       <div className="h-full bg-gray-400 border-l-2 border-gray-500" />
-                      
+
                       {/* Line Controls */}
                       <div className="absolute top-2 flex items-center gap-1">
                         <Button
@@ -512,10 +512,10 @@ const PDFColumnMarker = ({setPdfColMarkerData,initialConfig=initialConfigTest}) 
 
                   {/* Column labels */}
                   {columnLabels.map((label, index) => (
-                    <div 
-                      key={label.id} 
-                      className="absolute top-12" 
-                      style={{ 
+                    <div
+                      key={label.id}
+                      className="absolute top-12"
+                      style={{
                         left: `${label.x * scale}px`,
                         transform: 'translateX(-50%)'
                       }}
@@ -542,7 +542,7 @@ const PDFColumnMarker = ({setPdfColMarkerData,initialConfig=initialConfigTest}) 
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
-                        
+
                         {editingLabelIndex === index ? (
                           <Select
                             value={label.type}
@@ -560,7 +560,7 @@ const PDFColumnMarker = ({setPdfColMarkerData,initialConfig=initialConfigTest}) 
                             </SelectContent>
                           </Select>
                         ) : (
-                          <div 
+                          <div
                             className={`px-2 py-1 rounded cursor-pointer
                               ${COLUMN_COLORS[label.colorIndex].bg} ${COLUMN_COLORS[label.colorIndex].text}
                               text-sm font-medium whitespace-nowrap`}
