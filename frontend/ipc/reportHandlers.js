@@ -37,6 +37,11 @@ function registerReportHandlers() {
             throw error;
         }
     });
+
+
+    ipcMain.handle("add-pdf", async (event, data) => {
+        
+    })
 }
 
 module.exports = { registerReportHandlers };

@@ -1,172 +1,106 @@
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
-import {
-  Loader2,
-  Plus,
-  Trash2,
-  Download,
-  FileText,
   Bell,
-  Search,
-  Sun,
-  Moon,
 } from "lucide-react";
 import GenerateReportForm from "../Elements/ReportForm";
 import RecentReports from "./RecentReports";
+import { CircularProgress } from "../ui/circularprogress";
 
 export default function GenerateReport() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [file, setFile] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [darkMode, setDarkMode] = useState(false);
-  const [units, setUnits] = useState(["Unit 1", "Unit 2", "Unit 3"]);
-  const [selectedUnit, setSelectedUnit] = useState("");
-  const [serialNumber, setSerialNumber] = useState("00001");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [recentReports, setRecentReports] = useState([
-    {
-      id: 1,
-      date: "13-12-2024",
-      caseId: "ATS_unit_1_00008",
-      reportName: "Report_ATS_unit_1_00008",
-      status: "Completed",
-    },
-    {
-      id: 2,
-      date: "13-12-2024",
-      caseId: "ATS_unit_1_00007",
-      reportName: "Report_ATS_unit_1_00007",
-      status: "In Progress",
-    },
-    {
-      id: 3,
-      date: "12-12-2024",
-      caseId: "ATS_unit_1_00003",
-      reportName: "Report_ATS_unit_1_00003",
-      status: "Completed",
-    },
-    {
-      id: 4,
-      date: "12-12-2024",
-      caseId: "ATS_unit_1_00002",
-      reportName: "Report_ATS_unit_1_00002",
-      status: "Under Review",
-    },
-    {
-      id: 5,
-      date: "12-12-2024",
-      caseId: "ATS_unit_1_00001",
-      reportName: "Report_ATS_unit_1_00001",
-      status: "Completed",
-    },
-  ]);
 
-  const handleAddUnit = (value) => {
-    if (value && !units.includes(value)) {
-      setUnits([...units, value]);
-    }
-  };
-
-  const StatusBadge = ({ status }) => {
-    const colors = {
-      Completed:
-        "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100",
-      "In Progress":
-        "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100",
-      "Under Review":
-        "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-100",
-    };
-
-    return (
-      <span
-        className={`px-3 py-1 rounded-full text-sm font-medium ${colors[status]}`}
-      >
-        {status}
-      </span>
-    );
-  };
-
-  const StatsCard = ({ title, value, icon: Icon }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-            {title}
-          </p>
-          <h3 className="text-2xl font-bold dark:text-white">
-            {value.toLocaleString()}
-          </h3>
-        </div>
-        <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900 flex items-center justify-center">
-          <Icon className="w-6 h-6 text-blue-500 dark:text-blue-300" />
-        </div>
-      </div>
-    </div>
-  );
-
-  const generateSerialNumber = () => {
-    const lastNumber = parseInt(serialNumber);
-    return String(lastNumber + 1).padStart(5, "0");
-  };
-
-  const handleUnitChange = (value) => {
-    if (value === "add_new") {
-      const newUnit = prompt("Enter new unit name:");
-      if (newUnit) {
-        handleAddUnit(newUnit);
-        setSelectedUnit(newUnit);
-      }
-    } else {
-      setSelectedUnit(value);
-    }
-    const newSerialNum = generateSerialNumber();
-    setSerialNumber(newSerialNum);
-  };
-
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
-
-  const handleSubmit = async () => {
-    if (!file || !selectedUnit) {
-      console.log("Please select a unit and file");
+  const handleSubmit = async (setProgress, setLoading, setToastId, selectedFiles, fileDetails, setSelectedFiles, setFileDetails, setCaseId, toast, progressIntervalRef, simulateProgress, convertDateFormat, caseId) => {
+    if (selectedFiles.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one file",
+        variant: "destructive",
+        duration: 3000,
+      });
       return;
     }
 
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    setLoading(true);
+    const newToastId = toast({
+      title: "Initializing Report Generation",
+      description: (
+        <div className="mt-2 w-full flex flex-col gap-2">
+          <div className="flex items-center gap-4">
+            <CircularProgress value={0} className="w-full" />
+            <span className="text-sm font-medium">0%</span>
+          </div>
+          <p className="text-sm text-gray-500">Preparing to process files...</p>
+        </div>
+      ),
+      duration: Infinity,
+    });
+    setToastId(newToastId);
 
-    const submitData = {
-      unit: selectedUnit,
-      serialNumber,
-      caseId: `ATS_${selectedUnit
-        .toLowerCase()
-        .replace(" ", "_")}_${serialNumber}`,
-      file: file.name,
-    };
+    progressIntervalRef.current = simulateProgress();
 
-    console.log("Submitted data:", submitData);
-    setIsLoading(false);
-    setFile(null);
-    document.getElementById("fileInput").value = "";
+    try {
+      const filesWithContent = await Promise.all(
+        selectedFiles.map(async (file, index) => {
+          const fileContent = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsBinaryString(file);
+          });
+
+          const detail = fileDetails[index];
+
+          return {
+            fileContent,
+            pdf_paths: file.name,
+            bankName: detail.bankName,
+            passwords: detail.password || "",
+            start_date: convertDateFormat(detail.start_date), // Convert date format
+            end_date: convertDateFormat(detail.end_date), // Convert date format
+            ca_id: caseId,
+          };
+        })
+      );
+
+      const result = await window.electron.generateReportIpc({
+        files: filesWithContent,
+      });
+
+      if (result.success) {
+        clearInterval(progressIntervalRef.current);
+        setProgress(100);
+        toast.dismiss(newToastId);
+        toast({
+          title: "Success",
+          description: "Report generated successfully!",
+          duration: 3000,
+        });
+
+        // const newCaseId = generateNewCaseId();
+        // setCaseId(newCaseId);
+
+        setSelectedFiles([]);
+        setFileDetails([]);
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error("Report generation failed:", error);
+      clearInterval(progressIntervalRef.current);
+      toast.dismiss(newToastId);
+      setProgress(0);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate report",
+        variant: "destructive",
+        duration: 5000,
+      });
+    } finally {
+      setLoading(false);
+      progressIntervalRef.current = null;
+    }
   };
 
-  const handleAddReport = (id) => {
-    console.log("Adding report:", id);
-  };
-
-  const handleDeleteReport = (id) => {
-    setRecentReports(recentReports.filter((report) => report.id !== id));
-  };
 
   const notifications = [
     { id: 1, message: "You have a new message." },
@@ -235,7 +169,7 @@ export default function GenerateReport() {
       </div>
 
       <div>
-        <GenerateReportForm />
+        <GenerateReportForm handleReportSubmit={handleSubmit} />
       </div>
 
       {/* Recent reports */}

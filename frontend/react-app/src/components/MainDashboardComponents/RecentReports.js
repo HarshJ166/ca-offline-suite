@@ -43,6 +43,7 @@ import {
 } from "../ui/pagination";
 import CategoryEditModal from "./CategoryEditModal";
 import GenerateReportForm from "../Elements/ReportForm";
+import { CircularProgress } from "../ui/circularprogress";
 
 const RecentReports = () => {
   const { toast } = useToast();
@@ -242,6 +243,99 @@ const RecentReports = () => {
     setIsLoading(true);
     navigate(`/case-dashboard/${caseId}/defaultTab`);
     setIsLoading(false);
+  };
+
+  const handleAddPdfSubmit = async (setProgress, setLoading, setToastId, selectedFiles, fileDetails, setSelectedFiles, setFileDetails, setCaseId, toast, progressIntervalRef, simulateProgress, convertDateFormat, caseId) => {
+    if (selectedFiles.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one file",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
+
+    setLoading(true);
+    const newToastId = toast({
+      title: "Initializing Report Generation",
+      description: (
+        <div className="mt-2 w-full flex flex-col gap-2">
+          <div className="flex items-center gap-4">
+            <CircularProgress value={0} className="w-full" />
+            <span className="text-sm font-medium">0%</span>
+          </div>
+          <p className="text-sm text-gray-500">Preparing to process files...</p>
+        </div>
+      ),
+      duration: Infinity,
+    });
+    setToastId(newToastId);
+
+    progressIntervalRef.current = simulateProgress();
+
+    try {
+      const filesWithContent = await Promise.all(
+        selectedFiles.map(async (file, index) => {
+          const fileContent = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsBinaryString(file);
+          });
+
+          const detail = fileDetails[index];
+
+          return {
+            fileContent,
+            pdf_paths: file.name,
+            bankName: detail.bankName,
+            passwords: detail.password || "",
+            start_date: convertDateFormat(detail.start_date), // Convert date format
+            end_date: convertDateFormat(detail.end_date), // Convert date format
+            ca_id: caseId,
+          };
+        })
+      );
+
+      const result = await window.electron.addPdfIpc({
+        files: filesWithContent,
+      });
+
+      if (result.success) {
+        clearInterval(progressIntervalRef.current);
+        setProgress(100);
+        toast.dismiss(newToastId);
+        toast({
+          title: "Success",
+          description: "Report generated successfully!",
+          duration: 3000,
+        });
+
+        // const newCaseId = generateNewCaseId();
+        // setCaseId(newCaseId);
+
+        setSelectedFiles([]);
+        setFileDetails([]);
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error("Report generation failed:", error);
+      clearInterval(progressIntervalRef.current);
+      toast.dismiss(newToastId);
+      setProgress(0);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate report",
+        variant: "destructive",
+        duration: 5000,
+      });
+    } finally {
+      setLoading(false);
+      progressIntervalRef.current = null;
+    }
+  
   };
 
   const toggleEdit = (id) => {
@@ -467,7 +561,7 @@ const RecentReports = () => {
               </button>
             </header>
             <div className="mt-4">
-              <GenerateReportForm source="add pdf" />
+              <GenerateReportForm source="add pdf" handleReportSubmit={handleAddPdfSubmit} />
             </div>
           </div>
         </div>

@@ -83,6 +83,16 @@ async def analyze_bank_statements(request: BankStatementRequest):
         )
 
 
+@app.post("/refresh/")
+async def refresh(request: BankStatementRequest):
+    pass
+
+
+@app.post("/add-pdf/")
+async def add_pdf(request: BankStatementRequest):
+    pass
+
+
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
