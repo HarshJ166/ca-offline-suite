@@ -38,6 +38,12 @@ const GenerateReportForm = ({source=""}) => {
     u.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  useEffect(()=>{
+    setForAts(false);
+    console.log("analysisResults",analysisResults);
+
+  },[analysisResults])
+
   useEffect(() => {
     if (forAts) {
       setCaseId(`ATS_${unit.replace(/\s+/g, "_")}_${serialNumber}`);
@@ -69,7 +75,7 @@ const GenerateReportForm = ({source=""}) => {
         }
       });
     };
-  }, [selectedFiles]);
+  }, [selectedFiles,fileDetails]);
 
   const handlePreviewFile = (previewUrl, fileType) => {
     window.open(previewUrl, "_blank");
@@ -123,7 +129,7 @@ const GenerateReportForm = ({source=""}) => {
         duration: Infinity,
       });
     }
-  }, [progress, toastId]);
+  }, [progress, toastId,toast]);
 
   const processFiles = async (files) => {
     try {
