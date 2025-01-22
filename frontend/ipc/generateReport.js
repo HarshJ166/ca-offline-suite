@@ -7,9 +7,9 @@ const db = require("../db/db");
 const { transactions } = require("../db/schema/Transactions");
 const { statements } = require("../db/schema/Statement");
 const { cases } = require("../db/schema/Cases");
+const { eod } = require("../db/schema/Eod");
 const { eq, and } = require("drizzle-orm");
 
-// Helper function to sanitize JSON string
 const sanitizeJSONString = (jsonString) => {
   return jsonString
     .replace(/: *NaN/g, ": null")
@@ -18,17 +18,15 @@ const sanitizeJSONString = (jsonString) => {
     .replace(/: *-Infinity/g, ": null");
 };
 
-// Helper function to validate and transform transaction data
 const validateAndTransformTransaction = (transaction, statementId) => {
   if (!transaction["Value Date"] || !transaction.Description) {
     throw new Error("Missing required transaction fields");
   }
 
-  // Parse date properly from DD-MM-YYYY format
   let date = null;
   try {
     const [day, month, year] = transaction["Value Date"].split("-");
-    date = new Date(year, month - 1, day); // month is 0-based in JS
+    date = new Date(year, month - 1, day);
     if (isNaN(date.getTime())) {
       throw new Error("Invalid date");
     }
@@ -36,12 +34,11 @@ const validateAndTransformTransaction = (transaction, statementId) => {
     throw new Error(`Invalid date format: ${transaction["Value Date"]}`);
   }
 
-  // Fixed amount handling logic
   let amount = 0;
   if (transaction.Credit !== null && !isNaN(transaction.Credit)) {
-    amount = Math.abs(transaction.Credit); // Ensure positive for credits
+    amount = Math.abs(transaction.Credit);
   } else if (transaction.Debit !== null && !isNaN(transaction.Debit)) {
-    amount = Math.abs(transaction.Debit); // Keep debit amounts positive if that's what you want
+    amount = Math.abs(transaction.Debit);
   }
 
   let balance = 0;
@@ -49,118 +46,79 @@ const validateAndTransformTransaction = (transaction, statementId) => {
     balance = parseFloat(transaction.Balance);
   }
 
-  // Determine transaction type based on whether it was a Credit or Debit
-  const type =
-    transaction.Credit !== null && !isNaN(transaction.Credit)
-      ? "credit"
-      : "debit";
+  const type = transaction.Credit !== null && !isNaN(transaction.Credit)
+    ? "credit"
+    : "debit";
 
   return {
     statementId,
     date: date,
     description: transaction.Description,
-    amount: amount, // Now preserving the original sign
+    amount: amount,
     category: transaction.Category || "uncategorized",
-    type: type, // Type is now determined by the transaction field used, not the amount sign
+    type: type,
     balance: balance,
     entity: transaction.Bank || "unknown",
   };
 };
 
-const logTransactionDetails = (original, transformed) => {
-  log.info("Transaction transformation:", {
-    original: {
-      valueDate: original["Value Date"],
-      description: original.Description,
-      credit: original.Credit,
-      debit: original.Debit,
-      balance: original.Balance,
-    },
-    transformed: {
-      date: transformed.date,
-      description: transformed.description,
-      amount: transformed.amount,
-      type: transformed.type,
-      balance: transformed.balance,
-    },
-  });
+const isDuplicateTransaction = async (transaction, statementId) => {
+  const existing = await db
+    .select()
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.statementId, statementId),
+        eq(transactions.date, transaction.date),
+        eq(transactions.amount, transaction.amount),
+        eq(transactions.description, transaction.description)
+      )
+    );
+  return existing.length > 0;
 };
 
-// Helper function to ensure case exists
-const ensureCaseExists = async (caseId, userId = 1) => {
-  try {
-    // Check if case exists
-    const existingCase = await db
-      .select()
-      .from(cases)
-      .where(eq(cases.id, caseId));
-
-    if (existingCase.length === 0) {
-      // Create new case if it doesn't exist
-      const newCase = await db
-        .insert(cases)
-        .values({
-          // id: caseId,
-          name: caseId,
-          userId: userId,
-          status: "active",
-          createdAt: new Date(),
-        })
-        .returning();
-
-      if (newCase.length > 0) {
-        return newCase[0].id;
-      }
-      log.info(`Created new case with ID: ${caseId}`);
-    }
-  } catch (error) {
-    log.error("Error ensuring case exists:", error);
-    throw error;
-  }
-};
-
-// Helper function to store transactions in batches
-// Modified store transactions batch with validation
 const storeTransactionsBatch = async (transformedTransactions) => {
   try {
     if (transformedTransactions.length === 0) return;
 
-    const dbTransactions = transformedTransactions.map((t) => {
-      // Log each transaction for verification
-      log.info(
-        `Processing transaction: ${t.description}, Amount: ${t.amount}, Type: ${t.type}`
-      );
+    const uniqueTransactions = [];
+    for (const t of transformedTransactions) {
+      const isDuplicate = await isDuplicateTransaction(t, t.statementId);
+      if (!isDuplicate) {
+        uniqueTransactions.push({
+          statementId: t.statementId.toString(),
+          date: t.date,
+          description: t.description,
+          amount: t.amount,
+          category: t.category,
+          type: t.type,
+          balance: t.balance,
+          entity: t.entity,
+        });
+      } else {
+        log.info(`Skipping duplicate transaction: ${t.description} on ${t.date}`);
+      }
+    }
 
-      return {
-        statementId: t.statementId.toString(),
-        date: t.date,
-        description: t.description,
-        amount: t.amount, // Using the corrected amount
-        category: t.category,
-        type: t.type,
-        balance: t.balance,
-        entity: t.entity,
-      };
-    });
+    if (uniqueTransactions.length === 0) {
+      log.info("No new unique transactions to store");
+      return true;
+    }
 
-    // Verify statement exists before inserting transactions
     const existingStatements = await db
       .select()
       .from(statements)
-      .where(eq(statements.id, dbTransactions[0].statementId));
+      .where(eq(statements.id, uniqueTransactions[0].statementId));
 
     if (existingStatements.length === 0) {
-      throw new Error(`Statement ${dbTransactions[0].statementId} not found`);
+      throw new Error(`Statement ${uniqueTransactions[0].statementId} not found`);
     }
 
-    // Insert transactions in chunks
-    const chunkSize = 20;
-    for (let i = 0; i < dbTransactions.length; i += chunkSize) {
-      const chunk = dbTransactions.slice(i, i + chunkSize);
+    const chunkSize = 50;
+    for (let i = 0; i < uniqueTransactions.length; i += chunkSize) {
+      const chunk = uniqueTransactions.slice(i, i + chunkSize);
       await db.insert(transactions).values(chunk);
-      log.info(
-        `Stored transactions batch ${i / chunkSize + 1}, size: ${chunk.length}`
-      );
+      log.info(`Stored transactions batch ${i / chunkSize + 1}, size: ${chunk.length}`);
     }
 
     return true;
@@ -170,88 +128,225 @@ const storeTransactionsBatch = async (transformedTransactions) => {
   }
 };
 
-// Helper function to create statement record
-const createStatement = async (fileDetail, caseId) => {
+const getOrCreateCase = async (caseId, userId = 1) => {
   try {
-    // Ensure case exists before creating statement
-    const caseName = await ensureCaseExists(caseId);
-
-    const statementData = {
-      caseId: caseName,
-      accountNumber: fileDetail.accountNumber || "UNKNOWN",
-      customerName: fileDetail.customerName || "UNKNOWN",
-      ifscCode: fileDetail.ifscCode || null,
-      bankName: fileDetail.bankName,
-      filePath: fileDetail.pdf_paths,
-      createdAt: new Date(),
-    };
-
-    const result = await db.insert(statements).values(statementData);
-    log.info("Created statement record");
-    return result.lastInsertRowid.toString();
-  } catch (error) {
-    log.error("Error creating statement record:", error);
-    throw error;
-  }
-};
-
-// Helper function to process transactions
-const processTransactions = async (transactions, fileDetail, statementId) => {
-  try {
-    // Transform and validate transactions for this statement
-    const statementTransactions = transactions
-      .filter((t) => t.Bank === fileDetail.bankName)
-      .map((transaction) => {
-        try {
-          return validateAndTransformTransaction(transaction, statementId);
-        } catch (error) {
-          log.warn(
-            `Invalid transaction skipped: ${error.message}`,
-            transaction
-          );
-          return null;
-        }
+    // First try to find existing case
+    const existingCase = await db
+      .select({
+        id: cases.id,
       })
-      .filter(Boolean); // Remove null entries
+      .from(cases)
+      .where(eq(cases.id, caseId))
+      .limit(1);
 
-    // Store the validated transactions
-    await storeTransactionsBatch(statementTransactions);
+    if (existingCase.length > 0) {
+      log.info(`Found existing case with ID: ${existingCase[0].id}`);
+      return existingCase[0].id;
+    }
 
-    return statementTransactions.length;
+    // Create new case if not found
+    const newCase = await db
+      .insert(cases)
+      .values({
+        name: caseId,
+        userId: userId,
+        status: "active",
+        createdAt: new Date(),
+      })
+      .returning();
+
+    if (newCase.length > 0) {
+      log.info(`Created new case with ID: ${newCase[0].id}`);
+      return newCase[0].id;
+    }
+
+    throw new Error("Failed to create or find case");
   } catch (error) {
-    log.error(
-      `Error processing transactions for ${fileDetail.bankName}:`,
-      error
-    );
+    log.error("Error in getOrCreateCase:", error);
     throw error;
   }
 };
 
-// Main IPC handler function
+//Session Management Implementation required:
+// const getOrCreateCase = async (caseId) => {
+//   try {
+//     // First try to find existing case
+//     const existingCase = await db
+//       .select({
+//         id: cases.id,
+//       })
+//       .from(cases)
+//       .where(eq(cases.id, caseId))
+//       .limit(1);
+
+//     if (existingCase.length > 0) {
+//       log.info(`Found existing case with ID: ${existingCase[0].id}`);
+//       return existingCase[0].id;
+//     }
+
+//     // Get user ID from session
+//     const { userId } = await sessionManager.getUser();
+//     if (!userId) {
+//       throw new Error("User ID not found in session");
+//     }
+
+//     // Create new case if not found
+//     const newCase = await db
+//       .insert(cases)
+//       .values({
+//         name: caseId,
+//         userId,
+//         status: "active",
+//         createdAt: new Date(),
+//       })
+//       .returning();
+
+//     if (newCase.length > 0) {
+//       log.info(`Created new case with ID: ${newCase[0].id}`);
+//       return newCase[0].id;
+//     }
+
+//     throw new Error("Failed to create or find case");
+//   } catch (error) {
+//     log.error("Error in getOrCreateCase:", error);
+//     throw error;
+//   }
+// };
+
+const processStatementAndEOD = async (fileDetail, transactions, eodData, caseId) => {
+  try {
+    const validCaseId = await getOrCreateCase(caseId);
+    let statementId = null;
+    let processedTransactions = 0;
+
+    // Process Statement and Transactions
+    try {
+      const statementData = {
+        caseId: validCaseId,
+        accountNumber: fileDetail.accountNumber || "UNKNOWN",
+        customerName: fileDetail.customerName || "UNKNOWN",
+        ifscCode: fileDetail.ifscCode || null,
+        bankName: fileDetail.bankName,
+        filePath: fileDetail.pdf_paths,
+        createdAt: new Date(),
+      };
+
+      const statementResult = await db.insert(statements).values(statementData).returning();
+      
+      if (!statementResult || statementResult.length === 0) {
+        throw new Error("Failed to create statement record");
+      }
+
+      statementId = statementResult[0].id;
+      
+      // Process transactions for this statement
+      const statementTransactions = transactions
+        .filter((t) => t.Bank === fileDetail.bankName)
+        .map((transaction) => {
+          try {
+            return validateAndTransformTransaction(transaction, statementId);
+          } catch (error) {
+            log.warn(`Invalid transaction skipped: ${error.message}`, transaction);
+            return null;
+          }
+        })
+        .filter(Boolean);
+
+      await storeTransactionsBatch(statementTransactions);
+      processedTransactions = statementTransactions.length;
+    } catch (error) {
+      log.error("Error processing statement and transactions:", error);
+      throw error;
+    }
+
+    // Process EOD data if available
+    if (eodData && Array.isArray(eodData)) {
+      try {
+        // Check if EOD data already exists for this case
+        const existingEOD = await db
+          .select()
+          .from(eod)
+          .where(eq(eod.caseId, validCaseId));
+
+        const validatedEODData = eodData
+          .filter(entry => {
+            return entry && 
+                   typeof entry === 'object' && 
+                   entry.Day !== "Total" && 
+                   entry.Day !== "Average";
+          })
+          .map(entry => {
+            try {
+              const monthKey = Object.keys(entry).find(key => 
+                key !== "Day" && typeof entry[key] !== 'undefined'
+              );
+
+              if (!monthKey) return null;
+
+              const dayValue = typeof entry.Day === 'number' ? 
+                entry.Day : parseFloat(entry.Day);
+              const monthValue = typeof entry[monthKey] === 'number' ? 
+                entry[monthKey] : parseFloat(entry[monthKey]);
+
+              if (isNaN(dayValue) || isNaN(monthValue)) return null;
+
+              return {
+                Day: dayValue,
+                [monthKey]: monthValue
+              };
+            } catch (error) {
+              log.warn("Error processing EOD entry:", error, entry);
+              return null;
+            }
+          })
+          .filter(Boolean);
+
+        if (validatedEODData.length > 0) {
+          if (existingEOD.length > 0) {
+            await db
+              .update(eod)
+              .set({
+                data: JSON.stringify(validatedEODData),
+                updatedAt: new Date()
+              })
+              .where(eq(eod.caseId, validCaseId));
+          } else {
+            await db.insert(eod).values({
+              caseId: validCaseId,
+              data: JSON.stringify(validatedEODData),
+              createdAt: new Date()
+            });
+          }
+        }
+      } catch (error) {
+        log.error("Error processing EOD data:", error);
+        throw error;
+      }
+    }
+
+    return {
+      statementId,
+      transactionCount: processedTransactions,
+      bankName: fileDetail.bankName
+    };
+  } catch (error) {
+    log.error("Error in processStatementAndEOD:", error);
+    throw error;
+  }
+};
+
 function generateReportIpc() {
   ipcMain.handle("generate-report", async (event, result, reportName) => {
     log.info("IPC handler invoked for generate-report");
     const tempDir = path.join(__dirname, "..", "tmp");
 
     try {
-      // Input validation
       if (!result?.files?.length) {
         throw new Error("Invalid or empty files array received");
       }
 
-      log.info(
-        "Processing request with files:",
-        result.files.map((f) => ({
-          bankName: f.bankName,
-          start_date: f.start_date,
-          end_date: f.end_date,
-        }))
-      );
-
-      // Create temp directory
       fs.mkdirSync(tempDir, { recursive: true });
 
-      // Process file details
       const fileDetails = result.files.map((fileDetail, index) => {
         if (!fileDetail.pdf_paths || !fileDetail.bankName) {
           throw new Error(`Missing required fields for file at index ${index}`);
@@ -273,7 +368,6 @@ function generateReportIpc() {
         };
       });
 
-      // Prepare API payload
       const payload = {
         bank_names: fileDetails.map((d) => d.bankName),
         pdf_paths: fileDetails.map((d) => d.pdf_paths),
@@ -283,7 +377,6 @@ function generateReportIpc() {
         ca_id: fileDetails[0]?.ca_id || "DEFAULT_CASE",
       };
 
-      // Make API request
       const response = await axios.post(
         "http://localhost:7500/analyze-statements/",
         payload,
@@ -298,40 +391,24 @@ function generateReportIpc() {
         throw new Error("Empty response received from analysis server");
       }
 
-      log.info("Received response from analysis server");
-
-      // Parse and sanitize response data
       let parsedData;
-      console.log("response.data.data :", response.data);
-      console.log("response :", response.data.data);
       try {
         const sanitizedJsonString = sanitizeJSONString(response.data.data);
         parsedData = JSON.parse(sanitizedJsonString);
       } catch (error) {
         log.error("JSON parsing error:", error);
-        // log.error("Problematic JSON string:", sanitizedJsonString);
-        // throw new Error("Failed to parse response data: " + error.message);
+        throw error;
       }
 
-      // Filter and validate transactions
       const transactions = (parsedData.Transactions || []).filter(
         (transaction) => {
-          if (
-            typeof transaction.Credit === "number" &&
-            isNaN(transaction.Credit)
-          ) {
+          if (typeof transaction.Credit === "number" && isNaN(transaction.Credit)) {
             transaction.Credit = null;
           }
-          if (
-            typeof transaction.Debit === "number" &&
-            isNaN(transaction.Debit)
-          ) {
+          if (typeof transaction.Debit === "number" && isNaN(transaction.Debit)) {
             transaction.Debit = null;
           }
-          if (
-            typeof transaction.Balance === "number" &&
-            isNaN(transaction.Balance)
-          ) {
+          if (typeof transaction.Balance === "number" && isNaN(transaction.Balance)) {
             transaction.Balance = 0;
           }
 
@@ -342,45 +419,40 @@ function generateReportIpc() {
         }
       );
 
-      log.info(
-        `Extracted ${transactions.length} valid transactions from response`
-      );
-
-      // Process each file detail and its transactions
       const processedData = [];
       for (const fileDetail of fileDetails) {
         try {
-          const statementId = await createStatement(fileDetail, payload.ca_id);
-          const transactionCount = await processTransactions(
-            transactions,
+          const result = await processStatementAndEOD(
             fileDetail,
-            statementId
+            transactions,
+            parsedData.EOD,
+            payload.ca_id
           );
-
-          processedData.push({
-            statementId,
-            bankName: fileDetail.bankName,
-            transactionCount,
-          });
+          processedData.push(result);
         } catch (error) {
           log.error(
             `Error processing file detail for ${fileDetail.bankName}:`,
             error
           );
+          throw error;
         }
       }
 
-      // Cleanup temp files
+      // Cleanup
       fileDetails.forEach((detail) => {
         try {
-          fs.unlinkSync(detail.pdf_paths);
+          if (fs.existsSync(detail.pdf_paths)) {
+            fs.unlinkSync(detail.pdf_paths);
+          }
         } catch (error) {
           log.warn(`Failed to cleanup temp file: ${detail.pdf_paths}`, error);
         }
       });
 
       try {
-        fs.rmdirSync(tempDir);
+        if (fs.existsSync(tempDir)) {
+          fs.rmdirSync(tempDir);
+        }
       } catch (error) {
         log.warn("Failed to remove temp directory:", error);
       }
@@ -393,15 +465,20 @@ function generateReportIpc() {
             (sum, d) => sum + d.transactionCount,
             0
           ),
+          eodProcessed: true
         },
       };
+
     } catch (error) {
       // Cleanup on error
       try {
         if (fs.existsSync(tempDir)) {
           fs.readdirSync(tempDir).forEach((file) => {
             try {
-              fs.unlinkSync(path.join(tempDir, file));
+              const filePath = path.join(tempDir, file);
+              if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+              }
             } catch (e) {
               log.warn(`Failed to delete temp file ${file}:`, e);
             }
