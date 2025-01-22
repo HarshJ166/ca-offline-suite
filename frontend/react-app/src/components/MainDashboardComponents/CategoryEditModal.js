@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,8 +9,11 @@ import CategoryEditTable from "../MainDashboardComponents/CategoryEditTable"
 
 
 const CategoryEditModal = ({ open, onOpenChange }) => {
+    const [categoryOptions, setCategoryOptions] = useState(null);
+
+    
   // Sample entity options
-  const categoryOptions = [
+  const categoryOptionsfixed = [
     "Bank Charges",
     "Bank Interest Received",
     "Bonus Paid",
@@ -60,6 +63,10 @@ const CategoryEditModal = ({ open, onOpenChange }) => {
     "UPI-Dr",
     "Utility Bills"
   ];
+
+  useEffect(() => {
+    setCategoryOptions(categoryOptionsfixed);
+}, []);
 
   // const handleEntityChange = (transactionId, newEntity) => {
   //   setTransactions(prevTransactions =>
@@ -45053,7 +45060,7 @@ transactionData2.forEach((transaction) => {
           <DialogTitle>Transactions</DialogTitle>
         </DialogHeader>
           <div className="overflow-auto flex-1">
-            <CategoryEditTable data={transactionData} categoryOptions={categoryOptions}/>
+            <CategoryEditTable data={transactionData} categoryOptions={categoryOptions} setCategoryOptions={setCategoryOptions}/>
           </div>
       </DialogContent>
     </Dialog>
