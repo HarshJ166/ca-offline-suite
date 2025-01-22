@@ -44,7 +44,7 @@ import {
 import CategoryEditModal from "./CategoryEditModal";
 import GenerateReportForm from "../Elements/ReportForm";
 
-const RecentReports = () => {
+const RecentReports = ({ key }) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
