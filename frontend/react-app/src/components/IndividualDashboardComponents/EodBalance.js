@@ -53,29 +53,41 @@ const EodBalance = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg space-y-6 m-8 mt-2 dark:bg-slate-950 w-[80vw]">
-      <ToggleStrip
-        columns={numericColumns}
-        selectedColumns={selectedColumns}
-        setSelectedColumns={setSelectedColumns}
-      />
-      <div className="flex flex-col gap-1">
-        <div className="h-[50vh] w-[80vw]">
-          <SingleLineChart
-            title="EOD Balance"
-            data={eodData}
-            xAxisKey="Day"
-            selectedColumns={selectedColumns}
-            bottom={300}
-            height={"h-[45vh]"}
-            config={chartConfig}
-          />
+    <>
+    {eodData.length === 0 ? (
+        <div className="rounded-lg m-8 mt-2 space-y-6">
+        <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
+        <p className="text-gray-800 text-center mt-3 font-medium text-lg">
+          No Data Available
+        </p>
+      </div>
         </div>
-        <div className="mt-5">
-          <DataTable data={transformedData} title="EOD Balance" />
+    ):(<div className="bg-white rounded-lg space-y-6 m-8 mt-2 dark:bg-slate-950 w-[80vw]">
+        <ToggleStrip
+          columns={numericColumns}
+          selectedColumns={selectedColumns}
+          setSelectedColumns={setSelectedColumns}
+        />
+        <div className="flex flex-col gap-1">
+          <div className="h-[50vh] w-[80vw]">
+            <SingleLineChart
+              title="EOD Balance"
+              data={eodData}
+              xAxisKey="Day"
+              selectedColumns={selectedColumns}
+              bottom={300}
+              height={"h-[45vh]"}
+              config={chartConfig}
+            />
+          </div>
+          <div className="mt-5">
+            <DataTable data={transformedData} title="EOD Balance" />
+          </div>
         </div>
       </div>
-    </div>
+    )}
+    </>
+    
   );
 };
 
