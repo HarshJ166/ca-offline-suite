@@ -99,7 +99,14 @@ const Cash = ({ caseId }) => {
         </TabsList>
 
         <TabsContent value="withdrawal">
-          {withdrawalData.length > 0 ? (
+          {withdrawalData.length === 0 ?
+          (
+            <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
+            <p className="text-gray-800 text-center mt-3 font-medium text-lg">
+                No Data Available
+            </p>
+            </div>
+          ): (
             <>
               <div className="mb-6 w-full h-[60vh]">
                 <BarLineChart
@@ -113,15 +120,18 @@ const Cash = ({ caseId }) => {
                 <DataTable data={withdrawalData} />
               </div>
             </>
-          ) : (
-            <div className="text-center text-gray-600 dark:text-gray-400 my-6">
-              No withdrawal data available
-            </div>
           )}
         </TabsContent>
 
         <TabsContent value="deposit">
-          {depositData.length > 0 ? (
+          {depositData.length === 0 ? 
+          (
+            <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
+            <p className="text-gray-800 text-center mt-3 font-medium text-lg">
+                No Data Available
+            </p>
+            </div>
+          ) : (
             <>
               <div className="mb-6 w-full h-[60vh]">
                 <BarLineChart
@@ -135,11 +145,7 @@ const Cash = ({ caseId }) => {
                 <DataTable data={depositData} />
               </div>
             </>
-          ) : (
-            <div className="text-center text-gray-600 dark:text-gray-400 my-6">
-              No deposit data available
-            </div>
-          )}
+          ) }
         </TabsContent>
       </Tabs>
     </div>

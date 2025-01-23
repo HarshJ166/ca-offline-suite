@@ -77,7 +77,14 @@ const Suspense = ({ caseId }) => {
         </TabsList>
 
         <TabsContent value="credit">
-          <div className="grid grid-rows-[60vh_auto] gap-4">
+            {creditData.length ===0 ? (
+                <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
+                <p className="text-gray-800 text-center mt-3 font-medium text-lg">
+                  No Data Available
+                </p>
+              </div>
+            ):(
+            <div className="grid grid-rows-[60vh_auto] gap-4">
             <div className="grid grid-cols-2 gap-6">
               <div className="w-full h-full">
                 <HorizontalBarChart
@@ -99,10 +106,18 @@ const Suspense = ({ caseId }) => {
               <DataTable data={creditData} />
             </div>
           </div>
+            )}
+          
         </TabsContent>
 
         <TabsContent value="debit">
-          <div className="grid grid-rows-[60vh_auto] gap-6">
+            {debitData.length === 0 ? (
+                <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
+                <p className="text-gray-800 text-center mt-3 font-medium text-lg">
+                  No Data Available
+                </p>
+              </div>
+            ):(<div className="grid grid-rows-[60vh_auto] gap-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="w-full h-full">
                 <HorizontalBarChart
@@ -123,7 +138,8 @@ const Suspense = ({ caseId }) => {
             <div>
               <DataTable data={debitData} />
             </div>
-          </div>
+          </div>)}
+          
         </TabsContent>
       </Tabs>
     </div>

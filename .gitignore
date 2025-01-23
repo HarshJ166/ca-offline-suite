@@ -132,6 +132,8 @@ coverage.xml
 *~
 tmp/
 temp/
+dist 
+env
 
 # Cache directories
 .cache/

@@ -13,13 +13,13 @@ import { Button } from "../ui/button";
 import { useToast } from "../../hooks/use-toast";
 import { CircularProgress } from "../ui/circularprogress";
 
-const GenerateReportForm = ({ onReportGenerated }) => {
+const GenerateReportForm = ({ currentCaseName = null, currentCaseId = null, handleReportSubmit, onReportGenerated }) => {
   const [unit, setUnit] = useState("Unit 1");
   const [units, setUnits] = useState(["Unit 1", "Unit 2"]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [serialNumber, setSerialNumber] = useState("00009");
-  const [caseName, setCaseName] = useState(null);
+  const [caseName, setCaseName] = useState("");
   const [lastCaseNumber, setLastCaseNumber] = useState(9); // Track the last used number
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [fileDetails, setFileDetails] = useState([]);
@@ -33,6 +33,7 @@ const GenerateReportForm = ({ onReportGenerated }) => {
   const [progress, setProgress] = useState(0);
   const [toastId, setToastId] = useState(null);
   const progressIntervalRef = useRef(null);
+  // console.log("Case Name: ", currentCaseName);
 
   // Load the last case number from localStorage on component mount
   useEffect(() => {
@@ -99,8 +100,8 @@ const GenerateReportForm = ({ onReportGenerated }) => {
               {progress < 90
                 ? "Processing your bank statements..."
                 : progress < 100
-                ? "Finalizing report generation..."
-                : "Report generated successfully!"}
+                  ? "Finalizing report generation..."
+                  : "Report generated successfully!"}
             </p>
           </div>
         ),
@@ -185,100 +186,86 @@ const GenerateReportForm = ({ onReportGenerated }) => {
     }
     const validationErrors = [];
 
-    if (selectedFiles.length === 0) {
-      toast({
-        title: "Error",
-        description: "Please select at least one file",
-        variant: "destructive",
-        duration: 3000,
-      });
-      return;
-    }
+    handleReportSubmit(setProgress, setLoading, setToastId, selectedFiles, fileDetails, setSelectedFiles, setFileDetails, setCaseName, toast, progressIntervalRef, simulateProgress, convertDateFormat, currentCaseId);
 
-    setLoading(true);
-    const newToastId = toast({
-      title: "Initializing Report Generation",
-      description: (
-        <div className="mt-2 w-full flex flex-col gap-2">
-          <div className="flex items-center gap-4">
-            <CircularProgress value={0} className="w-full" />
-            <span className="text-sm font-medium">0%</span>
-          </div>
-          <p className="text-sm text-gray-500">Preparing to process files...</p>
-        </div>
-      ),
-      duration: Infinity,
-    });
-    setToastId(newToastId);
+    // if (selectedFiles.length === 0) {
+    //   toast({
+    //     title: "Error",
+    //     description: "Please select at least one file",
+    //     variant: "destructive",
+    //     duration: 3000,
+    //   });
+    //   return;
+    // }
 
-    progressIntervalRef.current = simulateProgress();
+    // setLoading(true);
+    // const newToastId = toast({
+    //   title: "Initializing Report Generation",
+    //   description: (
+    //     <div className="mt-2 w-full flex flex-col gap-2">
+    //       <div className="flex items-center gap-4">
+    //         <CircularProgress value={0} className="w-full" />
+    //         <span className="text-sm font-medium">0%</span>
+    //       </div>
+    //       <p className="text-sm text-gray-500">Preparing to process files...</p>
+    //     </div>
+    //   ),
+    //   duration: Infinity,
+    // });
+    // setToastId(newToastId);
 
-    try {
-      const filesWithContent = await Promise.all(
-        selectedFiles.map(async (file, index) => {
-          const fileContent = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsBinaryString(file);
-          });
+    // progressIntervalRef.current = simulateProgress();
 
-          const detail = fileDetails[index];
+    // try {
+    //   const filesWithContent = await Promise.all(
+    //     selectedFiles.map(async (file, index) => {
+    //       const fileContent = await new Promise((resolve, reject) => {
+    //         const reader = new FileReader();
+    //         reader.onload = () => resolve(reader.result);
+    //         reader.onerror = reject;
+    //         reader.readAsBinaryString(file);
+    //       });
 
-          return {
-            fileContent,
-            pdf_paths: file.name,
-            bankName: detail.bankName,
-            passwords: detail.password || "",
-            start_date: convertDateFormat(detail.start_date),
-            end_date: convertDateFormat(detail.end_date),
-            ca_id: caseName,
-          };
-        })
-      );
 
-      const result = await window.electron.generateReportIpc({
-        files: filesWithContent,
-      });
+    //       return {
+    //         fileContent,
+    //         pdf_paths: file.name,
+    //         bankName: detail.bankName,
+    //         passwords: detail.password || "",
+    //         start_date: convertDateFormat(detail.start_date), // Convert date format
+    //         end_date: convertDateFormat(detail.end_date), // Convert date format
+    //         ca_id: caseId,
+    //       };
+    //     })
+    //   );
 
-      if (result.success) {
-        clearInterval(progressIntervalRef.current);
-        setProgress(100);
-        toast.dismiss(newToastId);
-        toast({
-          title: "Success",
-          description: "Report generated successfully!",
-          duration: 3000,
-        });
+    //   const result = await window.electron.generateReportIpc({
+    //     files: filesWithContent,
+    //   });
 
-        const newCaseId = generateNewCaseId();
-        setCaseName(newCaseId);
+    //     const newCaseId = generateNewCaseId();
+    //     setCaseId(newCaseId);
 
-        setSelectedFiles([]);
-        setFileDetails([]);
-
-        // Call the refresh callback
-        if (onReportGenerated) {
-          onReportGenerated();
-        }
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      console.error("Report generation failed:", error);
-      clearInterval(progressIntervalRef.current);
-      toast.dismiss(newToastId);
-      setProgress(0);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to generate report",
-        variant: "destructive",
-        duration: 5000,
-      });
-    } finally {
-      setLoading(false);
-      progressIntervalRef.current = null;
-    }
+    //     setSelectedFiles([]);
+    //     setFileDetails([]);
+    //   } else {
+    //     throw new Error(result.error);
+    //   }
+    // } catch (error) {
+    //   console.error("Report generation failed:", error);
+    //   clearInterval(progressIntervalRef.current);
+    //   toast.dismiss(newToastId);
+    //   setProgress(0);
+    //   toast({
+    //     title: "Error",
+    //     description: error.message || "Failed to generate report",
+    //     variant: "destructive",
+    //     duration: 5000,
+    //   });
+    // } finally {
+    //   setLoading(false);
+    //   progressIntervalRef.current = null;
+    // }
   };
 
   const formatFileSize = (bytes) => {
@@ -429,8 +416,11 @@ const GenerateReportForm = ({ onReportGenerated }) => {
                   ref={caseIdRef}
                   type="text"
                   placeholder="Enter report name"
-                  onChange={(e) => setCaseName(e.target.value)} // Update caseId on user input
-                  className="w-full px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm"
+                  value={currentCaseName || caseName} // Set the current value, fallback to empty if undefined
+                  onChange={(e) => setCaseName(e.target.value)} // Update caseName state
+                  disabled={currentCaseName != null}
+                  className={`w-full px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 focus:outline-none ${currentCaseName == null ? "focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500" : "cursor-not-allowed"
+                    } transition-all border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm`}
                 />
               </div>
             </div>
@@ -440,9 +430,8 @@ const GenerateReportForm = ({ onReportGenerated }) => {
                 Bank Statements
               </label>
               <div
-                className={`relative ${
-                  isDragging ? "ring-2 ring-[#3498db] dark:ring-blue-500" : ""
-                }`}
+                className={`relative ${isDragging ? "ring-2 ring-[#3498db] dark:ring-blue-500" : ""
+                  }`}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}

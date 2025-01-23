@@ -185,12 +185,15 @@ const Transactions = ({ caseId }) => {
     return Object.values(categoryTotals);
   };
 
-  const [selectedMonths, setSelectedMonths] = useState(availableMonths);
-  // useEffect(() => {
-  //   if (availableMonths.length > 0) {
-  //     setSelectedMonths(availableMonths);
-  //   }
-  // }, [availableMonths]);
+  const [selectedMonths, setSelectedMonths] = useState([]);
+  const [initialLoad, setInitialLoad] = useState(true);
+
+  useEffect(() => {
+    if (initialLoad && availableMonths.length > 0) {
+      setSelectedMonths(availableMonths);
+      setInitialLoad(false);
+    }
+  }, [availableMonths, initialLoad]);
 
   const filteredData = selectedMonths
     .flatMap((month) => {
