@@ -58,6 +58,7 @@ const RecentReports = ({ key }) => {
   const [isLastInfo, setIsLastInfo] = useState();
   const itemsPerPage = 10;
   const [currentCaseName, setCurrentCaseName] = useState("");
+  const [currentCaseId, setCurrentCaseId] = useState("");
 
   const [recentReports, setRecentReports] = useState([]);
 
@@ -300,7 +301,7 @@ const RecentReports = ({ key }) => {
       );
 
       const result = await window.electron.addPdfIpc({
-        files: filesWithContent,
+        files: filesWithContent, caseId
       });
 
       if (result.success) {
@@ -343,9 +344,10 @@ const RecentReports = ({ key }) => {
     console.log("Clicked on edit");
     setIsCategoryEditOpen(!isCategoryEditOpen);
   };
-  const handleAddReport = (caseName) => {
+  const handleAddReport = (caseName, caseID) => {
     console.log("Case name clicked on add report:", caseName);
     setCurrentCaseName(caseName);
+    setCurrentCaseId(caseID);
     setIsAddPdfModalOpen(true);
   };
 
@@ -411,7 +413,7 @@ const RecentReports = ({ key }) => {
                       variant="outline"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => handleAddReport(report.name)}
+                      onClick={() => handleAddReport(report.name, report.id)}
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
