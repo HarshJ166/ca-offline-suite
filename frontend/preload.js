@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld("electron", {
 
   getTransactions: (caseId) => ipcRenderer.invoke("get-transactions", caseId),
 
+  getEodBalance: (caseId) => ipcRenderer.invoke("get-eod-balance", caseId),
+  getSummary: (caseId) => ipcRenderer.invoke("get-summary", caseId),
   getTransactionsByDebtor: (caseId) =>
     ipcRenderer.invoke("get-transactions-by-debtor", caseId),
 
