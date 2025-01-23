@@ -639,8 +639,8 @@ const GenerateReportForm = ({ currentCaseName = null, currentCaseId = null, hand
               >
                 {loading ? (
                   <>
-                    {/* <Loader2 className="w-4 h-4 mr-2 animate-spin" /> */}
-                    {/* <span>Processing...</span> */}
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <span>Processing...</span>
                   </>
                 ) : (
                   "Generate Report"

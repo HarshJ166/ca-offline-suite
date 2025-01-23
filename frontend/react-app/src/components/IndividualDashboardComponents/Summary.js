@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from "react";
-import summaryData from "../../data/summary.json";
 import PieCharts from "../charts/PieCharts";
 import TableData from "./TableData";
 import { Card, CardHeader, CardTitle } from "../ui/card";
@@ -8,8 +7,7 @@ import { Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "../ui/button";
 import ToggleStrip from "./ToggleStrip";
 
-// Rest of the imports and MaximizableChart component remain the same...
-const MaximizableChart = ({ children, title, isMaximized, setIsMaximized}) => {
+const MaximizableChart = ({ children, title, isMaximized, setIsMaximized }) => {
   const toggleMaximize = () => setIsMaximized(!isMaximized);
 
   if (isMaximized) {
@@ -47,12 +45,49 @@ const MaximizableChart = ({ children, title, isMaximized, setIsMaximized}) => {
   );
 };
 
-const Summary = () => {
-  const { income, importantExpenses, otherExpenses } = summaryData;
-  const [activeTable, setActiveTable] = useState("income");
+const Summary = ({ CaseId }) => {
+  const [summaryData, setSummaryData] = useState({
+    "Income Receipts": [],
+    "Important Expenses": [],
+    "Other Expenses": []
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const { "Income Receipts": incomeReceipts, "Important Expenses": importantExpenses, "Other Expenses": otherExpenses } = summaryData;
+  const [activeTable, setActiveTable] = useState("Income Receipts");
   const [incomeMaximized, setIncomeMaximized] = useState(false);
   const [importantExpensesMaximized, setImportantExpensesMaximized] = useState(false);
   const [otherExpensesMaximized, setOtherExpensesMaximized] = useState(false);
+
+  useEffect(() => {
+    const fetchSummaryData = async () => {
+      if (!CaseId) return;
+
+      try {
+        setIsLoading(true);
+        const result = await window.electron.getSummary(CaseId);
+        setSummaryData({
+          "Income Receipts": result["Income Receipts"] || [],
+          "Important Expenses": result["Important Expenses"] || [],
+          "Other Expenses": result["Other Expenses"] || []
+        });
+        setError(null);
+      } catch (error) {
+        console.error("Error fetching summary data:", error);
+        setError(error);
+        setSummaryData({
+          "Income Receipts": [],
+          "Important Expenses": [],
+          "Other Expenses": []
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSummaryData();
+  }, [CaseId]);
 
   const monthOrder = [
     "January", "February", "March", "April", "May", "June",
@@ -62,14 +97,14 @@ const Summary = () => {
   const [selectedMonths, setSelectedMonths] = useState([]);
   const months = useMemo(() => {
     const allMonths = new Set();
-    [income, importantExpenses, otherExpenses].forEach((category) => {
+    [incomeReceipts, importantExpenses, otherExpenses].forEach((category) => {
       category.forEach((item) => {
         Object.keys(item).forEach((key) => {
           if (
             key !== "total" &&
-            key !== "income" &&
-            key !== "importantExpenses" &&
-            key !== "otherExpenses"
+            key !== "Income Receipts" &&
+            key !== "Important Expenses" &&
+            key !== "Other Expenses"
           ) {
             allMonths.add(key);
           }
@@ -81,7 +116,7 @@ const Summary = () => {
     return extractedMonths.sort(
       (a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b)
     );
-  }, [income, importantExpenses, otherExpenses]);
+  }, [incomeReceipts, importantExpenses, otherExpenses]);
 
   useEffect(() => {
     if (months.length > 0) {
@@ -132,17 +167,17 @@ const Summary = () => {
     return data.length > 0;
   };
 
-  const incomeData = transformData(income, "total", "income", "Total Credit");
+  const incomeData = transformData(incomeReceipts, "total", "Income Receipts", "Total Credit");
   const importantExpensesData = transformData(
     importantExpenses,
     "total",
-    "importantExpenses",
+    "Important Expenses",
     "Total"
   );
   const otherExpensesData = transformData(
     otherExpenses,
     "total",
-    "otherExpenses",
+    "Other Expenses",
     "Total Debit"
   );
 
@@ -207,14 +242,14 @@ const Summary = () => {
     };
 
     switch (activeTable) {
-      case "income":
-        return getTableContent(incomeDataTransformed, "Income");
-      case "importantExpenses":
+      case "Income Receipts":
+        return getTableContent(incomeDataTransformed, "Income Receipts");
+      case "Important Expenses":
         return getTableContent(importantExpensesDataTransformed, "Important Expenses");
-      case "otherExpenses":
+      case "Other Expenses":
         return getTableContent(otherExpensesDataTransformed, "Other Expenses");
       default:
-        return getTableContent(incomeDataTransformed, "Income");
+        return getTableContent(incomeDataTransformed, "Income Receipts");
     }
   };
 
@@ -232,9 +267,9 @@ const Summary = () => {
       ) : (
         <>
           <div className="flex flex-wrap -mx-2">
-            {renderChart(incomeData, "Income", incomeMaximized, setIncomeMaximized, "income")}
-            {renderChart(importantExpensesData, "Important Expenses", importantExpensesMaximized, setImportantExpensesMaximized, "importantExpenses")}
-            {renderChart(otherExpensesData, "Other Expenses Breakdown", otherExpensesMaximized, setOtherExpensesMaximized, "otherExpenses")}
+            {renderChart(incomeData, "Income Receipts", incomeMaximized, setIncomeMaximized, "Income Receipts")}
+            {renderChart(importantExpensesData, "Important Expenses", importantExpensesMaximized, setImportantExpensesMaximized, "Important Expenses")}
+            {renderChart(otherExpensesData, "Other Expenses", otherExpensesMaximized, setOtherExpensesMaximized, "Other Expenses")}
           </div>
           {renderActiveTable()}
         </>

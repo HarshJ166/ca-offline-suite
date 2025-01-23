@@ -3,9 +3,49 @@ const log = require("electron-log");
 const db = require("../db/db");
 const { statements } = require("../db/schema/Statement");
 const { transactions } = require("../db/schema/Transactions");
+const { eod } = require("../db/schema/EOD");
+const {summary} = require("../db/schema/Summary");
 const { eq, and, inArray } = require("drizzle-orm"); // Add this import
 
 function registerIndividualDashboardIpc() {
+  // Handler for getting EOD balance
+  ipcMain.handle('get-eod-balance', async (event, caseId) => {
+    if (!caseId) {
+      log.error('Invalid caseId provided:', caseId);
+      throw new Error('Invalid case ID');
+    }
+  
+    try {
+      const result = await db
+        .select()
+        .from(eod)
+        .where(eq(eod.caseId, caseId));
+      
+      // log.info('EOD balance fetched successfully',result);
+      return result;
+      
+    } catch (error) {
+      log.error('Error fetching EOD balance:', error);
+      throw new Error('Failed to fetch EOD balance');
+    }
+  });
+
+  // Handler for getting summary data
+  ipcMain.handle("get-summary", async (event, caseId) => {
+    try {
+      const result = await db
+        .select()
+        .from(summary)
+        .where(eq(summary.caseId, caseId));
+      log.info("Summary data fetched successfully:", result);
+      return result;
+    } catch (error) {
+      log.error("Error fetching summary data:", error);
+      throw error;
+    }
+  });
+  
+  // Handler for getting all transactions
   ipcMain.handle("get-transactions", async (event, caseId) => {
     try {
       // Get all statements for the case
