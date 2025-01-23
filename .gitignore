@@ -23,6 +23,7 @@ develop-eggs/
 /backend/venv/
 /backend/env/
 /backend/ENV/
+/backend/saved_pdf/
 /backend/.env
 /backend/.venv
 /backend/.env.*
