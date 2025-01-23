@@ -79,6 +79,9 @@ export default function GenerateReport() {
 
         setSelectedFiles([]);
         setFileDetails([]);
+
+        // Trigger a page refresh
+        refreshPage();
       } else {
         throw new Error(result.error);
       }
@@ -150,7 +153,10 @@ export default function GenerateReport() {
       </div>
 
       <div>
-        <GenerateReportForm handleReportSubmit={handleSubmit} onReportGenerated={refreshPage} />
+        <GenerateReportForm
+          handleReportSubmit={handleSubmit}
+          onReportGenerated={refreshPage}
+        />
       </div>
 
       <RecentReports key={refreshTrigger} />
