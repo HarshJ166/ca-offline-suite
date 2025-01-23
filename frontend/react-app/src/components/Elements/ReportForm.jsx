@@ -13,7 +13,7 @@ import { Button } from "../ui/button";
 import { useToast } from "../../hooks/use-toast";
 import { CircularProgress } from "../ui/circularprogress";
 
-const GenerateReportForm = ({ currentCaseName = null, handleReportSubmit, onReportGenerated }) => {
+const GenerateReportForm = ({ currentCaseName = null, currentCaseId = null, handleReportSubmit, onReportGenerated }) => {
   const [unit, setUnit] = useState("Unit 1");
   const [units, setUnits] = useState(["Unit 1", "Unit 2"]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -186,7 +186,7 @@ const GenerateReportForm = ({ currentCaseName = null, handleReportSubmit, onRepo
     }
     const validationErrors = [];
 
-    handleReportSubmit(setProgress, setLoading, setToastId, selectedFiles, fileDetails, setSelectedFiles, setFileDetails, setCaseName, toast, progressIntervalRef, simulateProgress, convertDateFormat, caseName);
+    handleReportSubmit(setProgress, setLoading, setToastId, selectedFiles, fileDetails, setSelectedFiles, setFileDetails, setCaseName, toast, progressIntervalRef, simulateProgress, convertDateFormat, currentCaseId);
 
     // if (selectedFiles.length === 0) {
     //   toast({

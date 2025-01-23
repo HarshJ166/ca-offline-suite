@@ -7,7 +7,7 @@ import { CircularProgress } from "../ui/circularprogress";
 export default function GenerateReport() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
-  const handleSubmit = async (setProgress, setLoading, setToastId, selectedFiles, fileDetails, setSelectedFiles, setFileDetails, setCaseId, toast, progressIntervalRef, simulateProgress, convertDateFormat, caseName) => {
+  const handleSubmit = async (setProgress, setLoading, setToastId, selectedFiles, fileDetails, setSelectedFiles, setFileDetails, setCaseId, toast, progressIntervalRef, simulateProgress, convertDateFormat, caseId) => {
     if (selectedFiles.length === 0) {
       toast({
         title: "Error",
@@ -55,7 +55,7 @@ export default function GenerateReport() {
             passwords: detail.password || "",
             start_date: convertDateFormat(detail.start_date), // Convert date format
             end_date: convertDateFormat(detail.end_date), // Convert date format
-            ca_id: caseName,
+            ca_id: "test",
           };
         })
       );
