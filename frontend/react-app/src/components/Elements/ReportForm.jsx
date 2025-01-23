@@ -13,7 +13,7 @@ import { Button } from "../ui/button";
 import { useToast } from "../../hooks/use-toast";
 import { CircularProgress } from "../ui/circularprogress";
 
-const GenerateReportForm = ({ currentCaseName, handleReportSubmit }) => {
+const GenerateReportForm = ({ currentCaseName, handleReportSubmit, onReportGenerated }) => {
   const [unit, setUnit] = useState("Unit 1");
   const [units, setUnits] = useState(["Unit 1", "Unit 2"]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -170,9 +170,20 @@ const GenerateReportForm = ({ currentCaseName, handleReportSubmit }) => {
     return `${day}-${month}-${year}`;
   };
 
+  // In GenerateReportForm.js, modify the handleSubmit function:
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (caseName === null) {
+      toast({
+        title: "Error",
+        description: "Please enter a Case Name",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
     const validationErrors = [];
 
     handleReportSubmit(setProgress, setLoading, setToastId, selectedFiles, fileDetails, setSelectedFiles, setFileDetails, setCaseName, toast, progressIntervalRef, simulateProgress, convertDateFormat, caseName);

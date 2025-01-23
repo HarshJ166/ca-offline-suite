@@ -144,7 +144,7 @@ const Transactions = ({ caseId }) => {
 
   const processCreditDebitData = (transactions) => {
     return transactions.reduce((acc, transaction) => {
-      const date = new Date(transaction.date * 1000); // Convert Unix timestamp to JS Date
+      const date = transaction.date; // Convert Unix timestamp to JS Date
       const dateKey = date.toISOString().split("T")[0];
 
       if (!acc[dateKey]) {
@@ -156,7 +156,7 @@ const Transactions = ({ caseId }) => {
           }),
           credit: 0,
           debit: 0,
-          balance: transaction.balance, // Assuming balance is latest for the day
+          // balance: transaction.balance, // Assuming balance is latest for the day
         };
       }
 
