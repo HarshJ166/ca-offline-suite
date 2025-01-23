@@ -8,6 +8,7 @@ const { transactions } = require("../db/schema/Transactions");
 const { statements } = require("../db/schema/Statement");
 const { cases } = require("../db/schema/Cases");
 const { eod } = require("../db/schema/Eod");
+const {summary} = require("../db/schema/Summary");
 const { eq, and } = require("drizzle-orm");
 
 const sanitizeJSONString = (jsonString) => {
@@ -118,7 +119,7 @@ const storeTransactionsBatch = async (transformedTransactions) => {
     for (let i = 0; i < uniqueTransactions.length; i += chunkSize) {
       const chunk = uniqueTransactions.slice(i, i + chunkSize);
       await db.insert(transactions).values(chunk);
-      log.info(`Stored transactions batch ${i / chunkSize + 1}, size: ${chunk.length}`);
+      // log.info(`Stored transactions batch ${i / chunkSize + 1}, size: ${chunk.length}`);
     }
 
     return true;
@@ -130,13 +131,19 @@ const storeTransactionsBatch = async (transformedTransactions) => {
 
 const getOrCreateCase = async (caseId, userId = 1) => {
   try {
-    // First try to find existing case
+    // First try to find existing case with exact match on name
     const existingCase = await db
       .select({
         id: cases.id,
       })
       .from(cases)
-      .where(eq(cases.id, caseId))
+      .where(
+        and(
+          eq(cases.name, caseId),
+          eq(cases.userId, userId),
+          eq(cases.status, "active")
+        )
+      )
       .limit(1);
 
     if (existingCase.length > 0) {
@@ -268,38 +275,53 @@ const processStatementAndEOD = async (fileDetail, transactions, eodData, caseId)
           .from(eod)
           .where(eq(eod.caseId, validCaseId));
 
-        const validatedEODData = eodData
+          const validatedEODData = eodData
           .filter(entry => {
-            return entry && 
-                   typeof entry === 'object' && 
-                   entry.Day !== "Total" && 
-                   entry.Day !== "Average";
+            return (
+              entry &&
+              typeof entry === "object" &&
+              entry.Day !== "Total" &&
+              entry.Day !== "Average"
+            );
           })
           .map(entry => {
             try {
-              const monthKey = Object.keys(entry).find(key => 
-                key !== "Day" && typeof entry[key] !== 'undefined'
-              );
-
-              if (!monthKey) return null;
-
-              const dayValue = typeof entry.Day === 'number' ? 
-                entry.Day : parseFloat(entry.Day);
-              const monthValue = typeof entry[monthKey] === 'number' ? 
-                entry[monthKey] : parseFloat(entry[monthKey]);
-
-              if (isNaN(dayValue) || isNaN(monthValue)) return null;
-
-              return {
-                Day: dayValue,
-                [monthKey]: monthValue
-              };
+              const dayValue = typeof entry.Day === "number" 
+                ? entry.Day 
+                : parseFloat(entry.Day);
+        
+              // Validate the day value
+              if (isNaN(dayValue)) return null;
+        
+              // Process all month keys in the entry
+              const processedEntry = { Day: dayValue };
+        
+              Object.keys(entry).forEach(key => {
+                if (key !== "Day" && typeof entry[key] !== "undefined") {
+                  const monthValue = typeof entry[key] === "number" 
+                    ? entry[key] 
+                    : parseFloat(entry[key]);
+        
+                  // Only include valid numeric month values
+                  if (!isNaN(monthValue)) {
+                    processedEntry[key] = monthValue;
+                  }
+                }
+              });
+        
+              // If no valid month values are found, return null
+              if (Object.keys(processedEntry).length === 1) return null;
+        
+              return processedEntry;
             } catch (error) {
               log.warn("Error processing EOD entry:", error, entry);
               return null;
             }
           })
           .filter(Boolean);
+        
+
+        // log.info(`Validated EOD data for case ${validCaseId}:`, validatedEODData);
 
         if (validatedEODData.length > 0) {
           if (existingEOD.length > 0) {
@@ -335,6 +357,62 @@ const processStatementAndEOD = async (fileDetail, transactions, eodData, caseId)
   }
 };
 
+
+const processSummaryData = async (parsedData, caseId) => {
+  try {
+    const validCaseId = await getOrCreateCase(caseId);
+
+    // Validate the summary data
+    if (
+      !parsedData ||
+      typeof parsedData !== "object" ||
+      !parsedData["Income Receipts"] ||
+      !parsedData["Important Expenses"] ||
+      !parsedData["Other Expenses"]
+    ) {
+      throw new Error("Invalid summary data provided");
+    }
+
+    // Prepare summary data object
+    const summaryData = {
+      incomeReceipts: parsedData["Income Receipts"],
+      importantExpenses: parsedData["Important Expenses"],
+      otherExpenses: parsedData["Other Expenses"]
+    };
+
+    // Check if summary data already exists for this case
+    const existingSummary = await db
+      .select()
+      .from(summary)
+      .where(eq(summary.caseId, validCaseId))
+      .limit(1);
+
+    if (existingSummary.length > 0) {
+      // Update the existing summary record
+      await db
+        .update(summary)
+        .set({
+          data: JSON.stringify(summaryData),
+          updatedAt: new Date(),
+        })
+        .where(eq(summary.caseId, validCaseId));
+      log.info(`Updated Data:`,summaryData);
+    } else {
+      // Insert new summary record
+      await db.insert(summary).values({
+        caseId: validCaseId,
+        data: JSON.stringify(summaryData),
+        createdAt: new Date(),
+      });
+    }
+
+    log.info(`Summary data processed for case ${validCaseId}`);
+    return true;
+  } catch (error) {
+    log.error("Error processing summary data:", error);
+    throw error;
+  }
+};
 function generateReportIpc() {
   ipcMain.handle("generate-report", async (event, result, reportName) => {
     log.info("IPC handler invoked for generate-report");
@@ -438,6 +516,21 @@ function generateReportIpc() {
         }
       }
 
+      // Process Summary Data
+      try {
+        await processSummaryData(
+          {
+            "Income Receipts": parsedData["Income Receipts"] || [],
+            "Important Expenses": parsedData["Important Expenses"] || [],
+            "Other Expenses": parsedData["Other Expenses"] || []
+          },
+          payload.ca_id
+        );
+      } catch (error) {
+        log.error("Error processing summary data:", error);
+        throw error;
+      }
+
       // Cleanup
       fileDetails.forEach((detail) => {
         try {
@@ -465,10 +558,10 @@ function generateReportIpc() {
             (sum, d) => sum + d.transactionCount,
             0
           ),
-          eodProcessed: true
+          eodProcessed: true,
+          summaryProcessed: true,
         },
       };
-
     } catch (error) {
       // Cleanup on error
       try {
@@ -505,5 +598,4 @@ function generateReportIpc() {
     }
   });
 }
-
 module.exports = { generateReportIpc };
