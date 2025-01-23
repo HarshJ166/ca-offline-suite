@@ -7,7 +7,31 @@ import { CircularProgress } from "../ui/circularprogress";
 export default function GenerateReport() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
-  const handleSubmit = async (setProgress, setLoading, setToastId, selectedFiles, fileDetails, setSelectedFiles, setFileDetails, setCaseId, toast, progressIntervalRef, simulateProgress, convertDateFormat, caseId) => {
+  const handleSubmit = async (
+    setProgress,
+    setLoading,
+    setToastId,
+    selectedFiles,
+    fileDetails,
+    setSelectedFiles,
+    setFileDetails,
+    setCaseId,
+    toast,
+    progressIntervalRef,
+    simulateProgress,
+    convertDateFormat,
+    caseId
+  ) => {
+    if (caseName === "") {
+      toast({
+        title: "Error",
+        description: "Please enter a Case Name",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
+
     if (selectedFiles.length === 0) {
       toast({
         title: "Error",

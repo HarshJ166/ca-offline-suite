@@ -71,6 +71,13 @@
       "when": 1737534985957,
       "tag": "0009_awesome_umar",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1737631855140,
+      "tag": "0010_first_azazel",
+      "breakpoints": true
     }
   ]
 }

@@ -68,25 +68,27 @@ const RecentReports = ({ key }) => {
         const result = await window.electron.getRecentReports();
         console.log("Fetched reports:", result);
 
-        const formattedReports = result.map((report) => ({
-          ...report,
-          createdAt: new Date(report.createdAt).toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          }),
-          statements: report.statements.map((statement) => ({
-            ...statement,
-            createdAt: new Date(statement.createdAt).toLocaleDateString(
-              "en-GB",
-              {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-              }
-            ),
-          })),
-        }));
+        const formattedReports = result
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .map((report) => ({
+            ...report,
+            createdAt: new Date(report.createdAt).toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            }),
+            statements: report.statements.map((statement) => ({
+              ...statement,
+              createdAt: new Date(statement.createdAt).toLocaleDateString(
+                "en-GB",
+                {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                }
+              ),
+            })),
+          }));
 
         setRecentReports(formattedReports);
         // toast({ title: "Success", description: "Reports loaded successfully." });
@@ -247,7 +249,21 @@ const RecentReports = ({ key }) => {
     setIsLoading(false);
   };
 
-  const handleAddPdfSubmit = async (setProgress, setLoading, setToastId, selectedFiles, fileDetails, setSelectedFiles, setFileDetails, setCaseId, toast, progressIntervalRef, simulateProgress, convertDateFormat, caseId) => {
+  const handleAddPdfSubmit = async (
+    setProgress,
+    setLoading,
+    setToastId,
+    selectedFiles,
+    fileDetails,
+    setSelectedFiles,
+    setFileDetails,
+    setCaseId,
+    toast,
+    progressIntervalRef,
+    simulateProgress,
+    convertDateFormat,
+    caseId
+  ) => {
     if (selectedFiles.length === 0) {
       toast({
         title: "Error",
@@ -257,7 +273,7 @@ const RecentReports = ({ key }) => {
       });
       return;
     }
-    console.log("CASEEEE IDDDDD : ", caseId)
+    console.log("CASEEEE IDDDDD : ", caseId);
     setLoading(true);
     const newToastId = toast({
       title: "Initializing Report Generation",
@@ -301,8 +317,9 @@ const RecentReports = ({ key }) => {
       );
 
       const result = await window.electron.addPdfIpc({
-        files: filesWithContent
-      }, caseId);
+        files: filesWithContent,
+        caseId,
+      });
 
       if (result.success) {
         clearInterval(progressIntervalRef.current);
@@ -338,7 +355,6 @@ const RecentReports = ({ key }) => {
       setLoading(false);
       progressIntervalRef.current = null;
     }
-  
   };
 
   const toggleEdit = (id) => {
@@ -567,7 +583,11 @@ const RecentReports = ({ key }) => {
               </button>
             </header>
             <div className="mt-4">
-              <GenerateReportForm source="add pdf" handleReportSubmit={handleAddPdfSubmit} currentCaseName={currentCaseName} currentCaseId={currentCaseId} />
+              <GenerateReportForm
+                source="add pdf"
+                handleReportSubmit={handleAddPdfSubmit}
+                currentCaseName={currentCaseName}
+              />
             </div>
           </div>
         </div>
