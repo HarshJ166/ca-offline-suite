@@ -16,17 +16,65 @@ import {
   CardTitle,
   CardDescription,
 } from "../ui/card";
+import { useState, useEffect } from "react";
+import { useToast } from "../../hooks/use-toast";
 
-const reports = [
-  { date: "13-12-2024", name: "Report_ATS_unit_1_00008" },
-  { date: "13-12-2024", name: "Report_ATS_unit_1_00007" },
-  { date: "12-12-2024", name: "Report_ATS_unit_1_00003" },
-  { date: "12-12-2024", name: "Report_ATS_unit_1_00002" },
-  { date: "12-12-2024", name: "Report_ATS_unit_1_00001" },
-  { date: "12-12-2024", name: "Report_ATS_unit_1_00001" },
-];
+// const reports = [
+//   { date: "13-12-2024", name: "Report_ATS_unit_1_00008" },
+//   { date: "13-12-2024", name: "Report_ATS_unit_1_00007" },
+//   { date: "12-12-2024", name: "Report_ATS_unit_1_00003" },
+//   { date: "12-12-2024", name: "Report_ATS_unit_1_00002" },
+//   { date: "12-12-2024", name: "Report_ATS_unit_1_00001" },
+//   { date: "12-12-2024", name: "Report_ATS_unit_1_00001" },
+// ];
 
 const Analytics = () => {
+  const { toast } = useToast();
+  const [recentReports, setRecentReports] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const result = await window.electron.getRecentReports();
+        console.log("Fetched reports:", result);
+
+        const formattedReports = result.map((report) => ({
+          ...report,
+          createdAt: new Date(report.createdAt).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          }),
+          statements: report.statements.map((statement) => ({
+            ...statement,
+            createdAt: new Date(statement.createdAt).toLocaleDateString(
+              "en-GB",
+              {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              }
+            ),
+          })),
+        }));
+
+        setRecentReports(formattedReports);
+        // toast({ title: "Success", description: "Reports loaded successfully." });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: `Failed to load reports: ${error.message}`,
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, []);
+
   return (
     <div className="w-full px-4 py-6 -space-y-2 mx-auto ">
       <Card className="border dark:border-gray-700 rounded-lg shadow-sm">
@@ -54,13 +102,13 @@ const Analytics = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {reports.map((report, index) => (
+              {recentReports.map((report, index) => (
                 <TableRow
                   key={index}
                   className="hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all duration-200 "
                 >
                   <TableCell className="w-36 text-sm dark:text-slate-200 text-zinc-600 text-center">
-                    {report.date}
+                    {report.createdAt}
                   </TableCell>
                   <TableCell className="flex-1 text-sm text-zinc-700 text-center dark:text-slate-200">
                     {report.name}
