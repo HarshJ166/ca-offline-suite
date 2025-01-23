@@ -3,8 +3,8 @@ const log = require("electron-log");
 const db = require("../db/db");
 const { statements } = require("../db/schema/Statement");
 const { transactions } = require("../db/schema/Transactions");
-const { eod } = require("../db/schema/EOD");
-const {summary} = require("../db/schema/Summary");
+const { eod } = require("../db/schema/Eod");
+const { summary } = require("../db/schema/Summary");
 const { eq, and, inArray } = require("drizzle-orm"); // Add this import
 
 function registerIndividualDashboardIpc() {
@@ -14,16 +14,16 @@ function registerIndividualDashboardIpc() {
       log.error('Invalid caseId provided:', caseId);
       throw new Error('Invalid case ID');
     }
-  
+
     try {
       const result = await db
         .select()
         .from(eod)
         .where(eq(eod.caseId, caseId));
-      
+
       // log.info('EOD balance fetched successfully',result);
       return result;
-      
+
     } catch (error) {
       log.error('Error fetching EOD balance:', error);
       throw new Error('Failed to fetch EOD balance');
@@ -44,7 +44,7 @@ function registerIndividualDashboardIpc() {
       throw error;
     }
   });
-  
+
   // Handler for getting all transactions
   ipcMain.handle("get-transactions", async (event, caseId) => {
     try {
