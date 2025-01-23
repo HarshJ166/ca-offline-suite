@@ -257,7 +257,7 @@ const RecentReports = ({ key }) => {
       });
       return;
     }
-
+    console.log("CASEEEE IDDDDD : ", caseId)
     setLoading(true);
     const newToastId = toast({
       title: "Initializing Report Generation",
@@ -295,14 +295,14 @@ const RecentReports = ({ key }) => {
             passwords: detail.password || "",
             start_date: convertDateFormat(detail.start_date), // Convert date format
             end_date: convertDateFormat(detail.end_date), // Convert date format
-            ca_id: caseId,
+            ca_id: "test",
           };
         })
       );
 
       const result = await window.electron.addPdfIpc({
-        files: filesWithContent, caseId
-      });
+        files: filesWithContent
+      }, caseId);
 
       if (result.success) {
         clearInterval(progressIntervalRef.current);
@@ -319,6 +319,7 @@ const RecentReports = ({ key }) => {
 
         setSelectedFiles([]);
         setFileDetails([]);
+        setIsAddPdfModalOpen(false);
       } else {
         throw new Error(result.error);
       }
@@ -566,7 +567,7 @@ const RecentReports = ({ key }) => {
               </button>
             </header>
             <div className="mt-4">
-              <GenerateReportForm source="add pdf" handleReportSubmit={handleAddPdfSubmit} currentCaseName={currentCaseName} />
+              <GenerateReportForm source="add pdf" handleReportSubmit={handleAddPdfSubmit} currentCaseName={currentCaseName} currentCaseId={currentCaseId} />
             </div>
           </div>
         </div>

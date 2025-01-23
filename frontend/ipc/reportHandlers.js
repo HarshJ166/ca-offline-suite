@@ -118,7 +118,7 @@ const ensureCaseExists = async (caseId, userId = 1) => {
             // log.info(`Created new case with ID: ${caseId}`);
         }
 
-        return existingCase[0].id;
+        // return existingCase[0].id;
 
     } catch (error) {
         log.error("Error ensuring case exists:", error);
@@ -181,7 +181,7 @@ const storeTransactionsBatch = async (transformedTransactions) => {
 const createStatement = async (fileDetail, caseId) => {
     try {
         // Ensure case exists before creating statement
-        const caseId = await ensureCaseExists(caseId);
+        await ensureCaseExists(caseId);
 
         const statementData = {
             caseId: caseId,
@@ -286,7 +286,7 @@ function registerReportHandlers() {
 
     // Main IPC handler function
     ipcMain.handle("add-pdf", async (event, result, caseId) => {
-        log.info("IPC handler invoked for generate-report");
+        log.info("IPC handler invoked for add-pdf");
         const tempDir = path.join(__dirname, "..", "tmp");
         console.log(tempDir);
         console.log("CASE ID : ", caseId);
