@@ -37,7 +37,7 @@ function registerIndividualDashboardIpc() {
         .select()
         .from(summary)
         .where(eq(summary.caseId, caseId));
-      log.info("Summary data fetched successfully:", result);
+      // log.info("Summary data fetched successfully:", result);
       return result;
     } catch (error) {
       log.error("Error fetching summary data:", error);
@@ -60,7 +60,7 @@ function registerIndividualDashboardIpc() {
       }
 
       // Log statements for debugging
-      log.info("Found statements:", allStatements);
+      // log.info("Found statements:", allStatements);
 
       // Get all transactions for these statements
       const allTransactions = await db
@@ -73,7 +73,7 @@ function registerIndividualDashboardIpc() {
           )
         );
 
-      log.info("Transactions fetched successfully:", allTransactions);
+      log.info("Transactions fetched successfully:", allTransactions.length);
       return allTransactions;
     } catch (error) {
       log.error("Error fetching transactions:", error);
@@ -154,7 +154,7 @@ function registerIndividualDashboardIpc() {
             )
           ); // Apply both filters
 
-        log.info("Transactions with category 'Cash withdrawal':", result);
+        log.info("Transactions with category 'Cash withdrawal':", result.length);
 
         return result;
       } catch (error) {
