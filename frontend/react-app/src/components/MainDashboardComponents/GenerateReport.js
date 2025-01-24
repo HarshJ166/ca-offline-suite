@@ -20,7 +20,8 @@ export default function GenerateReport() {
     progressIntervalRef,
     simulateProgress,
     convertDateFormat,
-    caseId
+    caseId,
+    caseName
   ) => {
     if (caseName === "") {
       toast({
@@ -85,8 +86,8 @@ export default function GenerateReport() {
       );
 
       const result = await window.electron.generateReportIpc({
-        files: filesWithContent,
-      });
+        files: filesWithContent, 
+      }, caseName);
 
       if (result.success) {
         clearInterval(progressIntervalRef.current);

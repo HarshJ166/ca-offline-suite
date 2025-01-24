@@ -104,8 +104,8 @@ const GenerateReportForm = ({
               {progress < 90
                 ? "Processing your bank statements..."
                 : progress < 100
-                ? "Finalizing report generation..."
-                : "Report generated successfully!"}
+                  ? "Finalizing report generation..."
+                  : "Report generated successfully!"}
             </p>
           </div>
         ),
@@ -194,6 +194,7 @@ const GenerateReportForm = ({
       progressIntervalRef,
       simulateProgress,
       convertDateFormat,
+      "CASE_1",
       caseName
     );
 
@@ -427,11 +428,10 @@ const GenerateReportForm = ({
                   value={currentCaseName || caseName} // Set the current value, fallback to empty if undefined
                   onChange={(e) => setCaseName(e.target.value)} // Update caseName state
                   disabled={currentCaseName != null}
-                  className={`w-full px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 focus:outline-none ${
-                    currentCaseName == null
+                  className={`w-full px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 focus:outline-none ${currentCaseName == null
                       ? "focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500"
                       : "cursor-not-allowed"
-                  } transition-all border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm`}
+                    } transition-all border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm`}
                 />
               </div>
             </div>
@@ -441,9 +441,8 @@ const GenerateReportForm = ({
                 Bank Statements
               </label>
               <div
-                className={`relative ${
-                  isDragging ? "ring-2 ring-[#3498db] dark:ring-blue-500" : ""
-                }`}
+                className={`relative ${isDragging ? "ring-2 ring-[#3498db] dark:ring-blue-500" : ""
+                  }`}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}

@@ -262,7 +262,8 @@ const RecentReports = ({ key }) => {
     progressIntervalRef,
     simulateProgress,
     convertDateFormat,
-    caseId
+    caseId,
+    caseName,
   ) => {
     if (selectedFiles.length === 0) {
       toast({
@@ -318,8 +319,7 @@ const RecentReports = ({ key }) => {
 
       const result = await window.electron.addPdfIpc({
         files: filesWithContent,
-        caseId,
-      });
+      }, currentCaseId);
 
       if (result.success) {
         clearInterval(progressIntervalRef.current);
