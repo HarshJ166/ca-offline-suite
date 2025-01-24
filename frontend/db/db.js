@@ -2,13 +2,14 @@ const log = require("electron-log");
 const path = require("path");
 const { exec } = require("child_process");
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
+
+const isDev = process.env.NODE_ENV === "development";
+log.info('process.env.NODE_ENV', process.env.NODE_ENV);
+const BASE_DIR = isDev ? __dirname : process.resourcesPath;
 const drizzleConfigPath = path.resolve(__dirname, "../drizzle.config.js");
 log.info('drizzleConfigPath', drizzleConfigPath);
 
 
-
-const isDev = process.env.NODE_ENV === "development";
-log.info('process.env.NODE_ENV', process.env.NODE_ENV);
 log.info('DB process.env.DB_FILE_NAME', process.env.DB_FILE_NAME);
 const { drizzle } = require("drizzle-orm/libsql");
 
