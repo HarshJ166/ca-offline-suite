@@ -27,6 +27,8 @@ const isDev = process.env.NODE_ENV === "development";
 console.log("process.env.NODE_ENV", process.env.NODE_ENV);
 
 const BASE_DIR = isDev ? __dirname : process.resourcesPath;
+console.log("BASE_DIR", BASE_DIR);
+console.log("__dirname", __dirname);
 
 // Add this function to handle file protocol
 function createProtocol() {
