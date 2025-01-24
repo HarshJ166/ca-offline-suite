@@ -116,10 +116,11 @@ const storeTransactionsBatch = async (transformedTransactions) => {
     }
 
     const chunkSize = 50;
+    console.log("Unique Transactions : ", uniqueTransactions.length);
     for (let i = 0; i < uniqueTransactions.length; i += chunkSize) {
       const chunk = uniqueTransactions.slice(i, i + chunkSize);
       await db.insert(transactions).values(chunk);
-      // log.info(`Stored transactions batch ${i / chunkSize + 1}, size: ${chunk.length}`);
+      log.info(`Stored transactions batch ${i / chunkSize + 1}, size: ${chunk.length}`);
     }
 
     return true;
@@ -129,19 +130,17 @@ const storeTransactionsBatch = async (transformedTransactions) => {
   }
 };
 
-const getOrCreateCase = async (caseId, userId = 1) => {
+const getOrCreateCase = async (caseName, userId = 1) => {
   try {
     // First try to find existing case with exact match on name
     const existingCase = await db
-      .select({
-        id: cases.id,
-      })
+      .select()
       .from(cases)
       .where(
         and(
-          eq(cases.name, caseId),
-          eq(cases.userId, userId),
-          eq(cases.status, "active")
+          eq(cases.name, caseName),
+          // eq(cases.userId, userId),
+          // eq(cases.status, "active")
         )
       )
       .limit(1);
@@ -155,7 +154,7 @@ const getOrCreateCase = async (caseId, userId = 1) => {
     const newCase = await db
       .insert(cases)
       .values({
-        name: caseId,
+        name: caseName,
         userId: userId,
         status: "active",
         createdAt: new Date(),
@@ -220,9 +219,9 @@ const getOrCreateCase = async (caseId, userId = 1) => {
 //   }
 // };
 
-const processStatementAndEOD = async (fileDetail, transactions, eodData, caseId) => {
+const processStatementAndEOD = async (fileDetail, transactions, eodData, caseName) => {
   try {
-    const validCaseId = await getOrCreateCase(caseId);
+    const validCaseId = await getOrCreateCase(caseName);
     let statementId = null;
     let processedTransactions = 0;
 
@@ -358,9 +357,9 @@ const processStatementAndEOD = async (fileDetail, transactions, eodData, caseId)
 };
 
 
-const processSummaryData = async (parsedData, caseId) => {
+const processSummaryData = async (parsedData, caseName) => {
   try {
-    const validCaseId = await getOrCreateCase(caseId);
+    const validCaseId = await getOrCreateCase(caseName);
 
     // Validate the summary data
     if (
@@ -396,7 +395,7 @@ const processSummaryData = async (parsedData, caseId) => {
           updatedAt: new Date(),
         })
         .where(eq(summary.caseId, validCaseId));
-      log.info(`Updated Data:`,summaryData);
+      // log.info(`Updated Data:`,summaryData);
     } else {
       // Insert new summary record
       await db.insert(summary).values({
@@ -414,8 +413,8 @@ const processSummaryData = async (parsedData, caseId) => {
   }
 };
 function generateReportIpc() {
-  ipcMain.handle("generate-report", async (event, result, reportName) => {
-    log.info("IPC handler invoked for generate-report");
+  ipcMain.handle("generate-report", async (event, result, caseName) => {
+    log.info("IPC handler invoked for generate-report", caseName);
     const tempDir = path.join(__dirname, "..", "tmp");
 
     try {
@@ -504,7 +503,7 @@ function generateReportIpc() {
             fileDetail,
             transactions,
             parsedData.EOD,
-            payload.ca_id
+            caseName
           );
           processedData.push(result);
         } catch (error) {
@@ -524,7 +523,7 @@ function generateReportIpc() {
             "Important Expenses": parsedData["Important Expenses"] || [],
             "Other Expenses": parsedData["Other Expenses"] || []
           },
-          payload.ca_id
+          caseName
         );
       } catch (error) {
         log.error("Error processing summary data:", error);

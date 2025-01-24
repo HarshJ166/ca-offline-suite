@@ -3,8 +3,8 @@ const log = require("electron-log");
 const db = require("../db/db");
 const { statements } = require("../db/schema/Statement");
 const { transactions } = require("../db/schema/Transactions");
-const { eod } = require("../db/schema/EOD");
-const {summary} = require("../db/schema/Summary");
+const { eod } = require("../db/schema/Eod");
+const { summary } = require("../db/schema/Summary");
 const { eq, and, inArray } = require("drizzle-orm"); // Add this import
 
 function registerIndividualDashboardIpc() {
@@ -14,16 +14,16 @@ function registerIndividualDashboardIpc() {
       log.error('Invalid caseId provided:', caseId);
       throw new Error('Invalid case ID');
     }
-  
+
     try {
       const result = await db
         .select()
         .from(eod)
         .where(eq(eod.caseId, caseId));
-      
+
       // log.info('EOD balance fetched successfully',result);
       return result;
-      
+
     } catch (error) {
       log.error('Error fetching EOD balance:', error);
       throw new Error('Failed to fetch EOD balance');
@@ -37,14 +37,14 @@ function registerIndividualDashboardIpc() {
         .select()
         .from(summary)
         .where(eq(summary.caseId, caseId));
-      log.info("Summary data fetched successfully:", result);
+      // log.info("Summary data fetched successfully:", result);
       return result;
     } catch (error) {
       log.error("Error fetching summary data:", error);
       throw error;
     }
   });
-  
+
   // Handler for getting all transactions
   ipcMain.handle("get-transactions", async (event, caseId) => {
     try {
@@ -60,7 +60,7 @@ function registerIndividualDashboardIpc() {
       }
 
       // Log statements for debugging
-      log.info("Found statements:", allStatements);
+      // log.info("Found statements:", allStatements);
 
       // Get all transactions for these statements
       const allTransactions = await db
@@ -73,7 +73,7 @@ function registerIndividualDashboardIpc() {
           )
         );
 
-      log.info("Transactions fetched successfully:", allTransactions);
+      log.info("Transactions fetched successfully:", allTransactions.length);
       return allTransactions;
     } catch (error) {
       log.error("Error fetching transactions:", error);
@@ -154,7 +154,7 @@ function registerIndividualDashboardIpc() {
             )
           ); // Apply both filters
 
-        log.info("Transactions with category 'Cash withdrawal':", result);
+        log.info("Transactions with category 'Cash withdrawal':", result.length);
 
         return result;
       } catch (error) {

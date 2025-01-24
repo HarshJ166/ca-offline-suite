@@ -60,7 +60,7 @@ const Transactions = ({ caseId }) => {
         console.log("Fetching transactions for statementId:", caseId);
         const data = await window.electron.getTransactions(caseId);
         setTransactionData(data);
-        console.log("Fetched transactions:", data);
+        console.log("Fetched transactions:", data.length);
       } catch (err) {
         setError("Failed to fetch transactions");
         console.error("Error fetching transactions:", err);
@@ -104,6 +104,8 @@ const Transactions = ({ caseId }) => {
     return new Date(parseInt(year), monthIndex);
   };
 
+  // print the getMonthDate
+
   const availableMonths = Object.keys(monthsData).sort((a, b) => {
     const dateA = getMonthDate(a);
     const dateB = getMonthDate(b);
@@ -111,64 +113,38 @@ const Transactions = ({ caseId }) => {
   });
 
   const processDailyData = (transactions) => {
-    return transactions.reduce((acc, transaction) => {
-      const date = transaction.date;
-      const dateKey = date.toISOString().split("T")[0];
-
-      if (!acc[dateKey]) {
-        acc[dateKey] = {
-          date: date.toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          }),
-          description: transaction.description,
-          credit: 0,
-          debit: 0,
-          balance: transaction.balance,
-          category: transaction.category,
-          entity: transaction.entity,
-        };
-      }
-
-      // Add credit or debit based on transaction type
-      if (transaction.type.toLowerCase() === "credit") {
-        acc[dateKey].credit += transaction.amount;
-      } else if (transaction.type.toLowerCase() === "debit") {
-        acc[dateKey].debit += transaction.amount;
-      }
-
-      return acc;
-    }, {});
+    return transactions.map((transaction) => ({
+      date: transaction.date.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }),
+      description: transaction.description,
+      credit:
+        transaction.type.toLowerCase() === "credit" ? transaction.amount : 0,
+      debit:
+        transaction.type.toLowerCase() === "debit" ? transaction.amount : 0,
+      balance: transaction.balance,
+      category: transaction.category,
+      entity: transaction.entity,
+    }));
   };
 
+  // print the processed data
+  console.log("processedData", processDailyData(transactionData));
+
   const processCreditDebitData = (transactions) => {
-    return transactions.reduce((acc, transaction) => {
-      const date = transaction.date; // Convert Unix timestamp to JS Date
-      const dateKey = date.toISOString().split("T")[0];
-
-      if (!acc[dateKey]) {
-        acc[dateKey] = {
-          date: date.toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          }),
-          credit: 0,
-          debit: 0,
-          // balance: transaction.balance, // Assuming balance is latest for the day
-        };
-      }
-
-      // Add credit or debit based on transaction type
-      if (transaction.type.toLowerCase() === "credit") {
-        acc[dateKey].credit += transaction.amount;
-      } else if (transaction.type.toLowerCase() === "debit") {
-        acc[dateKey].debit += transaction.amount;
-      }
-
-      return acc;
-    }, {});
+    return transactions.map((transaction) => ({
+      date: transaction.date.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }),
+      credit:
+        transaction.type.toLowerCase() === "credit" ? transaction.amount : 0,
+      debit:
+        transaction.type.toLowerCase() === "debit" ? transaction.amount : 0,
+    }));
   };
   const processCategoryData = (transactions) => {
     const categoryTotals = transactions.reduce((acc, transaction) => {
@@ -213,6 +189,7 @@ const Transactions = ({ caseId }) => {
     selectedMonths.flatMap((month) => monthsData[month])
   );
 
+  console.log("filteredData", filteredData);
   return (
     <div className="rounded-lg space-y-6 m-8 mt-2">
       {isLoading ? (

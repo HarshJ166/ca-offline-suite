@@ -77,11 +77,11 @@ const Dashboard = () => {
       url: "#",
       icon: ReceiptText,
     },
-    // {
-    //   title:"Marker",
-    //   url:"#",
-    //   icon:Files
-    // }
+    {
+      title:"Marker",
+      url:"#",
+      icon:Files
+    }
   ];
 
   useEffect(() => {
