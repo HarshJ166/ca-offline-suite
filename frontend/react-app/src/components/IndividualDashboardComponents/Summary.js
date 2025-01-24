@@ -4,7 +4,7 @@ import TableData from "./TableData";
 import { Card, CardHeader, CardTitle } from "../ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Maximize2, Minimize2 } from "lucide-react";
-import { Button } from "../ui/button";
+// import { Button } from "../ui/button";
 import ToggleStrip from "./ToggleStrip";
 
 const MaximizableChart = ({ children, title, isMaximized, setIsMaximized }) => {
@@ -45,7 +45,7 @@ const MaximizableChart = ({ children, title, isMaximized, setIsMaximized }) => {
   );
 };
 
-const Summary = ({ CaseId }) => {
+const Summary = ({ caseId }) => {
   const [summaryData, setSummaryData] = useState({
     "Income Receipts": [],
     "Important Expenses": [],
@@ -62,17 +62,21 @@ const Summary = ({ CaseId }) => {
 
   useEffect(() => {
     const fetchSummaryData = async () => {
-      if (!CaseId) return;
+      if (!caseId) return;
 
       try {
-        setIsLoading(true);
-        const result = await window.electron.getSummary(CaseId);
+        // setIsLoading(true);
+        console.log("Fetching summary data for caseId:", caseId);
+        const result = await window.electron.getSummary(caseId);
+        const parsedData = result.length > 0 ? JSON.parse(result[0].data) : {};
+
+        console.log("Parsed data:", parsedData);
+
         setSummaryData({
-          "Income Receipts": result["Income Receipts"] || [],
-          "Important Expenses": result["Important Expenses"] || [],
-          "Other Expenses": result["Other Expenses"] || []
+          "Income Receipts": parsedData.incomeReceipts || [],
+          "Important Expenses": parsedData.importantExpenses || [],
+          "Other Expenses": parsedData.otherExpenses || []
         });
-        setError(null);
       } catch (error) {
         console.error("Error fetching summary data:", error);
         setError(error);
@@ -86,8 +90,10 @@ const Summary = ({ CaseId }) => {
       }
     };
 
-    fetchSummaryData();
-  }, [CaseId]);
+    if (caseId) {
+        fetchSummaryData();
+      }
+    }, [caseId]);
 
   const monthOrder = [
     "January", "February", "March", "April", "May", "June",
@@ -101,10 +107,10 @@ const Summary = ({ CaseId }) => {
       category.forEach((item) => {
         Object.keys(item).forEach((key) => {
           if (
-            key !== "total" &&
-            key !== "Income Receipts" &&
-            key !== "Important Expenses" &&
-            key !== "Other Expenses"
+            key !== "Total" &&
+            key !== "Income / Receipts" &&
+            key !== "Important Expenses / Payments" &&
+            key !== "Other Expenses / Payments"
           ) {
             allMonths.add(key);
           }
@@ -167,17 +173,17 @@ const Summary = ({ CaseId }) => {
     return data.length > 0;
   };
 
-  const incomeData = transformData(incomeReceipts, "total", "Income Receipts", "Total Credit");
+  const incomeData = transformData(incomeReceipts, "Total", "Income / Receipts", "Total Credit");
   const importantExpensesData = transformData(
     importantExpenses,
-    "total",
-    "Important Expenses",
+    "Total",
+    "Important Expenses / Payments",
     "Total"
   );
   const otherExpensesData = transformData(
     otherExpenses,
-    "total",
-    "Other Expenses",
+    "Total",
+    "Other Expenses / Payments",
     "Total Debit"
   );
 
@@ -208,7 +214,7 @@ const Summary = ({ CaseId }) => {
                 nameKey="name"
                 showLegends={isMaximized}
               />
-              {!isMaximized && (
+              {/* {!isMaximized && (
                 <Button
                   onClick={() => setActiveTable(tableType)}
                   variant={activeTable === tableType ? "default" : "outline"}
@@ -216,7 +222,7 @@ const Summary = ({ CaseId }) => {
                 >
                   View Table
                 </Button>
-              )}
+              )} */}
             </>
           ) : (
             <div className="flex items-center justify-center h-48">
@@ -228,30 +234,29 @@ const Summary = ({ CaseId }) => {
     );
   };
 
-  const renderActiveTable = () => {
+  const renderAllTables = () => {
     const getTableContent = (data, title) => {
-      return checkDataAvailability(data) ? (
-        <TableData data={data} title={title} />
-      ) : (
-        <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md w-full">
-          <p className="text-gray-800 dark:text-gray-200 text-center font-medium">
-            No Data Available for Selected Month(s)
-          </p>
-        </div>
-      );
+        return checkDataAvailability(data) ? (
+            <div className="mb-6">
+                <TableData data={data} title={title} />
+            </div>
+        ) : (
+            <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md w-full mb-6">
+                <p className="text-gray-800 dark:text-gray-200 text-center font-medium">
+                    No Data Available for Selected Month(s)
+                </p>
+            </div>
+        );
     };
 
-    switch (activeTable) {
-      case "Income Receipts":
-        return getTableContent(incomeDataTransformed, "Income Receipts");
-      case "Important Expenses":
-        return getTableContent(importantExpensesDataTransformed, "Important Expenses");
-      case "Other Expenses":
-        return getTableContent(otherExpensesDataTransformed, "Other Expenses");
-      default:
-        return getTableContent(incomeDataTransformed, "Income Receipts");
-    }
-  };
+    return (
+        <>
+            {getTableContent(incomeDataTransformed, "Income")}
+            {getTableContent(importantExpensesDataTransformed, "Important Expenses")}
+            {getTableContent(otherExpensesDataTransformed, "Other Expenses")}
+        </>
+    );
+};
 
   return (
     <div className="space-y-6 m-8 mt-2">
@@ -271,7 +276,7 @@ const Summary = ({ CaseId }) => {
             {renderChart(importantExpensesData, "Important Expenses", importantExpensesMaximized, setImportantExpensesMaximized, "Important Expenses")}
             {renderChart(otherExpensesData, "Other Expenses", otherExpensesMaximized, setOtherExpensesMaximized, "Other Expenses")}
           </div>
-          {renderActiveTable()}
+          {renderAllTables()}
         </>
       )}
     </div>
