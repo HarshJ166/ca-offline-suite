@@ -11,10 +11,10 @@ const { registerAuthHandlers } = require("./ipc/authHandlers.js");
 const sessionManager = require("./SessionManager");
 const licenseManager = require('./LicenseManager');
 const {generateReportIpc} = require("./ipc/generateReport");
-
-console.log("Working Directory:", process.cwd());
+const db = require("./db/db");
 
 const log = require("electron-log");
+log.info("Working Directory:", process.cwd());
 // const database = require('./db/db');
 // const UserRepository = require('./db/repository/UserRepository');
 
@@ -24,11 +24,11 @@ log.transports.file.level = "info"; // Only log info level and above in the log 
 
 // Instead of electron-is-dev, we'll use this simple check
 const isDev = process.env.NODE_ENV === "development";
-console.log("process.env.NODE_ENV", process.env.NODE_ENV);
+log.info("process.env.NODE_ENV", process.env.NODE_ENV);
 
 const BASE_DIR = isDev ? __dirname : process.resourcesPath;
-console.log("BASE_DIR", BASE_DIR);
-console.log("__dirname", __dirname);
+log.info("BASE_DIR", BASE_DIR);
+log.info("__dirname", __dirname);
 
 // Add this function to handle file protocol
 function createProtocol() {
