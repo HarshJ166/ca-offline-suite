@@ -8,7 +8,8 @@ const { transactions } = require("../db/schema/Transactions");
 const { statements } = require("../db/schema/Statement");
 const { cases } = require("../db/schema/Cases");
 const { eod } = require("../db/schema/Eod");
-const {summary} = require("../db/schema/Summary");
+const { summary } = require("../db/schema/Summary");
+const { failedStatements } = require("../db/schema/FailedStatements");
 const { eq, and } = require("drizzle-orm");
 
 const sanitizeJSONString = (jsonString) => {
@@ -417,6 +418,10 @@ function generateReportIpc() {
     log.info("IPC handler invoked for generate-report", caseName);
     const tempDir = path.join(__dirname, "..", "tmp");
 
+    // Track successfully processed files to avoid deleting them
+    const successfulFiles = [];
+    const failedFiles = [];
+
     try {
       if (!result?.files?.length) {
         throw new Error("Invalid or empty files array received");
@@ -454,133 +459,166 @@ function generateReportIpc() {
         ca_id: fileDetails[0]?.ca_id || "DEFAULT_CASE",
       };
 
-      const response = await axios.post(
-        "http://localhost:7500/analyze-statements/",
-        payload,
-        {
-          headers: { "Content-Type": "application/json" },
-          timeout: 300000,
-          validateStatus: (status) => status === 200,
-        }
-      );
-
-      if (!response.data) {
-        throw new Error("Empty response received from analysis server");
-      }
-
-      let parsedData;
       try {
-        const sanitizedJsonString = sanitizeJSONString(response.data.data);
-        parsedData = JSON.parse(sanitizedJsonString);
-      } catch (error) {
-        log.error("JSON parsing error:", error);
-        throw error;
-      }
+        const response = await axios.post(
+          "http://localhost:7500/analyze-statements/",
+          payload,
+          {
+            headers: { "Content-Type": "application/json" },
+            timeout: 300000,
+            validateStatus: (status) => status === 200,
+          }
+        );
 
-      const transactions = (parsedData.Transactions || []).filter(
-        (transaction) => {
-          if (typeof transaction.Credit === "number" && isNaN(transaction.Credit)) {
-            transaction.Credit = null;
-          }
-          if (typeof transaction.Debit === "number" && isNaN(transaction.Debit)) {
-            transaction.Debit = null;
-          }
-          if (typeof transaction.Balance === "number" && isNaN(transaction.Balance)) {
-            transaction.Balance = 0;
-          }
+        // Track failed PDF paths
+        let failedPdfPaths = [];
 
-          return (
-            (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
-            (transaction.Debit !== null && !isNaN(transaction.Debit))
-          );
+        // Check if there are any PDF paths not extracted
+        if (response.data?.['pdf_paths_not_extracted']) {
+          // Get the case ID
+          const validCaseId = await getOrCreateCase(caseName);
+
+          // Store failed statements in the database
+          await db.insert(failedStatements).values({
+            caseId: validCaseId,
+            data: JSON.stringify(response.data['pdf_paths_not_extracted'])
+          });
+
+          // Track failed PDF paths
+          failedPdfPaths = response.data['pdf_paths_not_extracted'].paths || [];
+          log.warn('Some PDF paths were not extracted', failedPdfPaths);
         }
-      );
 
-      const processedData = [];
-      for (const fileDetail of fileDetails) {
+        // Continue processing if data exists
+        if (!response.data || !response.data.data) {
+          throw new Error("Empty or invalid response received from analysis server");
+        }
+
+        let parsedData;
         try {
-          const result = await processStatementAndEOD(
-            fileDetail,
-            transactions,
-            parsedData.EOD,
-            caseName
-          );
-          processedData.push(result);
+          const sanitizedJsonString = sanitizeJSONString(response.data.data);
+          parsedData = JSON.parse(sanitizedJsonString);
         } catch (error) {
-          log.error(
-            `Error processing file detail for ${fileDetail.bankName}:`,
-            error
-          );
+          log.error("JSON parsing error:", error);
           throw error;
         }
-      }
 
-      // Process Summary Data
-      try {
-        await processSummaryData(
-          {
-            "Income Receipts": parsedData["Income Receipts"] || [],
-            "Important Expenses": parsedData["Important Expenses"] || [],
-            "Other Expenses": parsedData["Other Expenses"] || []
-          },
-          caseName
-        );
-      } catch (error) {
-        log.error("Error processing summary data:", error);
-        throw error;
-      }
-
-      // Cleanup
-      fileDetails.forEach((detail) => {
-        try {
-          if (fs.existsSync(detail.pdf_paths)) {
-            fs.unlinkSync(detail.pdf_paths);
-          }
-        } catch (error) {
-          log.warn(`Failed to cleanup temp file: ${detail.pdf_paths}`, error);
-        }
-      });
-
-      try {
-        if (fs.existsSync(tempDir)) {
-          fs.rmdirSync(tempDir);
-        }
-      } catch (error) {
-        log.warn("Failed to remove temp directory:", error);
-      }
-
-      return {
-        success: true,
-        data: {
-          processed: processedData,
-          totalTransactions: processedData.reduce(
-            (sum, d) => sum + d.transactionCount,
-            0
-          ),
-          eodProcessed: true,
-          summaryProcessed: true,
-        },
-      };
-    } catch (error) {
-      // Cleanup on error
-      try {
-        if (fs.existsSync(tempDir)) {
-          fs.readdirSync(tempDir).forEach((file) => {
-            try {
-              const filePath = path.join(tempDir, file);
-              if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-              }
-            } catch (e) {
-              log.warn(`Failed to delete temp file ${file}:`, e);
+        const transactions = (parsedData.Transactions || []).filter(
+          (transaction) => {
+            if (typeof transaction.Credit === "number" && isNaN(transaction.Credit)) {
+              transaction.Credit = null;
             }
-          });
-          fs.rmdirSync(tempDir);
+            if (typeof transaction.Debit === "number" && isNaN(transaction.Debit)) {
+              transaction.Debit = null;
+            }
+            if (typeof transaction.Balance === "number" && isNaN(transaction.Balance)) {
+              transaction.Balance = 0;
+            }
+
+            return (
+              (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
+              (transaction.Debit !== null && !isNaN(transaction.Debit))
+            );
+          }
+        );
+
+        const processedData = [];
+        for (const fileDetail of fileDetails) {
+          try {
+            const result = await processStatementAndEOD(
+              fileDetail,
+              transactions,
+              parsedData.EOD,
+              caseName
+            );
+            processedData.push(result);
+            // Track successfully processed files
+            successfulFiles.push(fileDetail.pdf_paths);
+          } catch (error) {
+            // Track failed files
+            failedFiles.push(fileDetail.pdf_paths);
+            log.error(
+              `Error processing file detail for ${fileDetail.bankName}:`,
+              error
+            );
+            throw error;
+          }
         }
-      } catch (cleanupError) {
-        log.warn("Error during cleanup:", cleanupError);
+
+        // Process Summary Data
+        try {
+          await processSummaryData(
+            {
+              "Income Receipts": parsedData["Income Receipts"] || [],
+              "Important Expenses": parsedData["Important Expenses"] || [],
+              "Other Expenses": parsedData["Other Expenses"] || []
+            },
+            caseName
+          );
+        } catch (error) {
+          log.error("Error processing summary data:", error);
+          throw error;
+        }
+
+        // Cleanup only successfully processed files
+        successfulFiles.forEach((filePath) => {
+          try {
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+            }
+          } catch (error) {
+            log.warn(`Failed to cleanup temp file: ${filePath}`, error);
+          }
+        });
+
+        return {
+          success: true,
+          data: {
+            processed: processedData,
+            totalTransactions: processedData.reduce(
+              (sum, d) => sum + d.transactionCount,
+              0
+            ),
+            eodProcessed: true,
+            summaryProcessed: true,
+            failedStatements: response.data['pdf_paths_not_extracted'] || null,
+            failedFiles: failedFiles,
+            successfulFiles: successfulFiles
+          },
+        };
+
+      } catch (analysisError) {
+        // Handle errors from analysis server
+        log.error("Analysis server error:", {
+          message: analysisError.message,
+          response: analysisError.response?.data,
+          status: analysisError.response?.status,
+        });
+
+        // If there's a specific PDF paths not extracted data, store it
+        if (analysisError.response?.data?.['pdf_paths_not_extracted']) {
+          const validCaseId = await getOrCreateCase(caseName);
+          
+          await db.insert(failedStatements).values({
+            caseId: validCaseId,
+            data: JSON.stringify(analysisError.response.data['pdf_paths_not_extracted'])
+          });
+
+          // Track failed PDF paths
+          const failedPdfPaths = analysisError.response.data['pdf_paths_not_extracted'].paths || [];
+          failedFiles.push(...failedPdfPaths);
+        }
+
+        throw {
+          message: analysisError.message || "Failed to generate report",
+          code: analysisError.response?.status || 500,
+          details: analysisError.response?.data || analysisError.toString(),
+          timestamp: new Date().toISOString(),
+          failedFiles: failedFiles
+        };
       }
 
+    } catch (error) {
       log.error("Error in report generation:", {
         message: error.message,
         stack: error.stack,
@@ -588,13 +626,16 @@ function generateReportIpc() {
         status: error.response?.status,
       });
 
+      // In case of any error, we won't remove the tmp folder or files
       throw {
         message: error.message || "Failed to generate report",
         code: error.response?.status || 500,
         details: error.response?.data || error.toString(),
         timestamp: new Date().toISOString(),
+        failedFiles: failedFiles
       };
     }
   });
 }
+
 module.exports = { generateReportIpc };

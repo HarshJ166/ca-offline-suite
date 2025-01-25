@@ -121,9 +121,12 @@ export default function GenerateReport() {
         variant: "destructive",
         duration: 5000,
       });
+      refreshPage();
+
     } finally {
       setLoading(false);
       progressIntervalRef.current = null;
+
     }
   };
 
