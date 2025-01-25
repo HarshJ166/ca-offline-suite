@@ -12,6 +12,7 @@ log.info('drizzleConfigPath', drizzleConfigPath);
 
 log.info('DB process.env.DB_FILE_NAME', process.env.DB_FILE_NAME);
 const { drizzle } = require("drizzle-orm/libsql");
+const { migrate } = require("drizzle-orm/libsql/migrator");
 
 // const { createClient } = require("@libsql/client");
 // const { schema } = require("./schema");
@@ -23,26 +24,16 @@ class DatabaseManager {
     if (!DatabaseManager.instance) {
       // log.info("***********\n\n\nDatabasemanager instance is \n\n\n***********", DatabaseManager.instance);
       if (!isDev) {
-        // Command to run migration
-        const command = `npx drizzle-kit migrate --config ${drizzleConfigPath}`;
 
-        // Execute the command
-        exec(command, (error, stdout, stderr) => {
-          if (error) {
-            log.error(`Error while running migrations: ${error.message}`);
-            return;
-          }
-          if (stderr) {
-            log.error(`Migration STDERR: ${stderr}`);
-            return;
-          }
-          log.info(`Migration STDOUT: ${stdout}`);
-        });
       }
 
-      const dbUrl = process.env.DB_FILE_NAME;
+      // const dbUrl = process.env.DB_FILE_NAME;
+      const dbUrl = `file:${isDev
+        ? path.resolve(__dirname, "../db.sqlite3")
+        : path.join(BASE_DIR, "db.sqlite3")}`; // For production builds
+      log.info("Resolved dbUrl:", dbUrl);
 
-      console.log('dbUrl', dbUrl);
+      console.log('dbUrl : ', dbUrl);
       if (!dbUrl) {
         throw new Error("DATABASE_URL is not defined in the environment variables.");
       }
@@ -51,7 +42,21 @@ class DatabaseManager {
       // const client = createClient({ url: dbUrl });
 
       // Create Drizzle ORM instance with the schema
-      DatabaseManager.instance = drizzle(dbUrl);
+      const db = drizzle(dbUrl);
+      DatabaseManager.instance = db;
+      const migrationsFolder = path.resolve(__dirname, "../drizzle");
+      log.info('migrationsFolder : ', migrationsFolder);
+
+      migrate(db, {
+        migrationsFolder: migrationsFolder, // Ensure this path points to your migrations folder
+      })
+        .then(() => {
+          log.info("Migrations completed successfully.");
+        })
+        .catch((error) => {
+          log.error("Error running migrations:", error);
+          throw error;
+        });
     }
     return DatabaseManager.instance;
   }

@@ -10,17 +10,16 @@ const { registerReportHandlers } = require("./ipc/reportHandlers.js");
 const { registerAuthHandlers } = require("./ipc/authHandlers.js");
 const sessionManager = require("./SessionManager");
 const licenseManager = require('./LicenseManager');
-const {generateReportIpc} = require("./ipc/generateReport");
+const { generateReportIpc } = require("./ipc/generateReport");
 const db = require("./db/db");
 
 const log = require("electron-log");
-log.info("Working Directory:", process.cwd());
-// const database = require('./db/db');
-// const UserRepository = require('./db/repository/UserRepository');
 
 // Configure electron-log
 log.transports.console.level = "debug"; // Set the log level
 log.transports.file.level = "info"; // Only log info level and above in the log file
+
+log.info("Working Directory:", process.cwd());
 
 // Instead of electron-is-dev, we'll use this simple check
 const isDev = process.env.NODE_ENV === "development";
@@ -92,14 +91,14 @@ async function createWindow() {
     }
     return tempDir;
   };
-  
+
   // Handle file saving to temp directory
   ipcMain.handle('save-file-to-temp', async (event, fileBuffer) => {
     try {
       const tempDir = createTempDirectory();
       const fileName = `${uuidv4()}.pdf`; // Generate unique filename
       const filePath = path.join(tempDir, fileName);
-      
+
       await fs.promises.writeFile(filePath, Buffer.from(fileBuffer));
       return filePath;
     } catch (error) {
@@ -107,7 +106,7 @@ async function createWindow() {
       throw error;
     }
   });
-  
+
   // Clean up temp files
   ipcMain.handle('cleanup-temp-files', async () => {
     const tempDir = path.join(app.getPath('temp'), 'report-generator');
@@ -121,22 +120,7 @@ async function createWindow() {
       throw error;
     }
   });
-  
-}
 
-function createUser() {
-  try {
-    const userData = {
-      username: "john_doe",
-      email: "john.doe@example.com",
-      password: "securepassword", // Adjust this according to your hashing mechanism
-    };
-
-    const newUser = UserRepository.createUser(userData);
-    console.log("User created successfully:", newUser);
-  } catch (error) {
-    console.error("Error creating user:", error);
-  }
 }
 
 app.setName("CypherSol Dev");
@@ -144,31 +128,31 @@ app.setName("CypherSol Dev");
 app.whenReady().then(async () => {
   console.log("App is ready", app.getPath("userData"));
   try {
-    try{
+    try {
       await sessionManager.init();
     }
-    catch(error){
+    catch (error) {
       console.log("SessionManager initialization failed:", error);
     }
 
-    try{
+    try {
       await licenseManager.init();
     }
-    catch(error){
+    catch (error) {
       console.log("LicenseManager initialization failed:", error);
     }
 
-    try{
+    try {
       await sessionManager.init();
     }
-    catch(error){
+    catch (error) {
       console.log("SessionManager initialization failed:", error);
     }
 
-    try{
+    try {
       await licenseManager.init();
     }
-    catch(error){
+    catch (error) {
       console.log("LicenseManager initialization failed:", error);
     }
 
