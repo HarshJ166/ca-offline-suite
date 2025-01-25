@@ -2,7 +2,6 @@ class SessionManager {
     constructor() {
         this.store = null;
         this._user = null;
-
         this.init();
     }
 
@@ -15,7 +14,8 @@ class SessionManager {
 
         this._user = this.store.get('user') || null;
 
-        console.log('SessionManager initialized', "User:", this._user, " Store: ", this.store);
+        // console.log('SessionManager initialized', "User:", this._user, " Store: ", this.store);
+        console.log('SessionManager initialized');
     }
 
     get user() {

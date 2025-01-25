@@ -22,6 +22,7 @@ export const AuthProvider = ({ children }) => {
                 console.log('Activated:', result);
                 // If activated, try to restore user session
                 const userData = await window.electron.auth.getUser();
+                console.log('User data:', userData);
                 if (userData) setUser(userData);
             }
         } catch (err) {
