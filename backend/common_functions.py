@@ -34,13 +34,16 @@ from openpyxl.styles import Font
 import logging
 import openpyxl
 from openpyxl.styles import Alignment
+from .utils import get_base_dir
 
 bold_font = Font(bold=True)
 pd.options.display.float_format = "{:,.2f}".format
 pd.set_option("display.max_columns", None)
 pd.set_option("display.max_rows", None)
 pd.set_option("display.width", None)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+logger = logging.getLogger(__name__)
+BASE_DIR = get_base_dir()
+logger.info("Base Dir : ", BASE_DIR)
 #from old_bank_extractions import CustomStatement
 import json
 from .code_for_extraction import extract_with_test_cases, model_for_pdf, extract_dataframe_from_pdf
@@ -2335,6 +2338,7 @@ def category_add_ca(df):
             df[col] = df[col].str.lower()
     df["Description"] = df["Description"].str.replace(" ", "")
     excel_file_path = os.path.join(BASE_DIR, "CA_Category_sheet.xlsx")
+    print("Category sheet path : ", excel_file_path)
     df2 = pd.read_excel(excel_file_path)
 
     # Initialize the 'Category' column with "Suspense" for all rows

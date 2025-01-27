@@ -9,7 +9,7 @@ from fastapi import Body
 import matplotlib
 matplotlib.use('Agg')
 # from findaddy.exceptions import ExtractionError
-from .utils import get_saved_pdf_dir
+from backend.utils import get_saved_pdf_dir
 TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
 
 # If you have other custom imports:

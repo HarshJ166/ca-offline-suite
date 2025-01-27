@@ -28,6 +28,13 @@ from .old_bank_extractions import CustomStatement
 import re
 import uuid
 # from findaddy.exceptions import ExtractionError
+import logging
+from .utils import get_base_dir
+
+logger = logging.getLogger(__name__)
+BASE_DIR = get_base_dir()
+logger.info("Base Dir : ", BASE_DIR)
+
 from .utils import get_saved_pdf_dir
 TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
 
@@ -721,8 +728,8 @@ def outputs_to_objects(outputs, img_size, id2label):
     return objects
 
 def detect_table_columns(image):
-    # structure_model = TableTransformerForObjectDetection.from_pretrained(os.path.join(BASE_DIR, "models", "local_model"))
-    structure_model = TableTransformerForObjectDetection.from_pretrained("./local_model")
+    structure_model = TableTransformerForObjectDetection.from_pretrained(os.path.join(BASE_DIR, "models", "local_model"))
+    # structure_model = TableTransformerForObjectDetection.from_pretrained("./local_model")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     structure_model.to(device)
