@@ -27,6 +27,7 @@ develop-eggs/
 /backend/.env
 /backend/.venv
 /backend/.env.*
+.venv/
 
 # FastAPI specific
 /backend/instance/

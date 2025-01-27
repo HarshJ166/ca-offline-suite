@@ -20,6 +20,8 @@ from openpyxl import Workbook, load_workbook
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 # from findaddy.exceptions import ExtractionError
+from .utils import get_saved_pdf_dir
+TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
 
 
 class CustomStatement:
@@ -142,7 +144,7 @@ class CustomStatement:
         """Inserts separators between lines in the PDF."""
         CA_ID = self.CA_ID
         unlocked_pdf_filename = f"{timestamp}-{CA_ID}.pdf"
-        output_pdf_path = os.path.join("saved_pdf", unlocked_pdf_filename)
+        output_pdf_path = os.path.join(TEMP_SAVED_PDF_DIR, unlocked_pdf_filename)
         input_pdf = PdfReader(input_pdf_path)
         output_pdf = PdfWriter()
 
@@ -186,7 +188,7 @@ class CustomStatement:
         """Inserts separators between lines in the PDF."""
         CA_ID = self.CA_ID
         unlocked_pdf_filename = f"{timestamp}-{CA_ID}.pdf"
-        output_pdf_path = os.path.join("saved_pdf", unlocked_pdf_filename)
+        output_pdf_path = os.path.join(TEMP_SAVED_PDF_DIR, unlocked_pdf_filename)
         input_pdf = PdfReader(input_pdf_path)
         output_pdf = PdfWriter()
 
@@ -207,7 +209,7 @@ class CustomStatement:
         """Inserts separators between lines in the PDF."""
         CA_ID = self.CA_ID
         unlocked_pdf_filename = f"{timestamp}-{CA_ID}.pdf"
-        output_pdf_path = os.path.join("saved_pdf", unlocked_pdf_filename)
+        output_pdf_path = os.path.join(TEMP_SAVED_PDF_DIR, unlocked_pdf_filename)
         input_pdf = PdfReader(input_pdf_path)
         output_pdf = PdfWriter()
 
@@ -251,7 +253,7 @@ class CustomStatement:
         """Inserts separators between lines in the PDF."""
         CA_ID = self.CA_ID
         unlocked_pdf_filename = f"{timestamp}-{CA_ID}.pdf"
-        output_pdf_path = os.path.join("saved_pdf", unlocked_pdf_filename)
+        output_pdf_path = os.path.join(TEMP_SAVED_PDF_DIR, unlocked_pdf_filename)
         input_pdf = PdfReader(input_pdf_path)
         output_pdf = PdfWriter()
 
@@ -286,7 +288,7 @@ class CustomStatement:
     def separate_lines_in_vertical_pdf(self, input_pdf_path, x_positions, timestamp):
         CA_ID = self.CA_ID
         unlocked_pdf_filename = f"{timestamp}-{CA_ID}.pdf"
-        output_pdf_path = os.path.join("saved_pdf", unlocked_pdf_filename)
+        output_pdf_path = os.path.join(TEMP_SAVED_PDF_DIR, unlocked_pdf_filename)
         input_pdf = PdfReader(input_pdf_path)
         output_pdf = PdfWriter()
         for page_num in range(len(input_pdf.pages)):
@@ -354,14 +356,14 @@ class CustomStatement:
                 date_obj = datetime.strptime(date_str, format_str)
                 return date_obj.strftime("%d-%m-%Y")
             except ValueError:
-                pass
-        raise ExtractionError("Invalid date format: {}".format(date_str))
+                # pass
+                raise ValueError("Invalid date format: {}".format(date_str))
 
     #################--------******************----------#####################
     def unlock_the_pdfs_path(self, pdf_path, pdf_password, bank_name, timestamp):
         CA_ID = self.CA_ID
         logger = logging.getLogger(self.CA_ID)
-        os.makedirs("saved_pdf", exist_ok=True)
+        os.makedirs(TEMP_SAVED_PDF_DIR, exist_ok=True)
 
         with open(pdf_path, 'rb') as file:
             pdf_reader = PyPDF2.PdfReader(file)
@@ -373,15 +375,16 @@ class CustomStatement:
                     for page in pdf_reader.pages:
                         pdf_writer.add_page(page)
                     unlocked_pdf_filename = f"{timestamp}-{CA_ID}.pdf"
-                    unlocked_pdf_path = os.path.join("saved_pdf", unlocked_pdf_filename)
+                    unlocked_pdf_path = os.path.join(TEMP_SAVED_PDF_DIR, unlocked_pdf_filename)
                     with open(unlocked_pdf_path, 'wb') as unlocked_pdf_file:
                         pdf_writer.write(unlocked_pdf_file)
                 except Exception as e:
-                    raise ExtractionError("Incorrect password. Unable to unlock the PDF.")
+                    # raise ExtractionError("Incorrect password. Unable to unlock the PDF.")
+                    raise ValueError("Incorrect password. Unable to unlock the PDF.")
             else:
                 # Copy the PDF file to the "saved_pdf" folder without modification
                 unlocked_pdf_filename = f"{timestamp}-{CA_ID}.pdf"
-                unlocked_pdf_path = os.path.join("saved_pdf", unlocked_pdf_filename)
+                unlocked_pdf_path = os.path.join(TEMP_SAVED_PDF_DIR, unlocked_pdf_filename)
                 with open(pdf_path, 'rb') as unlocked_pdf_file:
                     with open(unlocked_pdf_path, 'wb') as output_file:
                         output_file.write(unlocked_pdf_file.read())
@@ -1158,8 +1161,8 @@ class CustomStatement:
             logger.error(f"An error occurred while processing pdf: {str(e)}", exc_info=True)
 
     def kotak(self, unlocked_pdf_path, timestamp):
-        path = [f for f in os.listdir('saved_pdf') if f.endswith('.pdf')][0]
-        unlocked_pdf_path = f"saved_pdf\{path}"
+        path = [f for f in os.listdir(TEMP_SAVED_PDF_DIR) if f.endswith('.pdf')][0]
+        unlocked_pdf_path = f"{TEMP_SAVED_PDF_DIR}\{path}"
 
         logger = logging.getLogger(self.CA_ID)
         try:
@@ -1226,7 +1229,7 @@ class CustomStatement:
 
             def kotak_format_2(unlocked_pdf_path):
                 try:
-                    one_pdf_path = self.separate_lines_in_pdf_idbi("saved_pdf/one.pdf", timestamp)
+                    one_pdf_path = self.separate_lines_in_pdf_idbi(f"{TEMP_SAVED_PDF_DIR}/one.pdf", timestamp)
 
                     x_positions = [80, 200, 380, 500, 600, 690, 780]
 

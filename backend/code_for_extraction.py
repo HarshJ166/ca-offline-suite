@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import io
-from django.utils import timezone
 from PyPDF2 import PdfReader, PdfWriter
 from PyPDF2 import PdfReader, PdfWriter, Transformation
 from PyPDF2.generic import NameObject, NumberObject, RectangleObject
@@ -25,9 +24,12 @@ import matplotlib.patches as patches
 import os
 import fitz  # PyMuPDF
 from io import BytesIO
-from old_bank_extractions import CustomStatement
+from .old_bank_extractions import CustomStatement
 import re
 import uuid
+# from findaddy.exceptions import ExtractionError
+from .utils import get_saved_pdf_dir
+TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
 
 def __init__(bank_name, pdf_path, pdf_password, CA_ID):
     writer = None
@@ -248,7 +250,7 @@ def flatten_pdf_rotation(input_pdf_path, output_pdf_path):
 
 def unlock_and_add_margins_to_pdf(pdf_path, pdf_password, timestamp, CA_ID):
     margin = 0.3
-    os.makedirs(f"saved_pdf", exist_ok=True)
+    os.makedirs(TEMP_SAVED_PDF_DIR, exist_ok=True)
 
     try:
         # Open the PDF using fitz (PyMuPDF)
@@ -261,7 +263,7 @@ def unlock_and_add_margins_to_pdf(pdf_path, pdf_password, timestamp, CA_ID):
 
         # Define the output path for the unlocked PDF
         unlocked_pdf_filename = f"{timestamp}-{CA_ID}_{uuid.uuid4().hex}.pdf"
-        unlocked_pdf_path = os.path.join("saved_pdf", unlocked_pdf_filename)
+        unlocked_pdf_path = os.path.join(TEMP_SAVED_PDF_DIR, unlocked_pdf_filename)
 
         # MARGIN CODE STARTS NOW: Convert margin from inches to points (1 inch = 72 points)
         margin_pts = margin * 72
@@ -1002,7 +1004,7 @@ def old_bank_extraction(page_path):
 def add_column_separators_in_memory(page):
     CA_ID = "1234_temp"
     # Simulate adding column separators to the in-memory page
-    output_pdf, coordinates, llama = process_pdf_and_annotate(page, os.path.join("saved_pdf",
+    output_pdf, coordinates, llama = process_pdf_and_annotate(page, os.path.join(TEMP_SAVED_PDF_DIR,
                                                                                       f"{CA_ID}_only_columns_add_{uuid.uuid4().hex}.pdf"))
     return output_pdf, coordinates, llama  # Return the modified page and coordinates
 
@@ -1010,7 +1012,7 @@ def add_column_separators_with_coordinates(pdf_path, coordinates):
     CA_ID = "1234_temp"
     pdf_document = fitz.open(pdf_path)
     llama_2 = annotate_pdf(pdf_document, coordinates)
-    processed_pdf_path = os.path.join("saved_pdf",
+    processed_pdf_path = os.path.join(TEMP_SAVED_PDF_DIR,
                                       f"{CA_ID}_columns_adding_with_coordinates_{uuid.uuid4().hex}.pdf")
     pdf_document.save(processed_pdf_path)
     return processed_pdf_path, llama_2

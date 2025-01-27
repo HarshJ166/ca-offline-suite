@@ -8,15 +8,18 @@ from fastapi.responses import HTMLResponse
 from fastapi import Body
 import matplotlib
 matplotlib.use('Agg')
-
+# from findaddy.exceptions import ExtractionError
+from .utils import get_saved_pdf_dir
+TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
 
 # If you have other custom imports:
-from tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf
+from backend.tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Bank Statement Analyzer API")
+logger.info(f"Temp directory python : {TEMP_SAVED_PDF_DIR}")
 
 class BankStatementRequest(BaseModel):
     bank_names: List[str]
