@@ -5,7 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron main.js",
-    "start:fastapi": "cd ../backend && uvicorn app:app --reload --port 5000",
+    "start:fastapi": "cd ../backend   && uvicorn main:app --reload --port 7500",
     "start:react": "cd react-app && npm start",
     "start:electron": "cross-env NODE_ENV=development wait-on http://localhost:3000 && electron main.js",
     "start-all": "cross-env NODE_ENV=development concurrently \"npm run start:fastapi\" \"npm run start:react\" \"npm run start:electron\"",
