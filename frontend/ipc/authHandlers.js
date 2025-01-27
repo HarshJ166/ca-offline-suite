@@ -1,5 +1,6 @@
 const { ipcMain } = require('electron');
 const sessionManager = require('../SessionManager');
+const log = require('electron-log');
 const licenseManager = require('../LicenseManager');
 const db = require('../db/db');
 const { users } = require('../db/schema/User');
@@ -8,6 +9,7 @@ const bcrypt = require('bcrypt');
 const { eq, exists, sql } = require("drizzle-orm");
 
 function registerAuthHandlers() {
+    log.info('Registering auth IPC handlers');
     // Handle login
     ipcMain.handle('auth:login', async (event, credentials) => {
         try {
