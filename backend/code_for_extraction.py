@@ -1226,10 +1226,27 @@ def run_test_output_on_whole_pdf(list_a, pdf_in_saved_pdf, bank_name, timestamp,
         return df, explicit_lines
 
 
+def is_pdf_encoded(pdf_path):
+    try:
+        reader = PdfReader(pdf_path)
+        if not reader.pages:
+            raise Exception("PDF has no pages.")
+
+        for page_number, page in enumerate(reader.pages):
+            text = page.extract_text()
+            if not text or sum(char.isprintable() for char in text) / len(text) < 0.5:
+                raise Exception(f"PDF appears encoded or obfuscated.")
+
+        return "PDF text is readable and not encoded."
+    except Exception as e:
+        raise Exception(f"Error: {e}")
+
+
 # Main function to run test cases with optimizations
 def extract_with_test_cases(bank_name, pdf_path, pdf_password, CA_ID):
     timestamp = "1234_temp"
     pdf_in_saved_pdf = unlock_and_add_margins_to_pdf(pdf_path, pdf_password, timestamp, CA_ID)
+    is_pdf_encoded(pdf_in_saved_pdf)
     list_test = process_pdf_with_test_cases(pdf_in_saved_pdf)
     text = extract_text_from_pdf(pdf_in_saved_pdf)
     idf, explicit_lines = run_test_output_on_whole_pdf(list_test, pdf_in_saved_pdf, bank_name, timestamp, CA_ID)

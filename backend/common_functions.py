@@ -649,6 +649,66 @@ def calculate_fixed_day_average( data):
     return averages_with_monthly
 
 def process_avg_last_6_months(data, eod):
+    def manish(loan_value_df):
+        if (
+                loan_value_df.empty
+                or "Maximum Home Loan Value" not in loan_value_df.columns
+                or "Maximum LAP Value" not in loan_value_df.columns
+                or "Maximum BL Value" not in loan_value_df.columns
+        ):
+            print("DataFrame is empty or required columns are missing.")
+            return  # or handle this situation in a way that fits your application
+
+        # Your existing logic with safety checks
+        max_home_loan = (
+            0
+            if pd.isna(loan_value_df["Maximum Home Loan Value"].iloc[0])
+            else round(loan_value_df["Maximum Home Loan Value"].iloc[0] / 1000) * 1000
+        )
+        max_lap = (
+            0
+            if pd.isna(loan_value_df["Maximum LAP Value"].iloc[0])
+            else round(loan_value_df["Maximum LAP Value"].iloc[0] / 1000) * 1000
+        )
+        max_bl = (
+            0
+            if pd.isna(loan_value_df["Maximum BL Value"].iloc[0])
+            else round(loan_value_df["Maximum BL Value"].iloc[0] / 1000) * 1000
+        )
+
+        commission_percentage = [
+            0.45 / 100,
+            0.65 / 100,
+            1.00 / 100,
+        ]  # Convert percentages to fractions
+
+        # Calculate commission in Rs
+        commission_home_loan = round(max_home_loan * commission_percentage[0], 2)
+        commission_lap = round(max_lap * commission_percentage[1], 2)
+        commission_bl = round(max_bl * commission_percentage[2], 2)
+
+        # Create the dataframe
+        data = {
+            "Product": [
+                "Home Loan / Balance Transfer",
+                "Loan Against Property / Balance Transfer",
+                "Business Loan",
+                "Term Plan",
+                "General Insurance",
+            ],
+            "Amount": [max_home_loan, max_lap, max_bl, np.nan, np.nan],
+            "Commission %": ["0.45%", "0.65%", "1.00%", "1%-30%", "upto 10%"],
+            "Commission (in Rs)": [
+                commission_home_loan,
+                commission_lap,
+                commission_bl,
+                np.nan,
+                np.nan,
+            ],
+        }
+        df = pd.DataFrame(data)
+        return df
+
     error_df = pd.DataFrame()
 
     # Check if 'Avg_Last_6_Months' column exists
@@ -868,7 +928,8 @@ def process_avg_last_6_months(data, eod):
         }
     )
 
-    return max_values_df
+    new_df = manish(max_values_df)
+    return new_df
 
 def process_repeating_columns( oy):
     df = pd.concat(oy, axis=1)
