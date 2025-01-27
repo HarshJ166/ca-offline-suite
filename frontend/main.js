@@ -22,6 +22,8 @@ function getProductionExecutablePath() {
   const platformExecutables = {
     win32: path.join(process.resourcesPath, "backend", "main", "main.exe"),
     darwin: path.join(process.resourcesPath, "backend", "main", "main"),
+    // win32: path.join(__dirname, "../dist/main", "main.exe"),
+    // darwin: path.join(__dirname, "../dist/main", "main"),
     // linux: path.join(process.resourcesPath, "dist", "linux", "my_app"),
   };
 
@@ -48,8 +50,8 @@ async function startPythonExecutable() {
     if (isDev) {
       const venvPythonPath =
         process.platform === "win32"
-          ? path.join(__dirname, "../.venv/Scripts/python.exe") // Path to .venv Python on Windows
-          : path.join(__dirname, "../.venv/bin/python"); // Path to .venv Python on macOS/Linux
+          ? path.join(__dirname, "../.venv/Scripts/python.exe")
+          : path.join(__dirname, "../.venv/bin/python");
 
       const pythonScriptPath = path.join(__dirname, "../backend/main.py");
       const workingDir = path.join(__dirname, "../");
