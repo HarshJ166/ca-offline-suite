@@ -14,8 +14,11 @@ pd.set_option("display.max_rows", None)
 pd.set_option("display.width", None)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+from ...utils import get_saved_pdf_dir
+# from findaddy.exceptions import ExtractionError
+TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
 
-from common_functions import (process_excel_to_json,process_name_n_num_df,category_add_ca,
+from ...common_functions import (process_excel_to_json,process_name_n_num_df,category_add_ca,
                               another_method,eod,opening_and_closing_bal,summary_sheet,
                               transaction_sheet,total_investment,redemption_investment,
                               creditor_list,debtor_list, cash_withdraw, cash_depo, div_int, emi,

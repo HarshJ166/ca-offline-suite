@@ -1,7 +1,5 @@
 import os
 from dateutil import parser
-from django.utils import timezone
-from django.conf import settings
 from openpyxl.styles import Font
 from pypdf import PdfReader
 import re
@@ -45,7 +43,7 @@ pd.set_option("display.width", None)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 #from old_bank_extractions import CustomStatement
 import json
-from code_for_extraction import extract_with_test_cases, model_for_pdf, extract_dataframe_from_pdf
+from .code_for_extraction import extract_with_test_cases, model_for_pdf, extract_dataframe_from_pdf
 
 ##EXTRACTION PROCESS
 def extract_text_from_file( file_path):
