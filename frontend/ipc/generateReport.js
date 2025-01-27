@@ -614,6 +614,8 @@ function generateReportIpc(tmpdir_path) {
         status: error.response?.status,
       });
 
+      log.info("Erororr in the report genernerenr : ", error.message)
+
       throw {
         message: error.message || "Failed to generate report",
         code: error.response?.status || 500,
