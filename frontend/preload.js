@@ -6,7 +6,8 @@ contextBridge.exposeInMainWorld("electron", {
   openFile: (filePath) => ipcRenderer.invoke("open-file", filePath),
 
   getTransactions: (caseId) => ipcRenderer.invoke("get-transactions", caseId),
-
+  getTransactionsCount: (caseId) =>
+    ipcRenderer.invoke("get-transactions-count", caseId),
   getEodBalance: (caseId) => ipcRenderer.invoke("get-eod-balance", caseId),
   getSummary: (caseId) => ipcRenderer.invoke("get-summary", caseId),
   getTransactionsByDebtor: (caseId) =>
@@ -73,6 +74,7 @@ contextBridge.exposeInMainWorld("electron", {
   },
 
   getRecentReports: () => ipcRenderer.invoke("get-recent-reports"),
+  getFailedStatements: (referenceId) => ipcRenderer.invoke("get-failed-statements", referenceId),
 
   shell: {
     openExternal: (url) => shell.openExternal(url),

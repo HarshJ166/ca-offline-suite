@@ -5,7 +5,7 @@ const { statements } = require("../db/schema/Statement");
 const { transactions } = require("../db/schema/Transactions");
 const { eod } = require("../db/schema/Eod");
 const { summary } = require("../db/schema/Summary");
-const { eq, and, inArray } = require("drizzle-orm"); // Add this import
+const { eq, gt,and, inArray } = require("drizzle-orm"); // Add this import
 
 function registerIndividualDashboardIpc() {
   // Handler for getting EOD balance
@@ -77,6 +77,49 @@ function registerIndividualDashboardIpc() {
       return allTransactions;
     } catch (error) {
       log.error("Error fetching transactions:", error);
+      throw error;
+    }
+  });
+
+  // create a ipc to get transactions count for both credits and debits transactions
+  ipcMain.handle("get-transactions-count", async (event, caseId) => {
+    try {
+      const allStatements = await db
+        .select()
+        .from(statements)
+        .where(eq(statements.caseId, caseId));
+
+      const statementIds = allStatements.map((stmt) => stmt.id.toString());
+
+      const creditTransactions = await db
+        .select()
+
+        .from(transactions)
+        .where(
+          and(
+            inArray(transactions.statementId, statementIds), // Check if statementId is in the list
+            eq(transactions.type, "credit"), // Filter by type,
+            gt(transactions.amount, 0) // Filter for amount greater than 0
+          )
+        ); // Apply both filters
+
+      const debitTransactions = await db
+        .select()
+        .from(transactions)
+        .where(
+          and(
+            inArray(transactions.statementId, statementIds), // Check if statementId is in the list
+            eq(transactions.type, "debit"), // Filter by type
+            gt(transactions.amount, 0) // Filter for amount greater than 0
+          )
+        ); // Apply both filters
+
+      return {
+        credit: creditTransactions.length,
+        debit: debitTransactions.length,
+      };
+    } catch (error) {
+      log.error("Error fetching transactions count:", error);
       throw error;
     }
   });

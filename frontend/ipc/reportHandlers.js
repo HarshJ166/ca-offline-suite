@@ -7,6 +7,7 @@ const db = require("../db/db");
 const { transactions } = require("../db/schema/Transactions");
 const { statements } = require("../db/schema/Statement");
 const { cases } = require("../db/schema/Cases");
+const {failedStatements} = require("../db/schema/FailedStatements");
 const { eq, and } = require("drizzle-orm");
 
 
@@ -251,13 +252,15 @@ async function getModifiedTransactions() {
 function registerReportHandlers(tmpdir_path) {
     ipcMain.handle("get-recent-reports", async (event) => {
         try {
-
+            log.info("Fetching recent reports from the database...");
             const result = await db
                 .select()
                 .from(cases)
                 .orderBy(cases.createdAt, "DESC")
                 .leftJoin(statements, eq(cases.id, statements.caseId))
                 .limit(10);
+
+            log.info("Reports fetched successfully, processing data...");
 
             const groupedResults = result.reduce((acc, row) => {
                 const caseId = row.cases.id; // Use 'cases.id' to group by case
@@ -267,13 +270,15 @@ function registerReportHandlers(tmpdir_path) {
                 }
 
                 if (row.statements) {
-                    acc[caseId].statements.push({ ...row.statements }); // Make sure you're adding the full statement object
+                    acc[caseId].statements.push({ ...row.statements });
                 }
 
                 return acc;
             }, {});
 
             const finalResults = Object.values(groupedResults);
+
+            log.info("Data processing complete, returning results...");
             return finalResults;
         } catch (error) {
             log.error("Error fetching reports:", error);
@@ -281,17 +286,31 @@ function registerReportHandlers(tmpdir_path) {
         }
     });
 
-
-
-
-    // Main IPC handler function
+    // Handler for getting failed statements
+    ipcMain.handle("get-failed-statements", async (event, referenceId) => {
+        try {
+          log.info(`Fetching failed statements for case ID: ${referenceId}...`);
+      
+          // Note: We're now filtering by caseId instead of referenceId
+          const result = await db
+            .select()
+            .from(failedStatements)
+            .where(eq(failedStatements.caseId, referenceId));
+      
+        //   log.info("Failed statements fetched successfully",result);
+          return result;
+        } catch (error) {
+          log.error("Error fetching failed statements:", error);
+          throw error;
+        }
+      });
+    // Handler for adding PDF reports
     ipcMain.handle("add-pdf", async (event, result, caseId) => {
         log.info("IPC handler invoked for add-pdf");
         const tempDir = tmpdir_path
         log.info("Temp Directory : ", tempDir);
         log.info("CASE ID : ", caseId);
         try {
-            // Input validation
             if (!result?.files?.length) {
                 throw new Error("Invalid or empty files array received");
             }
@@ -308,7 +327,6 @@ function registerReportHandlers(tmpdir_path) {
             // Create temp directory
             // fs.mkdirSync(tempDir, { recursive: true });
 
-            // Process file details
             const fileDetails = result.files.map((fileDetail, index) => {
                 if (!fileDetail.pdf_paths || !fileDetail.bankName) {
                     throw new Error(`Missing required fields for file at index ${index}`);
@@ -330,7 +348,6 @@ function registerReportHandlers(tmpdir_path) {
                 };
             });
 
-            // Prepare API payload
             const payload = {
                 bank_names: fileDetails.map((d) => d.bankName),
                 pdf_paths: fileDetails.map((d) => d.pdf_paths),
@@ -340,7 +357,7 @@ function registerReportHandlers(tmpdir_path) {
                 ca_id: fileDetails[0]?.ca_id || "DEFAULT_CASE",
             };
 
-            // Make API request
+            log.info("Sending payload to analysis server...");
             const response = await axios.post(
                 "http://localhost:7500/analyze-statements/",
                 payload,
@@ -355,53 +372,20 @@ function registerReportHandlers(tmpdir_path) {
                 throw new Error("Empty response received from analysis server");
             }
 
-            log.info("Received response from analysis server");
+            log.info("Response received from analysis server, processing data...");
 
-            // Parse and sanitize response data
-            let parsedData;
-            try {
-                const sanitizedJsonString = sanitizeJSONString(response.data.data);
-                parsedData = JSON.parse(sanitizedJsonString);
-            } catch (error) {
-                log.error("JSON parsing error:", error);
-                log.error("Problematic JSON string:", sanitizedJsonString);
-                throw new Error("Failed to parse response data: " + error.message);
-            }
+            const sanitizedJsonString = sanitizeJSONString(response.data.data);
+            const parsedData = JSON.parse(sanitizedJsonString);
 
-            // Filter and validate transactions
-            const transactions = (parsedData.Transactions || []).filter(
-                (transaction) => {
-                    if (
-                        typeof transaction.Credit === "number" &&
-                        isNaN(transaction.Credit)
-                    ) {
-                        transaction.Credit = null;
-                    }
-                    if (
-                        typeof transaction.Debit === "number" &&
-                        isNaN(transaction.Debit)
-                    ) {
-                        transaction.Debit = null;
-                    }
-                    if (
-                        typeof transaction.Balance === "number" &&
-                        isNaN(transaction.Balance)
-                    ) {
-                        transaction.Balance = 0;
-                    }
+            const transactions = (parsedData.Transactions || []).filter((transaction) => {
+                return (
+                    (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
+                    (transaction.Debit !== null && !isNaN(transaction.Debit))
+                );
+            });
 
-                    return (
-                        (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
-                        (transaction.Debit !== null && !isNaN(transaction.Debit))
-                    );
-                }
-            );
+            log.info(`Extracted ${transactions.length} valid transactions from response`);
 
-            log.info(
-                `Extracted ${transactions.length} valid transactions from response`
-            );
-
-            // Process each file detail and its transactions
             const processedData = [];
             for (const fileDetail of fileDetails) {
                 try {
@@ -418,14 +402,10 @@ function registerReportHandlers(tmpdir_path) {
                         transactionCount,
                     });
                 } catch (error) {
-                    log.error(
-                        `Error processing file detail for ${fileDetail.bankName}:`,
-                        error
-                    );
+                    log.error(`Error processing file detail for ${fileDetail.bankName}:`, error);
                 }
             }
 
-            // Cleanup temp files
             fileDetails.forEach((detail) => {
                 try {
                     fs.unlinkSync(detail.pdf_paths);
@@ -444,10 +424,7 @@ function registerReportHandlers(tmpdir_path) {
                 success: true,
                 data: {
                     processed: processedData,
-                    totalTransactions: processedData.reduce(
-                        (sum, d) => sum + d.transactionCount,
-                        0
-                    ),
+                    totalTransactions: processedData.reduce((sum, d) => sum + d.transactionCount, 0),
                 },
             };
         } catch (error) {

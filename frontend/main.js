@@ -225,7 +225,7 @@ async function createWindow() {
       throw error;
     }
   });
-
+  
   // Clean up temp files
   ipcMain.handle('cleanup-temp-files', async () => {
     const tempDir = path.join(app.getPath('temp'), 'report-generator');
