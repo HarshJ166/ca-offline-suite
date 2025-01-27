@@ -22,6 +22,8 @@ function getProductionExecutablePath() {
   const platformExecutables = {
     win32: path.join(process.resourcesPath, "backend", "main", "main.exe"),
     darwin: path.join(process.resourcesPath, "backend", "main", "main"),
+    // win32: path.join(__dirname, "../dist/main", "main.exe"),
+    // darwin: path.join(__dirname, "../dist/main", "main"),
     // linux: path.join(process.resourcesPath, "dist", "linux", "my_app"),
   };
 
@@ -41,14 +43,18 @@ function getProductionExecutablePath() {
 async function startPythonExecutable() {
   return new Promise((resolve, reject) => {
     let command, args;
-
+    let options = {
+      detached: false,
+      stdio: "pipe",
+    }
     if (isDev) {
       const venvPythonPath =
         process.platform === "win32"
-          ? path.join(__dirname, "../backend/.venv/Scripts/python.exe") // Path to .venv Python on Windows
-          : path.join(__dirname, "../backend/.venv/bin/python"); // Path to .venv Python on macOS/Linux
+          ? path.join(__dirname, "../.venv/Scripts/python.exe")
+          : path.join(__dirname, "../.venv/bin/python");
 
       const pythonScriptPath = path.join(__dirname, "../backend/main.py");
+      const workingDir = path.join(__dirname, "../");
 
       if (!fs.existsSync(pythonScriptPath)) {
         const errorMessage = "Python script main.py not found in development mode.";
@@ -67,7 +73,9 @@ async function startPythonExecutable() {
       }
 
       command = venvPythonPath; // Use Python from .venv
-      args = [pythonScriptPath];
+      args = ["-m", "backend.main"];
+      options.cwd = workingDir;
+
     } else {
       // Production mode: Run platform-specific executable
       const executablePath = getProductionExecutablePath();
@@ -81,10 +89,8 @@ async function startPythonExecutable() {
     }
 
     try {
-      pythonProcess = spawn(command, args, {
-        detached: false,
-        stdio: "pipe",
-      });
+      log.info("Options : ", options)
+      pythonProcess = spawn(command, args, options);
 
       pythonProcess.stdout.on("data", (data) => log.info(`Process stdout: ${data}`));
       pythonProcess.stderr.on("data", (data) => log.error(`Process stderr: ${data}`));
