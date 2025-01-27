@@ -53,6 +53,7 @@ const Transactions = ({ caseId }) => {
   const [transactionData, setTransactionData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [availableMonths, setAvailableMonths] = useState([]);
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -104,13 +105,6 @@ const Transactions = ({ caseId }) => {
     return new Date(parseInt(year), monthIndex);
   };
 
-  // print the getMonthDate
-
-  const availableMonths = Object.keys(monthsData).sort((a, b) => {
-    const dateA = getMonthDate(a);
-    const dateB = getMonthDate(b);
-    return dateA - dateB;
-  });
 
   const processDailyData = (transactions) => {
     return transactions.map((transaction) => ({
@@ -161,15 +155,20 @@ const Transactions = ({ caseId }) => {
     return Object.values(categoryTotals);
   };
 
-  const [selectedMonths, setSelectedMonths] = useState([]);
-  const [initialLoad, setInitialLoad] = useState(true);
-
+  const [selectedMonths, setSelectedMonths] = useState(availableMonths);
   useEffect(() => {
-    if (initialLoad && availableMonths.length > 0) {
+    
+  const availableMonthstemp = Object.keys(monthsData).sort((a, b) => {
+    const dateA = getMonthDate(a);
+    const dateB = getMonthDate(b);
+    return dateA - dateB;
+  });
+  setAvailableMonths(availableMonthstemp);
+  
+    if (availableMonths.length > 0) {
       setSelectedMonths(availableMonths);
-      setInitialLoad(false);
     }
-  }, [availableMonths, initialLoad]);
+  }, [availableMonths]);
 
   const filteredData = selectedMonths
     .flatMap((month) => {
