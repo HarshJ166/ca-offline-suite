@@ -8,7 +8,7 @@ const { transactions } = require("../db/schema/Transactions");
 const { statements } = require("../db/schema/Statement");
 const { cases } = require("../db/schema/Cases");
 const { eod } = require("../db/schema/Eod");
-const {summary} = require("../db/schema/Summary");
+const { summary } = require("../db/schema/Summary");
 const { eq, and } = require("drizzle-orm");
 
 const sanitizeJSONString = (jsonString) => {
@@ -238,13 +238,13 @@ const processStatementAndEOD = async (fileDetail, transactions, eodData, caseNam
       };
 
       const statementResult = await db.insert(statements).values(statementData).returning();
-      
+
       if (!statementResult || statementResult.length === 0) {
         throw new Error("Failed to create statement record");
       }
 
       statementId = statementResult[0].id;
-      
+
       // Process transactions for this statement
       const statementTransactions = transactions
         .filter((t) => t.Bank === fileDetail.bankName)
@@ -274,7 +274,7 @@ const processStatementAndEOD = async (fileDetail, transactions, eodData, caseNam
           .from(eod)
           .where(eq(eod.caseId, validCaseId));
 
-          const validatedEODData = eodData
+        const validatedEODData = eodData
           .filter(entry => {
             return (
               entry &&
@@ -285,32 +285,32 @@ const processStatementAndEOD = async (fileDetail, transactions, eodData, caseNam
           })
           .map(entry => {
             try {
-              const dayValue = typeof entry.Day === "number" 
-                ? entry.Day 
+              const dayValue = typeof entry.Day === "number"
+                ? entry.Day
                 : parseFloat(entry.Day);
-        
+
               // Validate the day value
               if (isNaN(dayValue)) return null;
-        
+
               // Process all month keys in the entry
               const processedEntry = { Day: dayValue };
-        
+
               Object.keys(entry).forEach(key => {
                 if (key !== "Day" && typeof entry[key] !== "undefined") {
-                  const monthValue = typeof entry[key] === "number" 
-                    ? entry[key] 
+                  const monthValue = typeof entry[key] === "number"
+                    ? entry[key]
                     : parseFloat(entry[key]);
-        
+
                   // Only include valid numeric month values
                   if (!isNaN(monthValue)) {
                     processedEntry[key] = monthValue;
                   }
                 }
               });
-        
+
               // If no valid month values are found, return null
               if (Object.keys(processedEntry).length === 1) return null;
-        
+
               return processedEntry;
             } catch (error) {
               log.warn("Error processing EOD entry:", error, entry);
@@ -318,7 +318,7 @@ const processStatementAndEOD = async (fileDetail, transactions, eodData, caseNam
             }
           })
           .filter(Boolean);
-        
+
 
         // log.info(`Validated EOD data for case ${validCaseId}:`, validatedEODData);
 
@@ -412,17 +412,43 @@ const processSummaryData = async (parsedData, caseName) => {
     throw error;
   }
 };
-function generateReportIpc() {
+function generateReportIpc(tmpdir_path) {
+  const baseUrl = `http://localhost:7500`;
+  const serverEndPoint = `${baseUrl}/analyze-statements/`;
+  // const client = axios.create({ socketPath: udsPath, baseURL: 'http://unix' });
+  // const payload = {
+  //   bank_names: ["ICICI", "HDFC"],
+  //   pdf_paths: ['/home/Downloads/ICICI.pdf', '/home/Downloads/HDFC.pdf'],
+  //   passwords: ["1234", "1234"],
+  //   start_date: ["2023-01-01", "2023-01-01"],
+  //   end_date: ["2023-12-31", "2023-12-31"],
+  //   ca_id: "DEFAULT_CASE",
+  // };
+  // const client = new axios.Axios({ socketPath: `unix://${udsPath}`, baseURL: 'http://localhost' });
+  // console.log("Client : ", client);
+  // client.post("/", 'test', {
+  //   headers: { "Content-Type": "application/json" },
+  //   timeout: 300000,
+  // }).then((res) => {
+  //   console.log(res.status);
+  //   console.log(res.data);
+  // }).catch((err) => {
+  //   console.error(err.response.data);
+  //   console.error(err.message);
+  //   console.error(err.response.data.detail[0].loc);
+  // });
+
   ipcMain.handle("generate-report", async (event, result, caseName) => {
     log.info("IPC handler invoked for generate-report", caseName);
-    const tempDir = path.join(__dirname, "..", "tmp");
+    const tempDir = tmpdir_path
+    log.info("Temp Directory : ", tempDir);
 
     try {
       if (!result?.files?.length) {
         throw new Error("Invalid or empty files array received");
       }
 
-      fs.mkdirSync(tempDir, { recursive: true });
+      // fs.mkdirSync(tempDir, { recursive: true });
 
       const fileDetails = result.files.map((fileDetail, index) => {
         if (!fileDetail.pdf_paths || !fileDetail.bankName) {
@@ -455,7 +481,7 @@ function generateReportIpc() {
       };
 
       const response = await axios.post(
-        "http://localhost:7500/analyze-statements/",
+        serverEndPoint,
         payload,
         {
           headers: { "Content-Type": "application/json" },
@@ -541,13 +567,13 @@ function generateReportIpc() {
         }
       });
 
-      try {
-        if (fs.existsSync(tempDir)) {
-          fs.rmdirSync(tempDir);
-        }
-      } catch (error) {
-        log.warn("Failed to remove temp directory:", error);
-      }
+      // try {
+      //   if (fs.existsSync(tempDir)) {
+      //     fs.rmdirSync(tempDir);
+      //   }
+      // } catch (error) {
+      //   log.warn("Failed to remove temp directory:", error);
+      // }
 
       return {
         success: true,
@@ -575,7 +601,7 @@ function generateReportIpc() {
               log.warn(`Failed to delete temp file ${file}:`, e);
             }
           });
-          fs.rmdirSync(tempDir);
+          // fs.rmdirSync(tempDir);
         }
       } catch (cleanupError) {
         log.warn("Error during cleanup:", cleanupError);

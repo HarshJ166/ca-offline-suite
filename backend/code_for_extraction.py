@@ -14,6 +14,8 @@ from PIL import Image
 import pdfplumber
 from torchvision import transforms
 from huggingface_hub import hf_hub_download
+import matplotlib
+matplotlib.use("Agg")
 from matplotlib.patches import Patch
 from PIL import ImageDraw
 from transformers import TableTransformerForObjectDetection
@@ -23,7 +25,7 @@ import matplotlib.patches as patches
 import os
 import fitz  # PyMuPDF
 from io import BytesIO
-from old_bank_extractions import CustomStatement
+# from old_bank_extractions import CustomStatement
 import re
 import uuid
 
@@ -568,7 +570,6 @@ def cleaning(new_df):
 
     return idf
 
-
 def credit_debit(df, description_column, date_column, bal_column, same_column):
     def classify_column(column):
         case1_count = 0
@@ -583,7 +584,9 @@ def credit_debit(df, description_column, date_column, bal_column, same_column):
              "debit"]).sum()
 
         # Case 2: Count occurrences where the value contains both a number and "CR" or "DR"
-        case2_count = values.str.contains(r'\d+.*(CR|DR|Credit|Debit|C|D)', regex=True).sum()
+
+        case2_count = values.str.contains(r'^[+-]?\d+.*(CR|DR|Credit|Debit|C|D)?', regex=True).sum()
+        print(case2_count)
 
         # Return the case based on counts
         if case1_count >= 5:
@@ -624,7 +627,7 @@ def credit_debit(df, description_column, date_column, bal_column, same_column):
         if amount_column:
             print(f"Found 'amount' column: {amount_column}")
             # Call the crdr_to_credit_debit_columns function with the found amount column
-            new_df = self.crdr_to_credit_debit_columns(df, description_column, date_column, bal_column, amount_column,
+            new_df = crdr_to_credit_debit_columns(df, description_column, date_column, bal_column, amount_column,
                                                        same_column)
             return new_df
         else:
@@ -636,20 +639,19 @@ def credit_debit(df, description_column, date_column, bal_column, same_column):
 
         # Vectorized split of numeric part and "CR/DR" part using regex
         df['A'] = df[same_column].str.extract(r'([\d,]+\.?\d*)')[0].str.replace(',', '').astype(float)
-        df['B'] = df[same_column].str.extract(r'(CR|DR|Credit|Debit|C|D)', flags=re.IGNORECASE)[0].str.upper()
+        df['B'] = df[same_column].str.extract(r'(CR|DR|Credit|Debit|C|D|\+|\-)', flags=re.IGNORECASE)[0].str.upper()
         # Now call the crdr_to_credit_debit_columns function with new columns 'A' and 'B'
-        new_df = self.crdr_to_credit_debit_columns(df, description_column, date_column, bal_column, 'A', 'B')
+        new_df = crdr_to_credit_debit_columns(df, description_column, date_column, bal_column, 'A', 'B')
         return new_df
 
     else:
         print("Fewer than 5 occurrences of either case")
         return None
 
-
 def crdr_to_credit_debit_columns(df, description_column, date_column, bal_column, amount_column, keyword_column):
-    # Vectorized assignment of Debit and Credit columns
-    debit_keywords = r'(?i)^(DR|Debit|dr|debit|D|D\.)$'
-    credit_keywords = r'(?i)^(CR|Credit|cr|credit|C|C\.)$'
+    # Vectorized assignment of Debit and Credit columns|\+|\-
+    debit_keywords = r'(?i)^(DR|Debit|dr|debit|D|\-|D\.)$'
+    credit_keywords = r'(?i)^(CR|Credit|cr|credit|C|\+|C\.)$'
 
     # Update the Debit and Credit columns
     df['Debit'] = np.where(df[keyword_column].str.contains(debit_keywords, regex=True, na=False), df[amount_column], 0)
@@ -662,7 +664,6 @@ def crdr_to_credit_debit_columns(df, description_column, date_column, bal_column
     final_df.columns = ["Value Date", "Description", "Debit", "Credit", "Balance"]
 
     return final_df
-
 
 def extract_text_from_pdf(unlocked_file_path):
     with fitz.open(unlocked_file_path) as pdf_doc:
@@ -902,6 +903,31 @@ def cut_the_datframe_from_headers(df):
 
     return df
 
+def check_balance_consistency(df):
+    """
+    Check for inconsistencies in the balance column of a transaction DataFrame with a tolerance range.
+    :param df: Pandas DataFrame with columns 'Debit', 'Credit', and 'Balance'
+    :param tolerance: Allowed error range for balance comparison (default is 1.0)
+    :return: List of rows with balance inconsistencies
+    """
+    df.reset_index(inplace=True)
+    tolerance = 1.0
+    df['Debit'] = df['Debit'].fillna(0)
+    df['Credit'] = df['Credit'].fillna(0)
+    balance_issues = []
+    for i in range(1, len(df)):
+        # Calculate the expected balance
+        expected_balance = df.loc[i - 1, 'Balance'] - (df.loc[i, 'Debit']) + (df.loc[i, 'Credit'])
+        actual_balance = df.loc[i, 'Balance']
+
+        # Compare with tolerance
+        if not pd.isna(expected_balance) and abs(expected_balance - actual_balance) > tolerance:
+            raise ValueError(
+                f"Transaction between {df.loc[i - 1, 'Value Date']} and {df.loc[i, 'Value Date']} are missing"
+            )
+
+    return balance_issues
+
 def model_for_pdf(df):
     # Simulate cleaning or processing the dataframe
     # print(f"Modeling dataframe: {df}")
@@ -958,6 +984,7 @@ def model_for_pdf(df):
         final_df = cleaning(new_df)
 
     print(final_df.head(10))
+    bal = check_balance_consistency(final_df)
     return final_df, lists
 
 def new_mode_for_pdf(df, lists):
