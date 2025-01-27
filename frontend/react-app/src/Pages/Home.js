@@ -24,7 +24,7 @@ import ExcelERP from "../components/ImortTally/TallyERP";
 import { BreadcrumbDynamic } from "../components/BreadCrumb";
 import { useBreadcrumb } from "../contexts/BreadcrumbContext";
 import { useParams } from "react-router-dom";
-import PdfColumnMarker from "../components/MainDashboardComponents/PdfCanvas";
+import PdfColumnMarker from "../components/MainDashboardComponents/PdfMarker";
 
 const Dashboard = () => {
   const { breadcrumbs, setMainDashboard } = useBreadcrumb();

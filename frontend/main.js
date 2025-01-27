@@ -107,6 +107,8 @@ async function createWindow() {
       throw error;
     }
   });
+
+  
   
   // Clean up temp files
   ipcMain.handle('cleanup-temp-files', async () => {
