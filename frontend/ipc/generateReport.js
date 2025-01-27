@@ -240,11 +240,13 @@ const processStatementAndEOD = async (fileDetail, transactions, eodData, caseNam
 
       const statementResult = await db.insert(statements).values(statementData).returning();
 
+
       if (!statementResult || statementResult.length === 0) {
         throw new Error("Failed to create statement record");
       }
 
       statementId = statementResult[0].id;
+
 
       // Process transactions for this statement
       const statementTransactions = transactions
@@ -276,6 +278,7 @@ const processStatementAndEOD = async (fileDetail, transactions, eodData, caseNam
           .where(eq(eod.caseId, validCaseId));
 
         const validatedEODData = eodData
+        
           .filter(entry => {
             return (
               entry &&
@@ -288,19 +291,25 @@ const processStatementAndEOD = async (fileDetail, transactions, eodData, caseNam
             try {
               const dayValue = typeof entry.Day === "number"
                 ? entry.Day
+
                 : parseFloat(entry.Day);
+
 
               // Validate the day value
               if (isNaN(dayValue)) return null;
 
+
               // Process all month keys in the entry
               const processedEntry = { Day: dayValue };
+
 
               Object.keys(entry).forEach(key => {
                 if (key !== "Day" && typeof entry[key] !== "undefined") {
                   const monthValue = typeof entry[key] === "number"
                     ? entry[key]
+
                     : parseFloat(entry[key]);
+
 
                   // Only include valid numeric month values
                   if (!isNaN(monthValue)) {
@@ -309,8 +318,10 @@ const processStatementAndEOD = async (fileDetail, transactions, eodData, caseNam
                 }
               });
 
+
               // If no valid month values are found, return null
               if (Object.keys(processedEntry).length === 1) return null;
+
 
               return processedEntry;
             } catch (error) {
@@ -319,6 +330,7 @@ const processStatementAndEOD = async (fileDetail, transactions, eodData, caseNam
             }
           })
           .filter(Boolean);
+
 
 
         // log.info(`Validated EOD data for case ${validCaseId}:`, validatedEODData);
@@ -413,6 +425,8 @@ const processSummaryData = async (parsedData, caseName) => {
     throw error;
   }
 };
+
+
 function generateReportIpc(tmpdir_path) {
   const baseUrl = `http://localhost:7500`;
   const serverEndPoint = `${baseUrl}/analyze-statements/`;

@@ -249,8 +249,7 @@ async function getModifiedTransactions() {
 }
 
 
-function registerReportHandlers() {
-    // Handler for getting recent reports
+function registerReportHandlers(tmpdir_path) {
     ipcMain.handle("get-recent-reports", async (event) => {
         try {
             log.info("Fetching recent reports from the database...");
@@ -308,16 +307,25 @@ function registerReportHandlers() {
     // Handler for adding PDF reports
     ipcMain.handle("add-pdf", async (event, result, caseId) => {
         log.info("IPC handler invoked for add-pdf");
-        const tempDir = path.join(__dirname, "..", "tmp");
-
+        const tempDir = tmpdir_path
+        log.info("Temp Directory : ", tempDir);
+        log.info("CASE ID : ", caseId);
         try {
             if (!result?.files?.length) {
                 throw new Error("Invalid or empty files array received");
             }
 
-            log.info("Processing request with files:", result.files);
+            log.info(
+                "Processing request with files:",
+                result.files.map((f) => ({
+                    bankName: f.bankName,
+                    start_date: f.start_date,
+                    end_date: f.end_date,
+                }))
+            );
 
-            fs.mkdirSync(tempDir, { recursive: true });
+            // Create temp directory
+            // fs.mkdirSync(tempDir, { recursive: true });
 
             const fileDetails = result.files.map((fileDetail, index) => {
                 if (!fileDetail.pdf_paths || !fileDetail.bankName) {
@@ -406,7 +414,11 @@ function registerReportHandlers() {
                 }
             });
 
-            fs.rmdirSync(tempDir);
+            // try {
+            //     fs.rmdirSync(tempDir);
+            // } catch (error) {
+            //     log.warn("Failed to remove temp directory:", error);
+            // }
 
             return {
                 success: true,
@@ -416,8 +428,35 @@ function registerReportHandlers() {
                 },
             };
         } catch (error) {
-            log.error("Error in report generation:", error);
-            throw error;
+            // Cleanup on error
+            try {
+                if (fs.existsSync(tempDir)) {
+                    fs.readdirSync(tempDir).forEach((file) => {
+                        try {
+                            fs.unlinkSync(path.join(tempDir, file));
+                        } catch (e) {
+                            log.warn(`Failed to delete temp file ${file}:`, e);
+                        }
+                    });
+                    // fs.rmdirSync(tempDir);
+                }
+            } catch (cleanupError) {
+                log.warn("Error during cleanup:", cleanupError);
+            }
+
+            log.error("Error in report generation:", {
+                message: error.message,
+                stack: error.stack,
+                response: error.response?.data,
+                status: error.response?.status,
+            });
+
+            throw {
+                message: error.message || "Failed to generate report",
+                code: error.response?.status || 500,
+                details: error.response?.data || error.toString(),
+                timestamp: new Date().toISOString(),
+            };
         }
     });
 }
