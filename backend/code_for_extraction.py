@@ -14,6 +14,8 @@ from PIL import Image
 import pdfplumber
 from torchvision import transforms
 from huggingface_hub import hf_hub_download
+import matplotlib
+matplotlib.use("Agg")
 from matplotlib.patches import Patch
 from PIL import ImageDraw
 from transformers import TableTransformerForObjectDetection

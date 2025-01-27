@@ -248,7 +248,7 @@ async function getModifiedTransactions() {
 }
 
 
-function registerReportHandlers() {
+function registerReportHandlers(tmpdir_path) {
     ipcMain.handle("get-recent-reports", async (event) => {
         try {
 
@@ -287,9 +287,9 @@ function registerReportHandlers() {
     // Main IPC handler function
     ipcMain.handle("add-pdf", async (event, result, caseId) => {
         log.info("IPC handler invoked for add-pdf");
-        const tempDir = path.join(__dirname, "..", "tmp");
-        console.log(tempDir);
-        console.log("CASE ID : ", caseId);
+        const tempDir = tmpdir_path
+        log.info("Temp Directory : ", tempDir);
+        log.info("CASE ID : ", caseId);
         try {
             // Input validation
             if (!result?.files?.length) {
@@ -306,7 +306,7 @@ function registerReportHandlers() {
             );
 
             // Create temp directory
-            fs.mkdirSync(tempDir, { recursive: true });
+            // fs.mkdirSync(tempDir, { recursive: true });
 
             // Process file details
             const fileDetails = result.files.map((fileDetail, index) => {
@@ -434,11 +434,11 @@ function registerReportHandlers() {
                 }
             });
 
-            try {
-                fs.rmdirSync(tempDir);
-            } catch (error) {
-                log.warn("Failed to remove temp directory:", error);
-            }
+            // try {
+            //     fs.rmdirSync(tempDir);
+            // } catch (error) {
+            //     log.warn("Failed to remove temp directory:", error);
+            // }
 
             return {
                 success: true,
@@ -461,7 +461,7 @@ function registerReportHandlers() {
                             log.warn(`Failed to delete temp file ${file}:`, e);
                         }
                     });
-                    fs.rmdirSync(tempDir);
+                    // fs.rmdirSync(tempDir);
                 }
             } catch (cleanupError) {
                 log.warn("Error during cleanup:", cleanupError);
