@@ -6,7 +6,8 @@ contextBridge.exposeInMainWorld("electron", {
   openFile: (filePath) => ipcRenderer.invoke("open-file", filePath),
 
   getTransactions: (caseId) => ipcRenderer.invoke("get-transactions", caseId),
-
+  getTransactionsCount: (caseId) =>
+    ipcRenderer.invoke("get-transactions-count", caseId),
   getEodBalance: (caseId) => ipcRenderer.invoke("get-eod-balance", caseId),
   getSummary: (caseId) => ipcRenderer.invoke("get-summary", caseId),
   getTransactionsByDebtor: (caseId) =>

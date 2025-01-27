@@ -271,7 +271,7 @@ def refresh_category_all_sheets(df, eod_sheet_df):
     return json_output
 
 
-def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end_dates, CA_ID, progress_data, explicit_lines_list, whole_transaction_sheet=None):
+def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end_dates, CA_ID, progress_data, aiyazs_array_of_array, whole_transaction_sheet=None):
     account_number = ""
     dfs = {}
     name_dfs = {}
@@ -290,9 +290,20 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
         pdf_password = passwords[i]
         start_date = start_dates[i]
         end_date = end_dates[i]
-        explicit_lines = explicit_lines_list[i]
+        aiyaz_array_of_array = aiyazs_array_of_array[i]
 
-        dfs[bank], name_dfs[bank] = extraction_process_explicit_lines(bank, pdf_path, pdf_password, start_date, end_date, explicit_lines)
+        explicit_lines = []
+        labels = []
+
+        # Iterate through the columns to extract start and end coordinates
+        # Extracting unique "start" and "end" coordinates
+        explicit_lines = list(
+            {coord for item in aiyaz_array_of_array for coord in (item["bounds"]["start"], item["bounds"]["end"])}
+        )
+        labels = [[entry["index"], entry["type"]] for entry in aiyaz_array_of_array]
+
+
+        dfs[bank], name_dfs[bank] = extraction_process_explicit_lines(bank, pdf_path, pdf_password, start_date, end_date, explicit_lines, labels)
 
         print(f"Extracted {bank} bank statement successfully")
         # account_number += f"{name_dfs[bank][1][:4]}x{name_dfs[bank][1][-4:]}_"
@@ -305,7 +316,6 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
             pdf_paths_not_extracted["respective_list_of_columns"].append(name_dfs[bank])
             del dfs[bank]
             del name_dfs[bank]
-
         i += 1
 
     print("|------------------------------|")
@@ -466,3 +476,140 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
 
         return {"sheets_in_json": json_lists_of_df, 'pdf_paths_not_extracted': pdf_paths_not_extracted}
 
+
+
+
+
+
+##################################33
+
+# bank_names = ["IDFC", "BOB"]
+# pdf_paths = ["Copy of Copy of IDFC FIRST Bank (1).pdf", "Oct'23 to Mar'24  FG5V03395.pdf"]
+# passwords = ["", "FG5V03395"]
+# start_dates = ["01-09-2021", "01-10-2023"]
+# end_dates = ["03-03-2022", "31-03-2024"]
+# CA_ID = "CA_ID_4321"
+# progress_data = {}
+# null = "null"
+# aiyaz_array_of_array = [
+#         [
+#             {
+#                 "index": 0,
+#                 "bounds": {
+#                     "start": 55.64100999098557,
+#                     "end": 69.48716383713942
+#                 },
+#                 "type": null
+#             },
+#             {
+#                 "index": 1,
+#                 "bounds": {
+#                     "start": 69.48716383713942,
+#                     "end": 146.41024076021634
+#                 },
+#                 "type": "date"
+#             },
+#             {
+#                 "index": 2,
+#                 "bounds": {
+#                     "start": 146.41024076021634,
+#                     "end": 194.8717792217548
+#                 },
+#                 "type": null
+#             },
+#             {
+#                 "index": 3,
+#                 "bounds": {
+#                     "start": 194.8717792217548,
+#                     "end": 321.02562537560095
+#                 },
+#                 "type": "description"
+#             },
+#             {
+#                 "index": 4,
+#                 "bounds": {
+#                     "start": 321.02562537560095,
+#                     "end": 398.71793306790863
+#                 },
+#                 "type": null
+#             },
+#             {
+#                 "index": 5,
+#                 "bounds": {
+#                     "start": 398.71793306790863,
+#                     "end": 473.3333176832933
+#                 },
+#                 "type": "amount (dr/cr)"
+#             },
+#             {
+#                 "index": 6,
+#                 "bounds": {
+#                     "start": 473.3333176832933,
+#                     "end": 529.4871638371394
+#                 },
+#                 "type": "balance"
+#             }
+#         ],
+#         [
+#             {
+#                 "index": 0,
+#                 "bounds": {
+#                     "start": 20.25639460637019,
+#                     "end": 99.48716383713942
+#                 },
+#                 "type": "date"
+#             },
+#             {
+#                 "index": 1,
+#                 "bounds": {
+#                     "start": 99.48716383713942,
+#                     "end": 161.02562537560095
+#                 },
+#                 "type": null
+#             },
+#             {
+#                 "index": 2,
+#                 "bounds": {
+#                     "start": 161.02562537560095,
+#                     "end": 349.4871638371394
+#                 },
+#                 "type": "balance"
+#             },
+#             {
+#                 "index": 3,
+#                 "bounds": {
+#                     "start": 349.4871638371394,
+#                     "end": 394.10254845252405
+#                 },
+#                 "type": null
+#             },
+#             {
+#                 "index": 4,
+#                 "bounds": {
+#                     "start": 394.10254845252405,
+#                     "end": 446.4102407602163
+#                 },
+#                 "type": "debit"
+#             },
+#             {
+#                 "index": 5,
+#                 "bounds": {
+#                     "start": 446.4102407602163,
+#                     "end": 497.1794715294471
+#                 },
+#                 "type": "credit"
+#             },
+#             {
+#                 "index": 6,
+#                 "bounds": {
+#                     "start": 497.1794715294471,
+#                     "end": 571.7948561448317
+#                 },
+#                 "type": "balance"
+#             }
+#         ]
+# ]
+#
+# # x = start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end_dates, CA_ID, progress_data, aiyaz_array_of_array, whole_transaction_sheet=None)
+# start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_dates, CA_ID, progress_data)
+# print("exit")

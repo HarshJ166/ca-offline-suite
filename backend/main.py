@@ -5,6 +5,10 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 from fastapi.responses import HTMLResponse
+from fastapi import Body
+import matplotlib
+matplotlib.use('Agg')
+
 
 # If you have other custom imports:
 from tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf
@@ -22,9 +26,17 @@ class BankStatementRequest(BaseModel):
     end_date: List[str]
     ca_id: str
 
+class DummyRequest(BaseModel):
+    data: str
+
 @app.get("/", response_class=HTMLResponse)
 async def root():
     return "<h1>Yes, I am alive!</h1>"
+
+@app.post("/")
+async def root(data: str = Body(...)):
+    print("Received data in root : ", data)
+    return {"message": "Bank Statement Analyzer API"}
 
 @app.post("/analyze-statements/")
 async def analyze_bank_statements(request: BankStatementRequest):
@@ -99,9 +111,19 @@ async def health_check():
 
 
 if __name__ == "__main__":
-    # Optionally use environment variables for host/port. Falls back to "0.0.0.0" and 7500 if none provided.
-    host = os.getenv("API_HOST", "0.0.0.0")
+    # Optionally use environment variables for host/port. Falls back to "127.0.0.1" and 7500 if none provided.
+    host = os.getenv("API_HOST", "127.0.0.1")
     port = int(os.getenv("API_PORT", "7500"))
 
+    # uds_path = "/tmp/bank_statement_analyzer.sock"
+
+    # Clean up any old socket
+    # if os.path.exists(uds_path):
+        # os.remove(uds_path)
+
+    # Start the FastAPI server on the Unix socket
+    # uvicorn.run("main:app", uds=uds_path, log_level="info", reload=False)
+
+
     # IMPORTANT: reload=False for production usage
-    uvicorn.run("main:app", host=host, port=port, reload=True)
+    uvicorn.run(app, host=host, port=port, reload=False)

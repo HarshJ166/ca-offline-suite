@@ -33,7 +33,7 @@ import {
 } from "../ui/pagination";
 import { Label } from "../ui/label";
 
-const DataTable = ({ data = [], title = "Data Table", excludeTotalsFor = []}) => {
+const DataTable = ({ data = [], source,title,subtitle }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [filteredData, setFilteredData] = useState(data);
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,7 +46,8 @@ const DataTable = ({ data = [], title = "Data Table", excludeTotalsFor = []}) =>
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const rowsPerPage = 10;
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [showAllRows, setShowAllRows] = useState(false);
 
   // Get dynamic columns from first data item
   const columns = data.length > 0 ? Object.keys(data[0]) : [];
@@ -167,9 +168,9 @@ const DataTable = ({ data = [], title = "Data Table", excludeTotalsFor = []}) =>
   };
 
   // Pagination calculations
-  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-  const startIndex = (currentPage - 1) * rowsPerPage;
-  const endIndex = startIndex + rowsPerPage;
+  const totalPages = showAllRows ? 1 : Math.ceil(filteredData.length / rowsPerPage);
+  const startIndex = showAllRows ? 0 : (currentPage - 1) * rowsPerPage;
+  const endIndex = showAllRows ? filteredData.length : (startIndex + rowsPerPage);
   const currentData = filteredData.slice(startIndex, endIndex);
 
   // Generate page numbers for pagination
@@ -206,28 +207,235 @@ const DataTable = ({ data = [], title = "Data Table", excludeTotalsFor = []}) =>
     return { ...acc, [column]: total.toFixed(2) };
   }, {});
 
+  // If source is lifo or fifo, render a different table
+  if (source === "LIFO" || source === "FIFO") {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div className="">
+              <CardTitle className="text-lg font-medium dark:text-slate-300">
+                {source} Transaction
+              </CardTitle>
+              <CardDescription className="text-sm">
+                View and manage your data
+              </CardDescription>
+            </div>
+            <div className="relative flex items-center gap-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                className="pl-10 w-[400px] text-sm"
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+              <Button
+                variant="default"
+                className="text-sm"
+                onClick={() => clearFilters()}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {data.length === 0 ? (
+            <div className="text-center text-sm">
+              No data available for {source}.
+            </div>
+          ) : (
+            <div className="relative">
+              <Table className="text-sm">
+                <TableHeader>
+                  <TableRow>
+                    {columns.map((column) => (
+                      <TableHead key={column} className="text-base">
+                        <div className="flex items-center gap-2">
+                          {column.charAt(0).toUpperCase() +
+                            column.slice(1).toLowerCase()}
+                          {column.toLowerCase() !== "description" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => {
+                                if (numericColumns.includes(column)) {
+                                  setCurrentNumericColumn(column);
+                                  setNumericFilterModalOpen(true);
+                                } else {
+                                  setCurrentFilterColumn(column);
+                                  setSelectedCategories([]);
+                                  setCategorySearchTerm("");
+                                  setFilterModalOpen(true);
+                                }
+                              }}
+                            >
+                              ▼
+                            </Button>
+                          )}
+                        </div>
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {currentData.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="text-center text-sm"
+                      >
+                        No matching results found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    currentData.map((row, index) => (
+                      <TableRow key={index}>
+                        {columns.map((column) => (
+                          <TableCell
+                            key={column}
+                            className={`max-w-[200px] relative ${
+                              column.toLowerCase() === "description"
+                                ? "group"
+                                : ""
+                            } text-[15px]`}
+                          >
+                            {/* Truncate only for the description column */}
+                            {column.toLowerCase() === "description" ? (
+                              <>
+                                <div className="truncate">{row[column]}</div>
+                                {/* Tooltip */}
+                                <div className="absolute left-0 top-10 hidden group-hover:block bg-black text-white text-xs rounded p-2 z-50 whitespace-normal min-w-[200px] max-w-[400px]">
+                                  {row[column]}
+                                </div>
+                              </>
+                            ) : (
+                              <div>{row[column]}</div>
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+
+                <TableFooter>
+                  <TableRow>
+                    <TableCell className="text-sm">Total</TableCell>
+                    {columns.slice(1).map((column) => (
+                      <TableCell key={column} className="text-sm">
+                        {numericColumns.includes(column) ? totals[column] : ""}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableFooter>
+              </Table>
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <div className="mt-6">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.max(prev - 1, 1))
+                      }
+                      className={cn(
+                        "cursor-pointer",
+                        currentPage === 1 && "pointer-events-none opacity-50"
+                      )}
+                    />
+                  </PaginationItem>
+                  {getPageNumbers().map((pageNumber, index) => (
+                    <PaginationItem key={index}>
+                      {pageNumber === "ellipsis" ? (
+                        <PaginationEllipsis />
+                      ) : (
+                        <PaginationLink
+                          onClick={() => setCurrentPage(pageNumber)}
+                          isActive={currentPage === pageNumber}
+                          className="cursor-pointer text-sm"
+                        >
+                          {pageNumber}
+                        </PaginationLink>
+                      )}
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                      }
+                      className={cn(
+                        "cursor-pointer",
+                        currentPage === totalPages &&
+                          "pointer-events-none opacity-50"
+                      )}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
+    // if source is equal to lifo or fifo then show the table
     <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div className="space-y-2">
-            <CardTitle className="dark:text-slate-300">{title}</CardTitle>
-            <CardDescription>View and manage your data</CardDescription>
-          </div>
-          <div className="relative flex items-center gap-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              className="pl-10 w-[400px]"
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-            />
-            <Button className="dark:bg-slate-300 dark:hover:bg-slate-200" variant="default" onClick={() => clearFilters()}>
-              Clear Filters
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
+     <CardHeader>
+  <div className="flex justify-between items-center">
+    <div className="space-y-2">
+      <CardTitle className="dark:text-slate-300">{title || "Data Table"}</CardTitle>
+      <CardDescription>{subtitle||"View and manage your data"}</CardDescription>
+    </div>
+    <div className="flex items-center gap-2">
+      <div className="relative flex items-center gap-2">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search..."
+          className="pl-10 w-[300px]"
+          value={searchTerm}
+          onChange={(e) => handleSearch(e.target.value)}
+        />
+        <select
+          className="p-2 border rounded-md text-sm dark:bg-slate-800 dark:border-slate-700 w-[120px]"
+          value={showAllRows ? 'all' : rowsPerPage}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value === 'all') {
+              setShowAllRows(true);
+              setCurrentPage(1);
+            } else {
+              setShowAllRows(false);
+              setRowsPerPage(Number(value));
+              setCurrentPage(1);
+            }
+          }}
+        >
+          <option value="5">5 rows</option>
+          <option value="10">10 rows</option>
+          <option value="20">20 rows</option>
+          <option value="50">50 rows</option>
+          <option value="100">100 rows</option>
+          <option value="all">Show all</option>
+        </select>
+        <Button
+          className="dark:bg-slate-300 dark:hover:bg-slate-200"
+          variant="default"
+          onClick={() => clearFilters()}
+        >
+          Clear Filters
+        </Button>
+      </div>
+    </div>
+  </div>
+</CardHeader>
       <CardContent>
         <div className="relative">
           <Table>
@@ -305,7 +513,7 @@ const DataTable = ({ data = [], title = "Data Table", excludeTotalsFor = []}) =>
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
+        {!showAllRows && totalPages > 1 && (
           <div className="mt-6">
             <Pagination>
               <PaginationContent>

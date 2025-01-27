@@ -8,6 +8,7 @@ const Suspense = ({ caseId }) => {
   const [creditData, setCreditData] = useState([]);
   const [debitData, setDebitData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [totalCreditDebitTransactionCount, setTotalCreditDebitTransactionCount] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -17,6 +18,10 @@ const Suspense = ({ caseId }) => {
           await window.electron.getTransactionsBySuspenseCredit(caseId);
         const debitTransactions =
           await window.electron.getTransactionsBySuspenseDebit(caseId);
+
+        const totalCreditDebitTransactionCount = await window.electron.getTransactionsCount(caseId);
+        setTotalCreditDebitTransactionCount(totalCreditDebitTransactionCount);
+        console.log("totalCreditDebitTransactionCount", totalCreditDebitTransactionCount);
 
         // Transform credit data
         const transformedCreditData = creditTransactions.map((item) => ({
@@ -51,6 +56,8 @@ const Suspense = ({ caseId }) => {
 
     fetchData();
   }, []);
+
+  console.log("creditData", creditData);
 
   // Chart configuration
   const chartConfig = {
@@ -99,6 +106,7 @@ const Suspense = ({ caseId }) => {
                 <SuspensePieChart
                   data={creditData}
                   title="Suspense Credit Chart"
+                  totalTransactionCount={totalCreditDebitTransactionCount.credit}
                 />
               </div>
             </div>
@@ -132,6 +140,7 @@ const Suspense = ({ caseId }) => {
                 <SuspensePieChart
                   data={debitData}
                   title="Suspense Debit Chart"
+                  totalTransactionCount={totalCreditDebitTransactionCount.debit}
                 />
               </div>
             </div>
