@@ -222,6 +222,7 @@ async function createWindow() {
   registerOpenFileIpc(BASE_DIR);
   registerReportHandlers(TMP_DIR);
   registerAuthHandlers();
+  registerOpportunityToEarnIpc();
 
   // Handle file saving to temp directory
   ipcMain.handle("save-file-to-temp", async (event, fileBuffer) => {
