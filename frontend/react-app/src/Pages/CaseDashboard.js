@@ -28,22 +28,9 @@ const CaseDashboard = () => {
       isActive: true,
     },
     {
-      title: "Reports",
+      title: "Individual Table",
       url: "#",
-      icon: ClipboardPlus,
-      items: [
-        {
-          title: "Individual Table",
-          url: "#",
-          icon: null,
-        },
-        {
-          title: "Combined Table",
-          url: "#",
-          icon: null,
-        },
-      ],
-      alwaysOpen: true,
+      icon: null,
     },
   ];
 
