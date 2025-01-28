@@ -1,4 +1,11 @@
-const { app, BrowserWindow, protocol, ipcMain, shell, dialog } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  protocol,
+  ipcMain,
+  shell,
+  dialog,
+} = require("electron");
 const fs = require("fs");
 const { registerOpenFileIpc } = require("./ipc/fileHandler.js");
 require("dotenv").config();
@@ -10,8 +17,9 @@ const { registerCaseDashboardIpc } = require("./ipc/caseDashboard.js");
 const { registerReportHandlers } = require("./ipc/reportHandlers.js");
 const { registerAuthHandlers } = require("./ipc/authHandlers.js");
 const sessionManager = require("./SessionManager");
-const licenseManager = require('./LicenseManager');
+const licenseManager = require("./LicenseManager");
 const { generateReportIpc } = require("./ipc/generateReport");
+const { registerOpportunityToEarnIpc } = require("./ipc/opportunityToEarn");
 const db = require("./db/db");
 const { spawn, execFile } = require("child_process");
 const log = require("electron-log");
@@ -46,7 +54,7 @@ async function startPythonExecutable() {
     let options = {
       detached: false,
       stdio: "pipe",
-    }
+    };
     if (isDev) {
       const venvPythonPath =
         process.platform === "win32"
@@ -57,7 +65,8 @@ async function startPythonExecutable() {
       const workingDir = path.join(__dirname, "../");
 
       if (!fs.existsSync(pythonScriptPath)) {
-        const errorMessage = "Python script main.py not found in development mode.";
+        const errorMessage =
+          "Python script main.py not found in development mode.";
         log.error(errorMessage);
         dialog.showErrorBox("Development Error", errorMessage);
         reject(new Error(errorMessage));
@@ -65,7 +74,8 @@ async function startPythonExecutable() {
       }
 
       if (!fs.existsSync(venvPythonPath)) {
-        const errorMessage = "Virtual environment not found. Ensure .venv is set up.";
+        const errorMessage =
+          "Virtual environment not found. Ensure .venv is set up.";
         log.error(errorMessage);
         dialog.showErrorBox("Development Error", errorMessage);
         reject(new Error(errorMessage));
@@ -75,7 +85,6 @@ async function startPythonExecutable() {
       command = venvPythonPath; // Use Python from .venv
       args = ["-m", "backend.main"];
       options.cwd = workingDir;
-
     } else {
       // Production mode: Run platform-specific executable
       const executablePath = getProductionExecutablePath();
@@ -89,11 +98,15 @@ async function startPythonExecutable() {
     }
 
     try {
-      log.info("Options : ", options)
+      log.info("Options : ", options);
       pythonProcess = spawn(command, args, options);
 
-      pythonProcess.stdout.on("data", (data) => log.info(`Process stdout: ${data}`));
-      pythonProcess.stderr.on("data", (data) => log.error(`Process stderr: ${data}`));
+      pythonProcess.stdout.on("data", (data) =>
+        log.info(`Process stdout: ${data}`)
+      );
+      pythonProcess.stderr.on("data", (data) =>
+        log.error(`Process stderr: ${data}`)
+      );
 
       pythonProcess.on("error", (error) => {
         const errorMessage = `Failed to start process: ${error.message}`;
@@ -189,8 +202,7 @@ async function createWindow() {
     let tempDir = "";
     if (isDev) {
       tempDir = path.join(__dirname, "tmp");
-    }
-    else {
+    } else {
       tempDir = path.join(app.getPath("temp"), "statements");
     }
 
@@ -198,9 +210,9 @@ async function createWindow() {
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
+    log.info("TEMP directory:", tempDir);
     return tempDir;
   };
-
 
   const TMP_DIR = createTempDirectory();
 
@@ -212,7 +224,7 @@ async function createWindow() {
   registerAuthHandlers();
 
   // Handle file saving to temp directory
-  ipcMain.handle('save-file-to-temp', async (event, fileBuffer) => {
+  ipcMain.handle("save-file-to-temp", async (event, fileBuffer) => {
     try {
       const tempDir = createTempDirectory();
       const fileName = `${uuidv4()}.pdf`; // Generate unique filename
@@ -221,25 +233,24 @@ async function createWindow() {
       await fs.promises.writeFile(filePath, Buffer.from(fileBuffer));
       return filePath;
     } catch (error) {
-      log.error('Error saving file to temp directory:', error.message);
+      log.error("Error saving file to temp directory:", error.message);
       throw error;
     }
   });
-  
+
   // Clean up temp files
-  ipcMain.handle('cleanup-temp-files', async () => {
-    const tempDir = path.join(app.getPath('temp'), 'report-generator');
+  ipcMain.handle("cleanup-temp-files", async () => {
+    const tempDir = path.join(app.getPath("temp"), "report-generator");
     try {
       if (fs.existsSync(tempDir)) {
         await fs.promises.rm(tempDir, { recursive: true, force: true });
       }
       return true;
     } catch (error) {
-      log.error('Error cleaning up temp files:', error);
+      log.error("Error cleaning up temp files:", error);
       throw error;
     }
   });
-
 }
 
 app.setName("CypherSol Dev");
@@ -249,44 +260,38 @@ app.whenReady().then(async () => {
   try {
     try {
       await sessionManager.init();
-    }
-    catch (error) {
+    } catch (error) {
       log.error("SessionManager initialization failed:", error);
       throw error;
     }
 
     try {
       await licenseManager.init();
-    }
-    catch (error) {
+    } catch (error) {
       log.error("LicenseManager initialization failed:", error);
       throw error;
     }
 
     try {
       await sessionManager.init();
-    }
-    catch (error) {
+    } catch (error) {
       log.error("SessionManager initialization failed:", error);
       throw error;
     }
 
     try {
       await licenseManager.init();
-    }
-    catch (error) {
+    } catch (error) {
       log.error("LicenseManager initialization failed:", error);
       throw error;
     }
 
     try {
       await startPythonExecutable();
-    }
-    catch (error) {
+    } catch (error) {
       log.error("Python initialization failed:", error);
       throw error;
     }
-
 
     // Proceed with the window creation and other tasks after initialization
     createProtocol();

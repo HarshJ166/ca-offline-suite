@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -16,46 +16,109 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import { Card } from "../ui/card";
 
-const data = [
-  {
-    type: "Home Loan / Balance Transfer",
-    amount: 905000,
-    rate: "0.45%",
-    value: 4072.5,
-  },
-  {
-    type: "Loan Against Property / Balance Transfer",
-    amount: 763000,
-    rate: "0.65%",
-    value: 4959.5,
-  },
-  { type: "Business Loan", amount: 205000, rate: "1.00 %", value: 2050 },
-  { type: "Term Plan", amount: "-", rate: "1 % -30 %", value: 4072.5 },
-  { type: "General Insurance", amount: "-", rate: "upto 10 %", value: 4072.5 },
-];
+export default function Eligibility({ caseId }) {
+  const [opportunityData, setOpportunityData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [transformedData, setTransformedData] = useState([]);
 
-const note = [
-  {
-    title: "To Proceed Further:",
-    content: `***In case your client is interested in any of the above products, you can contact our trusted vendor M/s BizPedia Tech Private Limited on 8828824242 and email id support@leadsathi.in. Kindly use the promo code "CYPHERSOLEARN" to avail the higher commission structure.
+  const labelMap = {
+    businessLoan: "Business Loan",
+    homeLoanValue: "Home Loan / Balance Transfer",
+    loanAgainstProperty: "Loan Against Property / Balance Transfer",
+    termPlan: "Term Plan",
+    generalInsurance: "General Insurance",
+  };
+
+  const commissionMap = {
+    "Business Loan": 1.0,
+    "Home Loan / Balance Transfer": 0.45,
+    "Loan Against Property / Balance Transfer": 0.65,
+    "Term Plan": "1 % -30",
+    "General Insurance": "upto 10",
+  };
+
+  useEffect(() => {
+    async function fetchOpportunityData() {
+      try {
+        // Use Electron's ipcRenderer to call the backend method
+        const data = await window.electron.getOpportunityToEarn(caseId);
+        setOpportunityData(data);
+
+        console.log("Opportunity data:", data);
+
+        const transformedData = data.map((item) => {
+          const newObj = {};
+          for (const [key, value] of Object.entries(item)) {
+            if (key === "caseId" || key === "id") continue;
+            newObj[labelMap[key]] = value;
+          }
+
+          return newObj;
+        });
+
+        setTransformedData(transformedData);
+
+        console.log("Transformed data:", transformedData);
+
+        setLoading(false);
+      } catch (err) {
+        console.log(err);
+        setError(err);
+        setLoading(false);
+      }
+    }
+
+    fetchOpportunityData();
+  }, [caseId]);
+
+  const defaultData = [
+    {
+      type: "Home Loan / Balance Transfer",
+      amount: 905000,
+      rate: "0.45%",
+      value: 4072.5,
+    },
+    {
+      type: "Loan Against Property / Balance Transfer",
+      amount: 763000,
+      rate: "0.65%",
+      value: 4959.5,
+    },
+    { type: "Business Loan", amount: 205000, rate: "1.00 %", value: 2050 },
+    { type: "Term Plan", amount: "-", rate: "1 % -30 %", value: 4072.5 },
+    {
+      type: "General Insurance",
+      amount: "-",
+      rate: "upto 10 %",
+      value: 4072.5,
+    },
+  ];
+
+  const note = [
+    {
+      title: "To Proceed Further:",
+      content: `In case your client is interested in any of the above products, you can contact our trusted vendor M/s BizPedia Tech Private Limited on 8828824242 and email id support@leadsathi.in. Kindly use the promo code "CYPHERSOLEARN" to avail the higher commission structure.
   
       Once the referrals are successfully closed, you will be eligible for payouts based on the above commission structure.
   
       The respective payments will be released on the 25th of the next month.`,
-  },
-  {
-    title: "Disclaimer:",
-    content: [
-      "The above loan eligibility calculations apply to self-employed clients only.",
-      "For salaried clients, the vendor will need more details to calculate the eligibility.",
-      "The above eligibility is based on the analysis of the current uploaded bank statement. Kindly upload all bank statements to obtain more accurate eligibility.",
-      "Final Approval will be dependent on complete thorough process and submission of relevant documents, CIBIL check, etc.",
-      "Nothing contained in this eligibility should be deemed to create any right and/or interest whatsoever in favor of or against any party.",
-    ],
-  },
-];
+    },
+    {
+      title: "Disclaimer:",
+      content: [
+        "The above loan eligibility calculations apply to self-employed clients only.",
+        "For salaried clients, the vendor will need more details to calculate the eligibility.",
+        "The above eligibility is based on the analysis of the current uploaded bank statement. Kindly upload all bank statements to obtain more accurate eligibility.",
+        "Final Approval will be dependent on complete thorough process and submission of relevant documents, CIBIL check, etc.",
+        "Nothing contained in this eligibility should be deemed to create any right and/or interest whatsoever in favor of or against any party.",
+      ],
+    },
+  ];
 
-export default function Eligibility() {
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error loading data: {error.message}</div>;
+
   return (
     <ScrollArea className="h-full">
       <div className="p-8 pt-0 space-y-8">
@@ -70,84 +133,63 @@ export default function Eligibility() {
         </div>
         <Card className="p-4 rounded-lg">
           <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="item-1">
-              <AccordionTrigger className="font-bold">Aiyaz Qureshi</AccordionTrigger>
-              <AccordionContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead className="text-center">Amount</TableHead>
-                      <TableHead className="text-center">
-                        Commission %
-                      </TableHead>
-                      <TableHead className="text-right">
-                        Commission (in Rs)
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">
-                          {item.type}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {item.amount}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {item.rate}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {item.value}
-                        </TableCell>
+            {/* Replace with actual names from fetched data if available */}
+            {["Aiyaz Qureshi", "Poojan vig"].map((name, index) => (
+              <AccordionItem key={index} value={`item-${index + 1}`}>
+                <AccordionTrigger className="font-bold">
+                  {name}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead className="text-center">Amount</TableHead>
+                        <TableHead className="text-center">
+                          Commission %
+                        </TableHead>
+                        <TableHead className="text-right">
+                          Commission (in Rs)
+                        </TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </AccordionContent>
-            </AccordionItem>
-            <AccordionItem value="item-2">
-              <AccordionTrigger className="font-bold">Poojan vig</AccordionTrigger>
-              <AccordionContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead className="text-center">Amount</TableHead>
-                      <TableHead className="text-center">
-                        Commission %
-                      </TableHead>
-                      <TableHead className="text-right">
-                        Commission (in Rs)
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">
-                          {item.type}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {item.amount}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {item.rate}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {item.value}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </AccordionContent>
-            </AccordionItem>
+                    </TableHeader>
+                    <TableBody>
+                      {transformedData.map((item, idx) => (
+                        <>
+                          {Object.keys(item).map((key) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">
+                                {key}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {item[key]
+                                  ? parseFloat(item[key]).toFixed(1)
+                                  : 0}
+                                {/* {item[key]} */}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {commissionMap[key]}%
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {item[key]
+                                  ? Math.floor(
+                                      item[key] * commissionMap[key] * 10
+                                    ) / 10
+                                  : 0}
+                                {/* {(item[key] * commissionMap[key]) / 100} */}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
           </Accordion>
         </Card>
 
-        {/* Notes Section */}
         {note.map((section, index) => (
           <Card key={index} className="p-6 rounded-lg shadow-sm">
             <h4 className="text-lg font-semibold text-gray-700 mb-2 dark:text-white">
