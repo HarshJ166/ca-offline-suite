@@ -85,9 +85,12 @@ export default function GenerateReport() {
         })
       );
 
-      const result = await window.electron.generateReportIpc({
-        files: filesWithContent,
-      }, caseName);
+      const result = await window.electron.generateReportIpc(
+        {
+          files: filesWithContent,
+        },
+        caseName
+      );
 
       if (result.success) {
         clearInterval(progressIntervalRef.current);
@@ -112,14 +115,13 @@ export default function GenerateReport() {
         console.log("Info : ", result.error);
         const errorMessage = result.error
           ? typeof result.error === "object"
-            ? JSON.stringify(result.error, null, 2)  // For better formatting, can be removed if you want simple string
+            ? JSON.stringify(result.error, null, 2) // For better formatting, can be removed if you want simple string
             : result.error
           : "Unknown error occurred";
 
         throw new Error(errorMessage);
       }
     } catch (error) {
-
       console.log("keys : ", Object.keys(error));
       // const errorMessage = error
       //     ? typeof error === "object"
@@ -152,11 +154,10 @@ export default function GenerateReport() {
         duration: 5000,
       });
       refreshPage();
-
     } finally {
       setLoading(false);
+      refreshPage();
       progressIntervalRef.current = null;
-
     }
   };
 
@@ -212,6 +213,7 @@ export default function GenerateReport() {
 
       <div>
         <GenerateReportForm
+          key={refreshTrigger}
           handleReportSubmit={handleSubmit}
           onReportGenerated={refreshPage}
         />
