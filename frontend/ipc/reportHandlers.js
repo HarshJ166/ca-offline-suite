@@ -244,15 +244,15 @@ async function getModifiedTransactions() {
 }
 
 function registerReportHandlers(tmpdir_path) {
-  ipcMain.handle("get-recent-reports", async (event) => {
-    try {
-      log.info("Fetching recent reports from the database...");
-      const result = await db
-        .select()
-        .from(cases)
-        .orderBy(cases.createdAt, "DESC")
-        .leftJoin(statements, eq(cases.id, statements.caseId))
-        .limit(10);
+    ipcMain.handle("get-recent-reports", async (event) => {
+        try {
+            log.info("Fetching recent reports from the database...");
+            const result = await db
+                .select()
+                .from(cases)
+                .orderBy(cases.createdAt, "DESC")
+                .leftJoin(statements, eq(cases.id, statements.caseId))
+                // .limit(10);
 
       log.info("Reports fetched successfully, processing data...");
 
