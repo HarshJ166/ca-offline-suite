@@ -1,4 +1,4 @@
-# Cyphersol ATS
+# Cyphersol
 
 CypherSol Desktop application built with React, Electron, and FastApi.
 

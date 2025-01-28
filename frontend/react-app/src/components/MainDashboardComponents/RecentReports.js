@@ -257,20 +257,34 @@ const RecentReports = ({ key }) => {
   //     console.log('Clicked on add report');
   // };
 
-  const handleDeleteReport = (reportName) => {
-    setRecentReports(
-      recentReports.filter((report) => report.reportName !== reportName)
-    );
-    if ((recentReports.length - 1) % 10 === 0) {
-      if (currentPage > 1) {
-        setCurrentPage(currentPage - 1);
-      }
+  const handleDeleteReport = async (reportId) => {
+    try {
+      // Optimistically update the state before confirming deletion
+      const updatedReports = recentReports.filter(
+        (report) => report.id !== reportId
+      );
+      setRecentReports(updatedReports);
+
+      // Call the API to delete the report
+      await window.electron.deleteReport(reportId);
+
+      toast({
+        title: "Success",
+        description: "Report deleted successfully.",
+        variant: "success",
+      });
+    } catch (error) {
+      // Roll back the state if the deletion fails
+      setRecentReports((prev) => [
+        ...prev,
+        recentReports.find((r) => r.id === reportId),
+      ]);
+      toast({
+        title: "Error",
+        description: `Failed to delete the report: ${error.message}`,
+        variant: "destructive",
+      });
     }
-    toast({
-      title: "Report Deleted",
-      description: "The report has been removed from your list.",
-      variant: "destructive",
-    });
   };
 
   const handleView = (caseId) => {
@@ -295,7 +309,7 @@ const RecentReports = ({ key }) => {
     simulateProgress,
     convertDateFormat,
     caseId,
-    caseName,
+    caseName
   ) => {
     if (selectedFiles.length === 0) {
       toast({
@@ -349,9 +363,12 @@ const RecentReports = ({ key }) => {
         })
       );
 
-      const result = await window.electron.addPdfIpc({
-        files: filesWithContent,
-      }, currentCaseId);
+      const result = await window.electron.addPdfIpc(
+        {
+          files: filesWithContent,
+        },
+        currentCaseId
+      );
 
       if (result.success) {
         clearInterval(progressIntervalRef.current);

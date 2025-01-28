@@ -49,7 +49,15 @@ contextBridge.exposeInMainWorld("electron", {
   generateReportIpc: (result, reportName) =>
     ipcRenderer.invoke("generate-report", result, reportName),
 
-  addPdfIpc: (data, caseId) => ipcRenderer.invoke("add-pdf", data, caseId),    
+  getOpportunityToEarn: (caseId) =>
+    ipcRenderer.invoke("getOpportunityToEarn", caseId),
+
+  addPdfIpc: (data, caseId) => ipcRenderer.invoke("add-pdf", data, caseId),
+
+  deleteReport: (caseId) => ipcRenderer.invoke("delete-report", caseId),
+
+  downloadExcelReport: (data) =>
+    ipcRenderer.invoke("download-excel-report", data),
 
   user: {
     getData: (userId) => ipcRenderer.invoke("user:get-data", userId),
