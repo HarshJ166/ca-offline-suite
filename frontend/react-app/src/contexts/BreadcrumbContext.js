@@ -87,6 +87,17 @@ export const BreadcrumbProvider = ({ children }) => {
       ...lastCaseDashboard.map(item => ({ ...item, isCurrentPage: false })),
       { label: section, path, isCurrentPage: true }
     ];
+
+    // let lastMainDashboard = lastStates.mainDashboard;
+    // if (lastMainDashboard.length === 0) {
+    //   await setCaseDashboard('Home', '/');
+    //   lastMainDashboard = [{ label: 'Home', path: '/', isCurrentPage: true }];
+    // }
+
+    // const newIndividualDashboard = [
+    //   ...lastMainDashboard.map(item => ({ ...item, isCurrentPage: false })),
+    //   { label: section, path, isCurrentPage: true }
+    // ];
     
     setLastStates(prev => ({
       ...prev,
@@ -94,7 +105,7 @@ export const BreadcrumbProvider = ({ children }) => {
     }));
     updateBreadcrumbs(newIndividualDashboard);
     await navigateWithTransition(path);
-  }, [lastStates.caseDashboard, setCaseDashboard, navigateWithTransition, updateBreadcrumbs]);
+  }, [lastStates.mainDashboard, setCaseDashboard, navigateWithTransition, updateBreadcrumbs]);
 
   const resetBreadcrumbs = useCallback(async () => {
     const homeBreadcrumb = { label: 'Home', path: '/', onClick: () => navigate('/') };

@@ -58,8 +58,8 @@ async function startPythonExecutable() {
     if (isDev) {
       const venvPythonPath =
         process.platform === "win32"
-          ? path.join(__dirname, "../.venv/Scripts/python.exe")
-          : path.join(__dirname, "../.venv/bin/python");
+          ? path.join(__dirname, "../.venv/Scripts/python.exe") // Path to .venv Python on Windows
+          : path.join(__dirname, "../.venv/bin/python"); // Path to .venv Python on macOS/Linux
 
       const pythonScriptPath = path.join(__dirname, "../backend/main.py");
       const workingDir = path.join(__dirname, "../");
@@ -119,7 +119,7 @@ async function startPythonExecutable() {
         if (code !== 0) {
           const errorMessage = `Process exited with non-zero code: ${code}`;
           log.error(errorMessage);
-          dialog.showErrorBox("Process Exited", errorMessage);
+          // dialog.showErrorBox("Process Exited", errorMessage);
           reject(new Error(errorMessage));
         } else {
           log.info("Process started successfully.");

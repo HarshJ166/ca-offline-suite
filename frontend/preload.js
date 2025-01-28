@@ -5,7 +5,7 @@ const { generateReportIpc } = require("./ipc/generateReport");
 contextBridge.exposeInMainWorld("electron", {
   openFile: (filePath) => ipcRenderer.invoke("open-file", filePath),
 
-  getTransactions: (caseId) => ipcRenderer.invoke("get-transactions", caseId),
+  getTransactions: (caseId,individualId) => ipcRenderer.invoke("get-transactions", caseId,individualId),
   getTransactionsCount: (caseId) =>
     ipcRenderer.invoke("get-transactions-count", caseId),
   getEodBalance: (caseId) => ipcRenderer.invoke("get-eod-balance", caseId),
