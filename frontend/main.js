@@ -220,7 +220,7 @@ async function createWindow() {
   });
 
   if (isDev) {
-    win.loadURL("http://localhost:3000");
+    mainWindow.loadURL("http://localhost:3000");
   } else {
     // Use absolute path resolution for production
     const prodPath = path.resolve(
