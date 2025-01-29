@@ -2,17 +2,22 @@ import React, { useState, useEffect } from "react";
 import DataTable from "./TableData";
 import refundData from "../../data/refund.json";
 import SingleBarChart from "../charts/BarChart";
+import { useParams } from "react-router-dom";
 
-const Reversal = ({ caseId }) => {
+const Reversal = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { caseId, individualId } = useParams();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         // Fetch transactions filtered by "debtor"
-        const result = await window.electron.getTransactionsByReversal(caseId);
+        const result = await window.electron.getTransactionsByReversal(
+          caseId,
+          parseInt(individualId)
+        );
         console.log("refund transactions:", result);
         // Transform data to include only required fields
         const transformedData = result.map((item) => ({

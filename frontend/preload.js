@@ -5,35 +5,48 @@ const { generateReportIpc } = require("./ipc/generateReport");
 contextBridge.exposeInMainWorld("electron", {
   openFile: (filePath) => ipcRenderer.invoke("open-file", filePath),
 
-  getTransactions: (caseId,individualId) => ipcRenderer.invoke("get-transactions", caseId,individualId),
+  getTransactions: (caseId, individualId) =>
+    ipcRenderer.invoke("get-transactions", caseId, individualId),
   getTransactionsCount: (caseId) =>
     ipcRenderer.invoke("get-transactions-count", caseId),
   getEodBalance: (caseId) => ipcRenderer.invoke("get-eod-balance", caseId),
   getSummary: (caseId) => ipcRenderer.invoke("get-summary", caseId),
-  getTransactionsByDebtor: (caseId) =>
-    ipcRenderer.invoke("get-transactions-by-debtor", caseId),
+  getTransactionsByDebtor: (caseId, individualId) =>
+    ipcRenderer.invoke("get-transactions-by-debtor", caseId, individualId),
 
-  getTransactionsByCreditor: (caseId) =>
-    ipcRenderer.invoke("get-transactions-by-creditor", caseId),
+  getTransactionsByCreditor: (caseId, individualId) =>
+    ipcRenderer.invoke("get-transactions-by-creditor", caseId, individualId),
 
-  getTransactionsByCashWithdrawal: (caseId) =>
-    ipcRenderer.invoke("get-transactions-by-cashwithdrawal", caseId),
+  getTransactionsByCashWithdrawal: (caseId, individualId) =>
+    ipcRenderer.invoke(
+      "get-transactions-by-cashwithdrawal",
+      caseId,
+      individualId
+    ),
 
-  getTransactionsByCashDeposit: (caseId) =>
-    ipcRenderer.invoke("get-transactions-by-cashdeposit", caseId),
+  getTransactionsByCashDeposit: (caseId, individualId) =>
+    ipcRenderer.invoke("get-transactions-by-cashdeposit", caseId, individualId),
 
-  getTransactionsBySuspenseCredit: (caseId) =>
-    ipcRenderer.invoke("get-transactions-by-suspensecredit", caseId),
+  getTransactionsBySuspenseCredit: (caseId, individualId) =>
+    ipcRenderer.invoke(
+      "get-transactions-by-suspensecredit",
+      caseId,
+      individualId
+    ),
 
-  getTransactionsBySuspenseDebit: (caseId) =>
-    ipcRenderer.invoke("get-transactions-by-suspensedebit", caseId),
+  getTransactionsBySuspenseDebit: (caseId, individualId) =>
+    ipcRenderer.invoke(
+      "get-transactions-by-suspensedebit",
+      caseId,
+      individualId
+    ),
 
-  getTransactionsByEmi: (caseId) =>
-    ipcRenderer.invoke("get-transactions-by-emi", caseId),
-  getTransactionsByInvestment: (caseId) =>
-    ipcRenderer.invoke("get-transactions-by-investment", caseId),
-  getTransactionsByReversal: (caseId) =>
-    ipcRenderer.invoke("get-transactions-by-reversal", caseId),
+  getTransactionsByEmi: (caseId, individualId) =>
+    ipcRenderer.invoke("get-transactions-by-emi", caseId, individualId),
+  getTransactionsByInvestment: (caseId, individualId) =>
+    ipcRenderer.invoke("get-transactions-by-investment", caseId, individualId),
+  getTransactionsByReversal: (caseId, individualId) =>
+    ipcRenderer.invoke("get-transactions-by-reversal", caseId, individualId),
 
   getStatements: (case_id) => ipcRenderer.invoke("get-statements", case_id),
 
@@ -82,7 +95,8 @@ contextBridge.exposeInMainWorld("electron", {
   },
 
   getRecentReports: () => ipcRenderer.invoke("get-recent-reports"),
-  getFailedStatements: (referenceId) => ipcRenderer.invoke("get-failed-statements", referenceId),
+  getFailedStatements: (referenceId) =>
+    ipcRenderer.invoke("get-failed-statements", referenceId),
 
   // Add auto-update related methods
   updates: {
