@@ -569,7 +569,7 @@ function generateReportIpc(tmpdir_path) {
           throw new Error(`Missing required fields for file at index ${index}`);
         }
 
-        log.info("file details", fileDetail);
+        // log.info("file details", fileDetail);
 
         const filePath = path.join(tempDir, fileDetail.pdf_paths);
 

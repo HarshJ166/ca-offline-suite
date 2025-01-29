@@ -1,11 +1,18 @@
 import React, { useState, useCallback } from "react";
-import { Bell } from "lucide-react";
+import { Bell, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import GenerateReportForm from "../Elements/ReportForm";
 import RecentReports from "./RecentReports";
 import { CircularProgress } from "../ui/circularprogress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog"; // Import shadcn/ui Dialog components
+import { Button } from "../ui/button"; // Import shadcn/ui Button component
+import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
 
 export default function GenerateReport() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false); // State to control Dialog visibility
+  const [failedStatements, setFailedStatements] = useState([]); // State to store failed statements
+  const [caseId, setCaseId] = useState(null); // State to store caseId
+  const navigate = useNavigate(); // Hook for navigation
 
   const handleSubmit = async (
     setProgress,
@@ -50,7 +57,6 @@ export default function GenerateReport() {
         <div className="mt-2 w-full flex flex-col gap-2">
           <div className="flex items-center gap-4">
             <CircularProgress value={0} className="w-full" />
-            {/* <span className="text-sm font-medium">0%</span> */}
           </div>
           <p className="text-sm text-gray-500">Preparing to process files...</p>
         </div>
@@ -80,7 +86,7 @@ export default function GenerateReport() {
             passwords: detail.password || "",
             start_date: convertDateFormat(detail.start_date), // Convert date format
             end_date: convertDateFormat(detail.end_date), // Convert date format
-            ca_id: "test",
+            ca_id: caseId,
           };
         })
       );
@@ -91,6 +97,7 @@ export default function GenerateReport() {
         },
         caseName
       );
+      // console.log("result", result.ca_id);
 
       if (result.success) {
         clearInterval(progressIntervalRef.current);
@@ -102,8 +109,9 @@ export default function GenerateReport() {
           duration: 3000,
         });
 
-        // const newCaseId = generateNewCaseId();
-        // setCaseId(newCaseId);
+        setFailedStatements(result.pdf_paths_not_extracted || []); // Store failed 
+        setCaseId(result.caseId); // Store caseId
+        setDialogOpen(true); // Open the Dialog
 
         setSelectedFiles([]);
         setFileDetails([]);
@@ -111,27 +119,17 @@ export default function GenerateReport() {
         // Trigger a page refresh
         refreshPage();
       } else {
-        // throw new Error(result.error);
-        console.log("Info : ", result.error);
         const errorMessage = result.error
           ? typeof result.error === "object"
-            ? JSON.stringify(result.error, null, 2) // For better formatting, can be removed if you want simple string
+            ? JSON.stringify(result.error, null, 2)
             : result.error
           : "Unknown error occurred";
 
         throw new Error(errorMessage);
       }
     } catch (error) {
-      console.log("keys : ", Object.keys(error));
-      // const errorMessage = error
-      //     ? typeof error === "object"
-      //       ? JSON.stringify(error)  // For better formatting, can be removed if you want simple string
-      //       : error
-      //     : "Unknown error occurred";
-
       console.error("Report generation failed:", error.message);
 
-      // Check if the error is an object and display its properties
       if (typeof error === "object" && error !== null) {
         console.error("Detailed error:", JSON.stringify(error, null, 2));
       }
@@ -160,9 +158,12 @@ export default function GenerateReport() {
       progressIntervalRef.current = null;
     }
   };
-
+  const viewAnalysis = (caseId) => {
+    console.log("View Analysis clicked");
+    navigate(`/case-dashboard/${caseId}/:defaultTab`);
+  };
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-
+  
   const notifications = [
     { id: 1, message: "You have a new message." },
     { id: 2, message: "Your report is ready to download." },
@@ -193,7 +194,7 @@ export default function GenerateReport() {
           {notificationsOpen && (
             <div
               className="absolute right-14 mt-48 w-64 bg-white dark:bg-gray-800 
-                          border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50"
+                          border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm z-50" // Reduced shadow
             >
               <ul className="max-h-60 overflow-y-auto p-2 space-y-2">
                 {notifications.map((notification) => (
@@ -220,6 +221,41 @@ export default function GenerateReport() {
       </div>
 
       <RecentReports key={refreshTrigger} />
+
+      {/* Dialog for successful report generation */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Report Generated Successfully!</DialogTitle>
+            <DialogDescription>
+              Your report has been generated successfully.
+              {failedStatements.length === 0 ? (
+                <CheckCircle className="text-green-500 w-6 h-6 mt-2" />
+              ) : failedStatements.length > 0 ? (
+                <AlertTriangle className="text-yellow-500 w-6 h-6 mt-2" />
+              ) : (
+                <XCircle className="text-red-500 w-6 h-6 mt-2" />
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {failedStatements.length > 0 && (
+            <div className="mb-4">
+              <h3 className="font-bold">Failed Statements:</h3>
+              <ul className="list-disc pl-5">
+                {failedStatements.map((statement, index) => (
+                  <li key={index}>{statement}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <Button
+            onClick={() => viewAnalysis(caseId)}
+            className="w-full"
+          >
+            View Analysis
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

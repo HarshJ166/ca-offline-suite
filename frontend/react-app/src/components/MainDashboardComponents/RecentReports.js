@@ -338,7 +338,7 @@ const RecentReports = ({ key }) => {
         <div className="mt-2 w-full flex flex-col gap-2">
           <div className="flex items-center gap-4">
             <CircularProgress value={0} className="w-full" />
-            <span className="text-sm font-medium">0%</span>
+            {/* <span className="text-sm font-medium">0%</span> */}
           </div>
           <p className="text-sm text-gray-500">Preparing to process files...</p>
         </div>
@@ -668,7 +668,7 @@ const RecentReports = ({ key }) => {
           </div>
         )}
       </CardContent>
-      {/* Modal for GenerateReportForm */}
+      {/* Modal for GenerateReportForm & its changes */}
       {isAddPdfModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div className="bg-white rounded-lg shadow-lg max-w-5xl w-full p-6">
