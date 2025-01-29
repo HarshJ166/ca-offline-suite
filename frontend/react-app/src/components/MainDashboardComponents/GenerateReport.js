@@ -97,7 +97,7 @@ export default function GenerateReport() {
         },
         caseName
       );
-      console.log("result", result.ca_id);
+      // console.log("result", result.ca_id);
 
       if (result.success) {
         clearInterval(progressIntervalRef.current);
@@ -160,7 +160,7 @@ export default function GenerateReport() {
   };
   const viewAnalysis = (caseId) => {
     console.log("View Analysis clicked");
-    navigate(`/case-dashboard/${caseId}/`);
+    navigate(`/case-dashboard/${caseId}/:defaultTab`);
   };
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   

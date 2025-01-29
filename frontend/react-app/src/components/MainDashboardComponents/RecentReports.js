@@ -667,7 +667,7 @@ const RecentReports = ({ key }) => {
           </div>
         )}
       </CardContent>
-      {/* Modal for GenerateReportForm */}
+      {/* Modal for GenerateReportForm & its changes */}
       {isAddPdfModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <div className="bg-white rounded-lg shadow-lg max-w-5xl w-full p-6">

@@ -51,7 +51,7 @@ const GenerateReportForm = ({
   const [isSearchInputFocused, setIsSearchInputFocused] = useState(false);
 const [bankSearchTerm, setBankSearchTerm] = useState("");
 const [filteredBanks, setFilteredBanks] = useState([]);
-
+//Bank Names
 const bankNames = [
   "Axis Bank",
   "Bank of Baroda",
