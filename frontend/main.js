@@ -82,9 +82,6 @@ function getProductionExecutablePath() {
   const platformExecutables = {
     win32: path.join(process.resourcesPath, "backend", "main", "main.exe"),
     darwin: path.join(process.resourcesPath, "backend", "main", "main"),
-    // win32: path.join(__dirname, "../dist/main", "main.exe"),
-    // darwin: path.join(__dirname, "../dist/main", "main"),
-    // linux: path.join(process.resourcesPath, "dist", "linux", "my_app"),
   };
 
   const executablePath = platformExecutables[process.platform];
@@ -99,7 +96,6 @@ function getProductionExecutablePath() {
   return executablePath;
 }
 
-// Function to start the appropriate process (executable in production or Python script in development)
 async function startPythonExecutable() {
   return new Promise((resolve, reject) => {
     let command, args;
@@ -134,11 +130,10 @@ async function startPythonExecutable() {
         return;
       }
 
-      command = venvPythonPath; // Use Python from .venv
+      command = venvPythonPath;
       args = ["-m", "backend.main"];
       options.cwd = workingDir;
     } else {
-      // Production mode: Run platform-specific executable
       const executablePath = getProductionExecutablePath();
       if (!executablePath) {
         reject(new Error("Executable not found"));
@@ -179,7 +174,6 @@ async function startPythonExecutable() {
         }
       });
 
-      // Small delay to ensure the process initializes
       setTimeout(resolve, 2000);
     } catch (error) {
       const errorMessage = `Unexpected error starting process: ${error.message}`;
@@ -211,7 +205,6 @@ async function createWindow() {
     simpleFullscreen: true,
     webPreferences: {
       nodeIntegration: true,
-      // contextIsolation: false,
       preload: path.join(__dirname, "preload.js"),
     },
     icon: path.join(__dirname, "./assets/cyphersol-icon.png"),
@@ -222,7 +215,6 @@ async function createWindow() {
   if (isDev) {
     win.loadURL("http://localhost:3000");
   } else {
-    // Use absolute path resolution for production
     const prodPath = path.resolve(
       __dirname,
       "react-app",
@@ -230,7 +222,6 @@ async function createWindow() {
       "index.html"
     );
     log.info("Directory name:", __dirname);
-    log.info("Production path:", prodPath);
     log.info("Production path:", prodPath);
     win.loadFile(prodPath).catch((err) => {
       log.error("Failed to load production build:", err);
@@ -303,7 +294,7 @@ async function createWindow() {
   ipcMain.handle("save-file-to-temp", async (event, fileBuffer) => {
     try {
       const tempDir = createTempDirectory();
-      const fileName = `${uuidv4()}.pdf`; // Generate unique filename
+      const fileName = `${uuidv4()}.pdf`;
       const filePath = path.join(tempDir, fileName);
 
       await fs.promises.writeFile(filePath, Buffer.from(fileBuffer));
@@ -385,7 +376,6 @@ app.whenReady().then(async () => {
     }
   } catch (error) {
     log.error("Failed to initialize App:", error);
-    // Optionally handle the error, e.g., show an error dialog or quit the app
     app.quit();
   }
 });

@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useState, useEffect}from "react";
 import { ScrollArea } from "../ui/scroll-area";
 import { Button } from "../ui/button";
 import {
@@ -16,6 +16,7 @@ import { useTheme } from "../theme-provider";
 import StatsMetricCard from "../Elements/StatsCard";
 
 const MainDashboard = () => {
+  
   const { theme, setTheme } = useTheme();
 
   const notifications = [
@@ -38,6 +39,79 @@ const MainDashboard = () => {
       time: "1h ago",
     },
   ];
+  const [totalReports, setTotalReports] = useState(0);
+  const [totalStatements, setTotalStatements] = useState(0);
+  const [reportChartData, setReportChartData] = useState([]);
+  const [statementChartData, setStatementChartData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [reportStatus, setReportStatus] = useState({ success: 0, failed: 0 });
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        const reports = await window.electron.getReportsProcessed();
+        const statements = await window.electron.getStatementsProcessed();
+
+        // Process reports status
+        const reportSuccessCount = reports.statusCounts?.success|| 0;
+        const reportFailedCount = reports.statusCounts?.failed || 0;
+        
+
+        console.log("reportSuccessCount", reportSuccessCount);
+        console.log("reportFailedCount", reportFailedCount);
+
+        // Process reports dates
+        const reportData = reports.caseDates?.map(date => ({
+          month: new Date(date).toLocaleString('default', { month: 'short' }),
+          value: 1
+        })) || [];
+  
+        // Group by month and sum values
+        const reportsByMonth = reportData.reduce((acc, curr) => {
+          const existing = acc.find(item => item.month === curr.month);
+          if (existing) {
+            existing.value += curr.value;
+          } else {
+            acc.push({ ...curr });
+          }
+          return acc;
+        }, []);
+  
+        // Process statement dates
+        const statementData = statements.statementDates?.map(date => ({
+          month: new Date(date).toLocaleString('default', { month: 'short' }),
+          value: 1
+        })) || [];
+  
+        // Group by month and sum values
+        const statementsByMonth = statementData.reduce((acc, curr) => {
+          const existing = acc.find(item => item.month === curr.month);
+          if (existing) {
+            existing.value += curr.value;
+          } else {
+            acc.push({ ...curr });
+          }
+          return acc;
+        }, []);
+
+        setTotalReports(reports.totalCount || 0);
+        setTotalStatements(statements.totalCount || 0);
+        setReportChartData(reportsByMonth);
+        setStatementChartData(statementsByMonth);
+        setReportStatus({
+          success: reportSuccessCount,
+          failed: reportFailedCount
+        });
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  
+    fetchDashboardData();
+  }, []);
 
   return (
     <ScrollArea className="h-full">
@@ -99,46 +173,38 @@ const MainDashboard = () => {
           <StatsMetricCard
             type="reports"
             title="Monthly Reports"
-            mainValue={120}
+            mainValue={totalReports}
             mainValueLabel="Reports Generated"
             percentageChange={15}
-            breakdownData={[
-              { label: "Approved", value: 90 },
-              { label: "Pending", value: 20 },
-              { label: "Rejected", value: 10 },
-            ]}
             bottomStats={[
-              { label: "Total Reports", value: 120 },
-              { label: "Errors", value: 2 },
+              { label: "Success", value: reportStatus.success },
+              { label: "Failed", value: reportStatus.failed },
             ]}
-            chartData={[
-              { month: "Jan", value: 30 },
-              { month: "Feb", value: 50 },
-              { month: "Mar", value: 40 },
-            ]}
+            // chartData={[
+            //   { month: "Jan", value: 30 },
+            //   { month: "Feb", value: 50 },
+            //   { month: "Mar", value: 40 },
+            // ]}
+            chartData={reportChartData}
             chartType="bar"
           />
           <StatsMetricCard
             type="statements"
             title="Monthly Statements"
-            mainValue={500}
+            mainValue={totalStatements}
             mainValueLabel="Statements Processed"
             percentageChange={10}
-            breakdownData={[
-              { label: "Approved", value: 350 },
-              { label: "Pending", value: 100 },
-              { label: "Rejected", value: 50 },
-            ]}
             bottomStats={[
-              { label: "Total Statements", value: 500 },
-              { label: "Errors", value: 5 },
+              { label: "Success", value: 100 },
+              { label: "Failed", value: 12 },
             ]}
-            chartData={[
-              { month: "Jan", value: 120 },
-              { month: "Feb", value: 200 },
-              { month: "Mar", value: 180 },
-              { month: "Apr", value: 250 },
-            ]}
+            // chartData={[
+            //   { month: "Jan", value: 120 },
+            //   { month: "Feb", value: 200 },
+            //   { month: "Mar", value: 180 },
+            //   { month: "Apr", value: 250 },
+            // ]}
+            chartData={statementChartData}
             chartType="line"
           />
           <StatsMetricCard

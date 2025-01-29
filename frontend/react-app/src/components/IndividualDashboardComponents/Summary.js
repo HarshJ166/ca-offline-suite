@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect } from "react";
 import PieCharts from "../charts/PieCharts";
-import TableData from "./TableData";
+import TableData from "./TableData"; // Reusing the existing component
 import { Card, CardHeader, CardTitle } from "../ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Maximize2, Minimize2 } from "lucide-react";
-// import { Button } from "../ui/button";
 import ToggleStrip from "./ToggleStrip";
+import { Button } from "../ui/button";
 
 const MaximizableChart = ({ children, title, isMaximized, setIsMaximized }) => {
   const toggleMaximize = () => setIsMaximized(!isMaximized);
@@ -46,38 +46,33 @@ const MaximizableChart = ({ children, title, isMaximized, setIsMaximized }) => {
 };
 
 const Summary = ({ caseId }) => {
+  const [activeTable, setActiveTable] = useState("Income Receipts");
   const [summaryData, setSummaryData] = useState({
     "Income Receipts": [],
     "Important Expenses": [],
-    "Other Expenses": []
+    "Other Expenses": [],
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const { "Income Receipts": incomeReceipts, "Important Expenses": importantExpenses, "Other Expenses": otherExpenses } = summaryData;
-  const [activeTable, setActiveTable] = useState("Income Receipts");
   const [incomeMaximized, setIncomeMaximized] = useState(false);
   const [importantExpensesMaximized, setImportantExpensesMaximized] = useState(false);
   const [otherExpensesMaximized, setOtherExpensesMaximized] = useState(false);
-
- 
 
   useEffect(() => {
     const fetchSummaryData = async () => {
       if (!caseId) return;
 
       try {
-        // setIsLoading(true);
         console.log("Fetching summary data for caseId:", caseId);
         const result = await window.electron.getSummary(caseId);
         const parsedData = result.length > 0 ? JSON.parse(result[0].data) : {};
 
-        console.log("Parsed data:", parsedData);
-
         setSummaryData({
           "Income Receipts": parsedData.incomeReceipts || [],
           "Important Expenses": parsedData.importantExpenses || [],
-          "Other Expenses": parsedData.otherExpenses || []
+          "Other Expenses": parsedData.otherExpenses || [],
         });
       } catch (error) {
         console.error("Error fetching summary data:", error);
@@ -85,17 +80,15 @@ const Summary = ({ caseId }) => {
         setSummaryData({
           "Income Receipts": [],
           "Important Expenses": [],
-          "Other Expenses": []
+          "Other Expenses": [],
         });
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (caseId) {
-        fetchSummaryData();
-      }
-    }, [caseId]);
+    if (caseId) fetchSummaryData();
+  }, [caseId]);
 
   const monthOrder = [
     "January", "February", "March", "April", "May", "June",
@@ -108,22 +101,14 @@ const Summary = ({ caseId }) => {
     [incomeReceipts, importantExpenses, otherExpenses].forEach((category) => {
       category.forEach((item) => {
         Object.keys(item).forEach((key) => {
-          if (
-            key !== "Total" &&
-            key !== "Income / Receipts" &&
-            key !== "Important Expenses / Payments" &&
-            key !== "Other Expenses / Payments"
-          ) {
+          if (!["Total", "Income / Receipts", "Important Expenses / Payments", "Other Expenses / Payments"].includes(key)) {
             allMonths.add(key);
           }
         });
       });
     });
 
-    const extractedMonths = Array.from(allMonths);
-    return extractedMonths.sort(
-      (a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b)
-    );
+    return Array.from(allMonths).sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b));
   }, [incomeReceipts, importantExpenses, otherExpenses]);
 
   useEffect(() => {
@@ -132,47 +117,26 @@ const Summary = ({ caseId }) => {
     }
   }, [months]);
 
-  const handleMonthChange = (month) => {
-    setSelectedMonths((prev) =>
-      prev.includes(month) ? prev.filter((m) => m !== month) : [...prev, month]
-    );
-  };
-
-  const formatNumber = (value) => {
-    return Number(parseFloat(value || 0).toFixed(2));
-  };
-
   const transformData = (data, valueKey, nameKey, excludeName) => {
     if (selectedMonths.length === 0) {
       return data
         .filter((item) => item[nameKey] !== excludeName)
         .map((item) => ({
           name: item[nameKey],
-          value: formatNumber(item[valueKey] || 0),
+          value: Number(parseFloat(item[valueKey] || 0).toFixed(2)),
         }))
         .filter((item) => item.value > 0);
     }
 
-    const transformedData = data
+    return data
       .filter((item) => item[nameKey] !== excludeName)
       .map((item) => ({
         name: item[nameKey],
-        value: formatNumber(
-          selectedMonths.reduce(
-            (sum, month) => sum + parseFloat(item[month] || 0),
-            0
-          )
+        value: Number(
+          selectedMonths.reduce((sum, month) => sum + parseFloat(item[month] || 0), 0).toFixed(2)
         ),
       }))
       .filter((item) => item.value > 0);
-
-    const hasDataForSelectedMonths = transformedData.some(item => item.value > 0);
-    return hasDataForSelectedMonths ? transformedData : [];
-  };
-
-  const checkDataAvailability = (data) => {
-    if (selectedMonths.length === 0) return false;
-    return data.length > 0;
   };
 
   const incomeData = transformData(incomeReceipts, "Total", "Income / Receipts", "Total Credit");
@@ -189,16 +153,6 @@ const Summary = ({ caseId }) => {
     "Total Debit"
   );
 
-  const mapDataKeys = (data) =>
-    data.map((item) => ({
-      "Income Category": item.name,
-      Amounts: formatNumber(item.value),
-    }));
-
-  const incomeDataTransformed = mapDataKeys(incomeData);
-  const importantExpensesDataTransformed = mapDataKeys(importantExpensesData);
-  const otherExpensesDataTransformed = mapDataKeys(otherExpensesData);
-
   const renderChart = (data, title, isMaximized, setIsMaximized, tableType) => {
     return (
       <MaximizableChart
@@ -207,28 +161,30 @@ const Summary = ({ caseId }) => {
         setIsMaximized={setIsMaximized}
       >
         <div className="w-full p-4">
-          {checkDataAvailability(data) ? (
+          {data.length > 0 ? (
             <>
-              <PieCharts
-                data={data}
-                title=""
-                valueKey="value"
-                nameKey="name"
-                showLegends={isMaximized}
-              />
-              {/* {!isMaximized && (
-                <Button
-                  onClick={() => setActiveTable(tableType)}
-                  variant={activeTable === tableType ? "default" : "outline"}
-                  className={`mt-4 w-full ${activeTable === tableType ? "dark:bg-slate-300" : ""}`}
-                >
-                  View Table
-                </Button>
-              )} */}
+            <PieCharts
+              data={data}
+              title=""
+              valueKey="value"
+              nameKey="name"
+              showLegends={isMaximized}
+            />
+            {!isMaximized && (
+              <Button
+                onClick={() => setActiveTable(tableType)}
+                variant={activeTable === tableType ? "default" : "outline"}
+                className={`mt-4 w-full ${
+                  activeTable === tableType ? "dark:bg-slate-300" : ""
+                }`}
+              >
+                View Table
+              </Button>
+            )}
             </>
           ) : (
             <div className="flex items-center justify-center h-48">
-              <p className="text-gray-500 dark:text-gray-400">No Data Available </p>
+              <p className="text-gray-500 dark:text-gray-400">No Data Available</p>
             </div>
           )}
         </div>
@@ -236,33 +192,9 @@ const Summary = ({ caseId }) => {
     );
   };
 
-  const renderAllTables = () => {
-    const getTableContent = (data, title) => {
-        return checkDataAvailability(data) ? (
-            <div className="mb-6">
-                <TableData data={data} title={title} />
-            </div>
-        ) : (
-            <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md w-full mb-6">
-                <p className="text-gray-800 dark:text-gray-200 text-center font-medium">
-                    No Data Available for Selected Month(s) in {title}
-                </p>
-            </div>
-        );
-    };
-
-    return (
-        <>
-            {getTableContent(incomeDataTransformed, "Income")}
-            {getTableContent(importantExpensesDataTransformed, "Important Expenses")}
-            {getTableContent(otherExpensesDataTransformed, "Other Expenses")}
-        </>
-    );
-};
-
   return (
-    <div className="space-y-6 m-8 mt-2">
-      <ToggleStrip
+    <div className="bg-white rounded-lg space-y-6 m-8 mt-2 dark:bg-slate-950 w-[80vw]">
+      {/* <ToggleStrip
         columns={months}
         selectedColumns={selectedMonths}
         setSelectedColumns={setSelectedMonths}
@@ -272,15 +204,34 @@ const Summary = ({ caseId }) => {
           Select months to display the graphs
         </div>
       ) : (
-        <>
+        <> */}
           <div className="flex flex-wrap -mx-2">
-            {renderChart(incomeData, "Income Receipts", incomeMaximized, setIncomeMaximized, "Income Receipts")}
-            {renderChart(importantExpensesData, "Important Expenses", importantExpensesMaximized, setImportantExpensesMaximized, "Important Expenses")}
-            {renderChart(otherExpensesData, "Other Expenses", otherExpensesMaximized, setOtherExpensesMaximized, "Other Expenses")}
+          {renderChart(incomeData, "Income Receipts", incomeMaximized, setIncomeMaximized, "Income Receipts")}
+          {renderChart(importantExpensesData, "Important Expenses", importantExpensesMaximized, setImportantExpensesMaximized, "Important Expenses")}
+          {renderChart(otherExpensesData, "Other Expenses", otherExpensesMaximized, setOtherExpensesMaximized, "Other Expenses")}
           </div>
-          {renderAllTables()}
-        </>
-      )}
+          {activeTable && (
+            <TableData
+              source="summary"
+              data={
+                activeTable === "Income Receipts"
+                  ? incomeReceipts
+                  : activeTable === "Important Expenses"
+                  ? importantExpenses
+                  : otherExpenses
+              }
+              title={activeTable}
+              categoryKey={
+                activeTable === "Income Receipts"
+                  ? "Income / Receipts"
+                  : activeTable === "Important Expenses"
+                  ? "Important Expenses / Payments"
+                  : "Other Expenses / Payments"
+              }
+            />
+          )}
+        {/* </>
+      )} */}
     </div>
   );
 };
