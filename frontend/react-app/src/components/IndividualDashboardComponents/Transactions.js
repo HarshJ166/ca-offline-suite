@@ -58,8 +58,7 @@ const Transactions = () => {
   const { caseId, individualId } = useParams();
 
   useEffect(() => {
-    console.log({fromTransactionsTab:individualId})
-
+    console.log({ fromTransactionsTab: individualId });
   }, [individualId]);
 
   useEffect(() => {
@@ -67,7 +66,10 @@ const Transactions = () => {
       try {
         console.log("Fetching transactions for statementId:", caseId);
 
-        const data = await window.electron.getTransactions(caseId,parseInt(individualId));
+        const data = await window.electron.getTransactions(
+          caseId,
+          parseInt(individualId)
+        );
         setTransactionData(data);
         console.log("Fetched transactions:", data.length);
       } catch (err) {
@@ -112,7 +114,6 @@ const Transactions = () => {
     const monthIndex = new Date(Date.parse(month + " 1, 2000")).getMonth();
     return new Date(parseInt(year), monthIndex);
   };
-
 
   const processDailyData = (transactions) => {
     return transactions.map((transaction) => ({
@@ -164,18 +165,19 @@ const Transactions = () => {
 
   const [selectedMonths, setSelectedMonths] = useState(availableMonths);
   useEffect(() => {
-    
-  const availableMonthstemp = Object.keys(monthsData).sort((a, b) => {
-    const dateA = getMonthDate(a);
-    const dateB = getMonthDate(b);
-    return dateA - dateB;
-  });
-  setAvailableMonths(availableMonthstemp);
-  
-    if (availableMonths.length > 0) {
-      setSelectedMonths(availableMonths);
+    const availableMonthstemp = Object.keys(monthsData).sort((a, b) => {
+      const dateA = getMonthDate(a);
+      const dateB = getMonthDate(b);
+      return dateA - dateB;
+    });
+
+    setAvailableMonths(availableMonthstemp);
+
+    // Ensure selectedMonths only updates if it's empty (prevents forced re-selection)
+    if (selectedMonths.length === 0) {
+      setSelectedMonths(availableMonthstemp);
     }
-  }, [availableMonths,monthsData]);
+  }, [monthsData]);
 
   const filteredData = selectedMonths
     .flatMap((month) => {

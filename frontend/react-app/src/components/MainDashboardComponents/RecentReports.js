@@ -44,9 +44,7 @@ import CategoryEditModal from "./CategoryEditModal";
 import GenerateReportForm from "../Elements/ReportForm";
 import { CircularProgress } from "../ui/circularprogress";
 
-
-import PDFMarkerModal from "./PdfMarkerModal"
-
+import PDFMarkerModal from "./PdfMarkerModal";
 
 const RecentReports = ({ key }) => {
   const { toast } = useToast();
@@ -60,7 +58,8 @@ const RecentReports = ({ key }) => {
   const [currentCaseName, setCurrentCaseName] = useState("");
   const [currentCaseId, setCurrentCaseId] = useState("");
   const [recentReports, setRecentReports] = useState([]);
-  const [selectedReportFailedData, setSelectedReportFailedData] = useState(null);
+  const [selectedReportFailedData, setSelectedReportFailedData] =
+    useState(null);
 
   const [isFirstInfo, setIsFirstInfo] = useState(true);
   const [isLastInfo, setIsLastInfo] = useState(false);
@@ -110,35 +109,45 @@ const RecentReports = ({ key }) => {
   }, []);
   const handleDetails = async (reportId) => {
     setIsLoading(true);
-  
-    try {
-      const failedStatements = await window.electron.getFailedStatements(reportId);
-      
-      // Process failed statements with extensive error checking
-      const processedFailedData = failedStatements.map(item => {
-        if (!item || !item.data) {
-          return null;
-        }
 
-        try {
-          const parsedData = JSON.parse(item.data);
-          return {
-            ...item,
-            parsedContent: {
-              paths: Array.isArray(parsedData.paths) ? parsedData.paths : [],
-              passwords: Array.isArray(parsedData.passwords) ? parsedData.passwords : [],
-              startDates: Array.isArray(parsedData.start_dates) ? parsedData.start_dates : [],
-              endDates: Array.isArray(parsedData.end_dates) ? parsedData.end_dates : [],
-              columns: Array.isArray(parsedData.respective_list_of_columns) 
-                ? parsedData.respective_list_of_columns 
-                : []
-            }
-          };
-        } catch (parseError) {
-          console.error('Failed to parse data:', parseError);
-          return null;
-        }
-      }).filter(item => item !== null); // Remove null entries
+    try {
+      const failedStatements = await window.electron.getFailedStatements(
+        reportId
+      );
+
+      // Process failed statements with extensive error checking
+      const processedFailedData = failedStatements
+        .map((item) => {
+          if (!item || !item.data) {
+            return null;
+          }
+
+          try {
+            const parsedData = JSON.parse(item.data);
+            return {
+              ...item,
+              parsedContent: {
+                paths: Array.isArray(parsedData.paths) ? parsedData.paths : [],
+                passwords: Array.isArray(parsedData.passwords)
+                  ? parsedData.passwords
+                  : [],
+                startDates: Array.isArray(parsedData.start_dates)
+                  ? parsedData.start_dates
+                  : [],
+                endDates: Array.isArray(parsedData.end_dates)
+                  ? parsedData.end_dates
+                  : [],
+                columns: Array.isArray(parsedData.respective_list_of_columns)
+                  ? parsedData.respective_list_of_columns
+                  : [],
+              },
+            };
+          } catch (parseError) {
+            console.error("Failed to parse data:", parseError);
+            return null;
+          }
+        })
+        .filter((item) => item !== null); // Remove null entries
 
       console.log("Processed failed data:", processedFailedData);
       setSelectedReportFailedData(processedFailedData);
@@ -152,7 +161,6 @@ const RecentReports = ({ key }) => {
       setIsLoading(false);
     }
   };
-
 
   const handlePrevInfo = (statements_length, currentInfoIndex) => {
     console.log(
@@ -251,8 +259,6 @@ const RecentReports = ({ key }) => {
       Failed: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
     };
 
-
-
     return (
       <Badge
         variant="outline"
@@ -337,7 +343,8 @@ const RecentReports = ({ key }) => {
       description: (
         <div className="mt-2 w-full flex flex-col gap-2">
           <div className="flex items-center gap-4">
-            <CircularProgress value={0} className="w-full" />
+            <CircularProgress className="w-full" />
+//             <CircularProgress value={0} className="w-full" />
             {/* <span className="text-sm font-medium">0%</span> */}
           </div>
           <p className="text-sm text-gray-500">Preparing to process files...</p>
@@ -432,6 +439,7 @@ const RecentReports = ({ key }) => {
   };
 
   const handleOpenMarker = () => {
+
     if (selectedReportFailedData && selectedReportFailedData[0] && selectedReportFailedData[0].parsedContent) {
       const pdfPath = selectedReportFailedData[0].parsedContent.paths[0]
       const pdfName = pdfPath.split('\\').pop()
@@ -439,22 +447,20 @@ const RecentReports = ({ key }) => {
       console.log("Opening marker with pdfPath:", pdfPath, "pdfName:", pdfName)
       setIsMarkerModalOpen(true)
     } else {
-      console.error("No PDF path available")
+      console.error("No PDF path available");
       toast({
         title: "Error",
         description: "No PDF path available for this report",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const handleSaveMarkerData = (data) => {
     // Handle saving marker data here
-    console.log("Saved marker data:", data)
-    setIsMarkerModalOpen(false)
-  }
-
-
+    console.log("Saved marker data:", data);
+    setIsMarkerModalOpen(false);
+  };
 
   return (
     <Card>
@@ -550,74 +556,92 @@ const RecentReports = ({ key }) => {
                   </div>
                 </TableCell>
                 <TableCell>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 hover:bg-black/5"
-              onClick={() => handleDetails(report.id)}
-            >
-              <Info className="h-4 w-4" />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent className="max-w-2xl bg-white shadow-lg border-0 dark:bg-slate-950">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="text-xl font-medium text-black bg-black/[0.03] -mx-6 -mt-6 p-4 border-b border-black/10 dark:bg-slate-900 dark:text-slate-300">
-                Report Details
-              </AlertDialogTitle>
-            </AlertDialogHeader>
-            <div className="p-6 overflow-auto max-h-[400px]">
-              {selectedReportFailedData && selectedReportFailedData.some(item => item.parsedContent && (
-                item.parsedContent.paths.length > 0 || 
-                item.parsedContent.passwords.length > 0 || 
-                item.parsedContent.startDates.length > 0 || 
-                item.parsedContent.endDates.length > 0 || 
-                (item.parsedContent.columns && item.parsedContent.columns.length > 0)
-              )) ? (
-                <div>
-                  {selectedReportFailedData.map((failedItem, index) => (
-                    <div key={index} className="mb-4 border-b pb-4">
-                      <h3 className="font-semibold mb-2">Failed Statement {index + 1}</h3>
-                      {failedItem.parsedContent ? (
-                        <div className="flex gap-2">
-                          <p className="flex-[4.5]"><strong>Path:</strong> {failedItem.parsedContent.paths.length > 0 ? failedItem.parsedContent.paths.join(', ') : 'N/A'}</p>
-                          {/* <p><strong>Passwords:</strong> {failedItem.parsedContent.passwords.length > 0 ? failedItem.parsedContent.passwords.join(', ') : 'N/A'}</p>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-black/5"
+                        onClick={() => handleDetails(report.id)}
+                      >
+                        <Info className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="max-w-2xl bg-white shadow-lg border-0 dark:bg-slate-950">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl font-medium text-black bg-black/[0.03] -mx-6 -mt-6 p-4 border-b border-black/10 dark:bg-slate-900 dark:text-slate-300">
+                          Report Details
+                        </AlertDialogTitle>
+                      </AlertDialogHeader>
+                      <div className="p-6 overflow-auto max-h-[400px]">
+                        {selectedReportFailedData &&
+                        selectedReportFailedData.some(
+                          (item) =>
+                            item.parsedContent &&
+                            (item.parsedContent.paths.length > 0 ||
+                              item.parsedContent.passwords.length > 0 ||
+                              item.parsedContent.startDates.length > 0 ||
+                              item.parsedContent.endDates.length > 0 ||
+                              (item.parsedContent.columns &&
+                                item.parsedContent.columns.length > 0))
+                        ) ? (
+                          <div>
+                            {selectedReportFailedData.map(
+                              (failedItem, index) => (
+                                <div key={index} className="mb-4 border-b pb-4">
+                                  <h3 className="font-semibold mb-2">
+                                    Failed Statement {index + 1}
+                                  </h3>
+                                  {failedItem.parsedContent ? (
+                                    <div className="flex gap-2">
+                                      <p className="flex-[4.5]">
+                                        <strong>Path:</strong>{" "}
+                                        {failedItem.parsedContent.paths.length >
+                                        0
+                                          ? failedItem.parsedContent.paths.join(
+                                              ", "
+                                            )
+                                          : "N/A"}
+                                      </p>
+                                      {/* <p><strong>Passwords:</strong> {failedItem.parsedContent.passwords.length > 0 ? failedItem.parsedContent.passwords.join(', ') : 'N/A'}</p>
                           <p><strong>Start Dates:</strong> {failedItem.parsedContent.startDates.length > 0 ? failedItem.parsedContent.startDates.join(', ') : 'N/A'}</p>
                           <p><strong>End Dates:</strong> {failedItem.parsedContent.endDates.length > 0 ? failedItem.parsedContent.endDates.join(', ') : 'N/A'}</p>
                           {failedItem.parsedContent.columns && failedItem.parsedContent.columns.length > 0 && (
                             <p><strong>Columns:</strong> {failedItem.parsedContent.columns[0].join(', ')}</p>
                           )} */}
-                        {/* Show a rectify button here shadcn */}
-                         <Button variant="secondary" size="sm" className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors" onClick={handleOpenMarker}>
-                          Rectify
-                         </Button>
-
-                      
-                        </div>
-
-                      ) : (
-                        <pre className="whitespace-pre-wrap break-all">
-                          {JSON.stringify(failedItem, null, 2)}
-                        </pre>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center text-grey font-bold opacity-70">
-                  Report Processed Successfully
-                </div>
-              )}
-            </div>
-            <AlertDialogFooter className="border-t border-black/10 pt-6">
-              <AlertDialogCancel className="px-8 bg-black text-white hover:bg-black/90 hover:text-white dark:bg-white dark:text-black">
-                Close
-              </AlertDialogCancel>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </TableCell>
+                                      {/* Show a rectify button here shadcn */}
+                                      <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors"
+                                        onClick={handleOpenMarker}
+                                      >
+                                        Rectify
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <pre className="whitespace-pre-wrap break-all">
+                                      {JSON.stringify(failedItem, null, 2)}
+                                    </pre>
+                                  )}
+                                </div>
+                              )
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-center text-green-600 font-semibold">
+                            Report Processed Successfully
+                          </div>
+                        )}
+                      </div>
+                      <AlertDialogFooter className="border-t border-black/10 pt-6">
+                        <AlertDialogCancel className="px-8 bg-black text-white hover:bg-black/90 hover:text-white dark:bg-white dark:text-black">
+                          Close
+                        </AlertDialogCancel>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </TableCell>
 
               </TableRow>
             ))}
@@ -693,7 +717,6 @@ const RecentReports = ({ key }) => {
           </div>
         </div>
       )}
-   
     </Card>
   );
 };
