@@ -13,6 +13,7 @@ const path = require("path");
 const {
   registerIndividualDashboardIpc,
 } = require("./ipc/individualDashboard.js");
+const { registerMainDashboardIpc } = require("./ipc/mainDashboard.js");
 const { registerCaseDashboardIpc } = require("./ipc/caseDashboard.js");
 const { registerReportHandlers } = require("./ipc/reportHandlers.js");
 const { registerAuthHandlers } = require("./ipc/authHandlers.js");
@@ -283,6 +284,7 @@ async function createWindow() {
   const TMP_DIR = createTempDirectory();
 
   registerIndividualDashboardIpc();
+  registerMainDashboardIpc();
   registerCaseDashboardIpc();
   generateReportIpc(TMP_DIR);
   registerOpenFileIpc(BASE_DIR);
