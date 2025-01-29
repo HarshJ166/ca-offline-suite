@@ -73,6 +73,10 @@ contextBridge.exposeInMainWorld("electron", {
 
   deleteReport: (caseId) => ipcRenderer.invoke("delete-report", caseId),
 
+  getReportName: (caseId) => ipcRenderer.invoke("get-Report-Name", caseId),
+
+  getCustomerName: (caseId) => ipcRenderer.invoke("get-Customer-Name", caseId),
+
   downloadExcelReport: (data) =>
     ipcRenderer.invoke("download-excel-report", data),
 
@@ -102,45 +106,53 @@ contextBridge.exposeInMainWorld("electron", {
   getFailedStatements: (referenceId) =>
     ipcRenderer.invoke("get-failed-statements", referenceId),
 
-  onLicenseExpired: (callback) => ipcRenderer.on('navigateToLogin', callback),
-  removeLicenseExpiredListener: () => ipcRenderer.removeAllListeners('navigateToLogin'),
+  onLicenseExpired: (callback) => ipcRenderer.on("navigateToLogin", callback),
+  removeLicenseExpiredListener: () =>
+    ipcRenderer.removeAllListeners("navigateToLogin"),
 
+  // // Add auto-update related methods
+  // updates: {
+  //   checkForUpdates: () => ipcRenderer.invoke('check-for-updates', () => {}),
+  //   downloadUpdate: () => ipcRenderer.invoke('download-update'),
+  //   installUpdate: () => ipcRenderer.invoke('install-update'),
+  //   onUpdateStatus: (callback) =>
+  //     ipcRenderer.on('update-status', (_, status) => callback(status)),
+  //   onUpdateProgress: (callback) =>
+  //     ipcRenderer.on('update-progress', (_, progress) => callback(progress)),
+  //   onUpdateDownloaded: (callback) =>
+  //     ipcRenderer.on('update-downloaded', () => callback()),
+  //   onUpdateError: (callback) =>
+  //     ipcRenderer.on('update-error', (_, error) => callback(error)),
+  //   // Remove event listeners when component unmounts
+  //   removeUpdateListeners: () => {
+  //     ipcRenderer.removeAllListeners('update-status');
+  //     ipcRenderer.removeAllListeners('update-progress');
+  //     ipcRenderer.removeAllListeners('update-downloaded');
+  //     ipcRenderer.removeAllListeners('update-error');
+  //   }
+  // },
+
+  // Add auto-update related methods
   updates: {
-    checkForUpdates: () => {
-      return ipcRenderer.invoke('check-for-updates');
-    },
-    downloadUpdate: () => {
-      return ipcRenderer.invoke('download-update');
-    },
-    installUpdate: () => {
-      return ipcRenderer.invoke('install-update');
-    },
+    checkForUpdates: () => ipcRenderer.invoke("check-for-updates", () => {}),
+    // downloadUpdate: () => ipcRenderer.invoke('download-update'),
+    // installUpdate: () => ipcRenderer.invoke('install-update'),
     onUpdateStatus: (callback) =>
-      ipcRenderer.on('update-status', (_, status, info) => {
-        console.log('Update status:', status, info);
-        callback(status, info);
-      }),
+      ipcRenderer.on("update-status", (_, status) => callback(status)),
     onUpdateProgress: (callback) =>
-      ipcRenderer.on('update-progress', (_, progress) => {
-        console.log('Update progress:', progress);
-        callback(progress);
-      }),
+      ipcRenderer.on("update-progress", (_, progress) => callback(progress)),
     onUpdateDownloaded: (callback) =>
-      ipcRenderer.on('update-downloaded', (_, info) => {
-        console.log('Update downloaded:', info);
-        callback(info);
-      }),
+      ipcRenderer.on("update-downloaded", () => callback()),
     onUpdateError: (callback) =>
-      ipcRenderer.on('update-error', (_, error) => {
-        console.error('Update error:', error);
-        callback(error);
-      }),
+      ipcRenderer.on("update-error", (_, error) => callback(error)),
+    // Remove event listeners when component unmounts
+
     removeUpdateListeners: () => {
-      ipcRenderer.removeAllListeners('update-status');
-      ipcRenderer.removeAllListeners('update-progress');
-      ipcRenderer.removeAllListeners('update-downloaded');
-      ipcRenderer.removeAllListeners('update-error');
-    }
+      ipcRenderer.removeAllListeners("update-status");
+      ipcRenderer.removeAllListeners("update-progress");
+      ipcRenderer.removeAllListeners("update-downloaded");
+      ipcRenderer.removeAllListeners("update-error");
+    },
   },
 
   shell: {

@@ -33,6 +33,7 @@ const IndividualDashboard = () => {
   const [activeTab, setActiveTab] = useState("Summary");
   const { breadcrumbs, setIndividualDashboard } = useBreadcrumb();
   const { caseId, individualId, defaultTab } = useParams();
+  const [customerName, setCustomerName] = useState(null);
 
   useEffect(() => {
     setIndividualDashboard(
@@ -40,8 +41,29 @@ const IndividualDashboard = () => {
       `/individual-dashboard/${caseId}/${individualId}/${activeTab}`
     );
 
-    console.log("CaseId : ", caseId, "Default Tab : ", defaultTab," activetab",activeTab);
+    console.log(
+      "CaseId : ",
+      caseId,
+      "Default Tab : ",
+      defaultTab,
+      " activetab",
+      activeTab
+    );
   }, [activeTab]);
+
+  useEffect(() => {
+    const fetchCustomerName = async () => {
+      try {
+        const result = await window.electron.getCustomerName(caseId);
+        console.log("customer Name fetched successfully:", result[0]);
+        setCustomerName(result);
+      } catch (error) {
+        console.error("Error fetching customer name:", error);
+      }
+    };
+
+    fetchCustomerName();
+  }, [caseId]);
 
   useEffect(() => {
     console.log({ caseId, individualId, defaultTab });
@@ -109,7 +131,6 @@ const IndividualDashboard = () => {
     }
   };
 
-
   return (
     <>
       <div className={cn("w-full flex h-screen bg-background")}>
@@ -117,21 +138,40 @@ const IndividualDashboard = () => {
           navItems={navItems}
           activeTab={activeTab}
           setActiveTab={handleTabChange}
+          name={customerName}
         />
         <ScrollArea className="w-full">
           <BreadcrumbDynamic items={breadcrumbs} />
           <div className="flex-1 flex flex-col overflow-hidden">
             <main className="flex-1">
-              {activeTab === "Summary" && <Summary caseId={caseId} individualId={individualId}/>}
+              {activeTab === "Summary" && (
+                <Summary caseId={caseId} individualId={individualId} />
+              )}
               {activeTab === "Transactions" && <Transactions />}
-              {activeTab === "Debtors" && <Debtors caseId={caseId} individualId={individualId}/>}
-              {activeTab === "Creditors" && <Creditors caseId={caseId} individualId={individualId}/>}
-              {activeTab === "EMI" && <EMI caseId={caseId} individualId={individualId}/>}
-              {activeTab === "Investment" && <Investment caseId={caseId} individualId={individualId}/>}
-              {activeTab === "EOD" && <EodBalance caseId={caseId} individualId={individualId}/>}
-              {activeTab === "Cash" && <Cash caseId={caseId} individualId={individualId}/>}
-              {activeTab === "Suspense" && <Suspense caseId={caseId} individualId={individualId}/>}
-              {activeTab === "Reversal" && <Reversal caseId={caseId} individualId={individualId}/>}
+              {activeTab === "Debtors" && (
+                <Debtors caseId={caseId} individualId={individualId} />
+              )}
+              {activeTab === "Creditors" && (
+                <Creditors caseId={caseId} individualId={individualId} />
+              )}
+              {activeTab === "EMI" && (
+                <EMI caseId={caseId} individualId={individualId} />
+              )}
+              {activeTab === "Investment" && (
+                <Investment caseId={caseId} individualId={individualId} />
+              )}
+              {activeTab === "EOD" && (
+                <EodBalance caseId={caseId} individualId={individualId} />
+              )}
+              {activeTab === "Cash" && (
+                <Cash caseId={caseId} individualId={individualId} />
+              )}
+              {activeTab === "Suspense" && (
+                <Suspense caseId={caseId} individualId={individualId} />
+              )}
+              {activeTab === "Reversal" && (
+                <Reversal caseId={caseId} individualId={individualId} />
+              )}
               {/* {activeTab === "Reversal" && <ForeignTransactions />} */}
             </main>
           </div>
