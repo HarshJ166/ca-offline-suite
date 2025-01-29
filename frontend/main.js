@@ -24,6 +24,7 @@ const db = require("./db/db");
 const { spawn, execFile } = require("child_process");
 const log = require("electron-log");
 const portscanner = require("portscanner");  // Import portscanner
+const { autoUpdater } = require("electron-updater");
 
 // Configure electron-log
 log.transports.console.level = "debug"; // Set the log level
@@ -219,7 +220,7 @@ async function createWindow() {
   });
 
   if (isDev) {
-    mainWindow.loadURL("http://localhost:3000");
+    win.loadURL("http://localhost:3000");
   } else {
     // Use absolute path resolution for production
     const prodPath = path.resolve(
