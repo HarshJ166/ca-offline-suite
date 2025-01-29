@@ -119,10 +119,10 @@ const MainDashboard = () => {
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-3xl font-bold tracking-tight dark:text-slate-300">
-              Dashboard
+              Sanchay
             </h2>
             <p className="text-muted-foreground">
-              Overview of your report analytics and recent activities
+              Overview of Sanchay the great
             </p>
           </div>
           <div className="flex items-center space-x-4">
