@@ -162,4 +162,5 @@ local_settings.py
 /frontend/dist/
 /.venv/
 /venv/
+build/
 /backend/local_model/
