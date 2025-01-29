@@ -60,6 +60,8 @@ const Summary = ({ caseId }) => {
   const [importantExpensesMaximized, setImportantExpensesMaximized] = useState(false);
   const [otherExpensesMaximized, setOtherExpensesMaximized] = useState(false);
 
+ 
+
   useEffect(() => {
     const fetchSummaryData = async () => {
       if (!caseId) return;
@@ -226,7 +228,7 @@ const Summary = ({ caseId }) => {
             </>
           ) : (
             <div className="flex items-center justify-center h-48">
-              <p className="text-gray-500 dark:text-gray-400">No Data Available</p>
+              <p className="text-gray-500 dark:text-gray-400">No Data Available </p>
             </div>
           )}
         </div>
@@ -243,7 +245,7 @@ const Summary = ({ caseId }) => {
         ) : (
             <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md w-full mb-6">
                 <p className="text-gray-800 dark:text-gray-200 text-center font-medium">
-                    No Data Available for Selected Month(s)
+                    No Data Available for Selected Month(s) in {title}
                 </p>
             </div>
         );

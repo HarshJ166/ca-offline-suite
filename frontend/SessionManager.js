@@ -1,8 +1,20 @@
-class SessionManager {
+const { EventEmitter } = require('events');
+const log = require('electron-log');
+
+class SessionManager extends EventEmitter {
     constructor() {
+        if (SessionManager.instance) {
+            return SessionManager.instance;
+        }
+
+        super();
         this.store = null;
         this._user = null;
-        this.init();
+        this.remainingSeconds = 0;
+        this.interval = null;
+
+        // this.init();
+        SessionManager.instance = this;
     }
 
     async init() {
@@ -18,7 +30,55 @@ class SessionManager {
         console.log('SessionManager initialized');
     }
 
-    get user() {
+    static getInstance() {
+        if (!SessionManager.instance) {
+            new SessionManager();  // Create the instance if it doesn't exist
+        }
+        return SessionManager.instance;
+    }
+
+    startLicenseCountdown(remainingSeconds) {
+
+        if (remainingSeconds <= 0) {
+            this.emit('licenseExpired');
+            console.log('License expired');
+            return;
+        }
+
+        // Set the initial remaining seconds
+        this.setRemainingSeconds(remainingSeconds);
+
+        // Start the countdown
+        this.interval = setInterval(() => {
+            remainingSeconds -= 1;
+
+            if (remainingSeconds <= 0) {
+                clearInterval(this.interval);
+                this.remainingSeconds = 0;
+                this.emit('licenseExpired');
+                console.log('License expired');
+            } else {
+                this.setRemainingSeconds(remainingSeconds);
+            }
+        }, 1000);
+
+        console.log(`License countdown started: ${remainingSeconds} seconds remaining`);
+    }
+
+    setRemainingSeconds(seconds) {
+        this.remainingSeconds = seconds;
+        this.emit('remainingSecondsUpdated', seconds);
+        log.info(`License countdown: ${seconds} seconds remaining`);
+    }
+
+    stopLicenseCountdown() {
+        if (this.interval) {
+            clearInterval(this.interval);
+            this.interval = null;
+        }
+    }
+
+    getUser() {
         return this._user;
     }
 
@@ -44,5 +104,5 @@ class SessionManager {
 }
 
 // Create and export singleton instance
-const sessionManager = new SessionManager();
-module.exports = sessionManager;
+// const sessionManager = new SessionManager();
+module.exports = SessionManager.getInstance();

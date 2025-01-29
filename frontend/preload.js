@@ -5,7 +5,7 @@ const { generateReportIpc } = require("./ipc/generateReport");
 contextBridge.exposeInMainWorld("electron", {
   openFile: (filePath) => ipcRenderer.invoke("open-file", filePath),
 
-  getTransactions: (caseId) => ipcRenderer.invoke("get-transactions", caseId),
+  getTransactions: (caseId,individualId) => ipcRenderer.invoke("get-transactions", caseId,individualId),
   getTransactionsCount: (caseId) =>
     ipcRenderer.invoke("get-transactions-count", caseId),
   getEodBalance: (caseId) => ipcRenderer.invoke("get-eod-balance", caseId),
@@ -84,9 +84,8 @@ contextBridge.exposeInMainWorld("electron", {
   getRecentReports: () => ipcRenderer.invoke("get-recent-reports"),
   getFailedStatements: (referenceId) => ipcRenderer.invoke("get-failed-statements", referenceId),
 
-  shell: {
-    openExternal: (url) => shell.openExternal(url),
-  },
+  onLicenseExpired: (callback) => ipcRenderer.on('navigateToLogin', callback),
+  removeLicenseExpiredListener: () => ipcRenderer.removeAllListeners('navigateToLogin'),
 
   shell: {
     openExternal: (url) => shell.openExternal(url),

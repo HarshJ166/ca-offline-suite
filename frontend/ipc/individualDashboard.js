@@ -46,35 +46,44 @@ function registerIndividualDashboardIpc() {
   });
 
   // Handler for getting all transactions
-  ipcMain.handle("get-transactions", async (event, caseId) => {
+  ipcMain.handle("get-transactions", async (event, caseId,individualId) => {
     try {
       // Get all statements for the case
-      const allStatements = await db
+      if(individualId){
+        console.log("individualId",individualId)
+        const allTransactions = await db
+          .select()
+          .from(transactions)
+          .where(
+            and(eq(transactions.statementId, individualId.toString())),
+          );
+        log.info("Transactions fetched successfully:", allTransactions.length);
+        return allTransactions;
+      }else{
+
+        const allStatements = await db
         .select()
         .from(statements)
         .where(eq(statements.caseId, caseId));
-
-      if (allStatements.length === 0) {
-        log.info("No statements found for case:", caseId);
-        return [];
+        if (allStatements.length === 0) {
+          log.info("No statements found for case:", caseId);
+          return [];
+        }
+        // Log statements for debugging
+        // log.info("Found statements:", allStatements);
+        // Get all transactions for these statements
+        const allTransactions = await db
+          .select()
+          .from(transactions)
+          .where(
+            inArray(
+              transactions.statementId,
+              allStatements.map((stmt) => stmt.id.toString()) // Convert integer ID to string
+            )
+          );
+        log.info("Transactions fetched successfully:", allTransactions.length);
+        return allTransactions;
       }
-
-      // Log statements for debugging
-      // log.info("Found statements:", allStatements);
-
-      // Get all transactions for these statements
-      const allTransactions = await db
-        .select()
-        .from(transactions)
-        .where(
-          inArray(
-            transactions.statementId,
-            allStatements.map((stmt) => stmt.id.toString()) // Convert integer ID to string
-          )
-        );
-
-      log.info("Transactions fetched successfully:", allTransactions.length);
-      return allTransactions;
     } catch (error) {
       log.error("Error fetching transactions:", error);
       throw error;
@@ -311,7 +320,9 @@ function registerIndividualDashboardIpc() {
         .where(
           and(
             inArray(transactions.statementId, statementIds), // Check if statementId is in the list
-            eq(transactions.category, "Probable EMI") // Filter by category
+            eq(transactions.category, "Probable EMI"), // Filter by category
+            gt(transactions.amount, 0), // Filter for amount greater than 0,
+            eq(transactions.type, "debit") // Filter by type
           )
         ); // Apply both filters
 

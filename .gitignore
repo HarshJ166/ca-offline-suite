@@ -160,4 +160,6 @@ local_settings.py
 *.out
 
 /frontend/dist/
-build/
+/.venv/
+/venv/
+/backend/local_model/

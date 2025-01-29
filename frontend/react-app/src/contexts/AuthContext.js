@@ -42,6 +42,24 @@ export const AuthProvider = ({ children }) => {
         }
     }, [error]);
 
+    useEffect(() => {
+        // Listen for the 'navigateToLogin' event from the main process via preload.js
+        window.electron.onLicenseExpired(() => {
+            // Navigate to the login page using React Router's history
+            console.log('License expired React');
+            setUser((prev) => {
+                setError('License key has expired');  // Call setError before setting user
+                return null;  // Update user state after setting the error
+            });
+            // setError('License key has expired');
+        });
+
+        // Clean up the listener when the component unmounts
+        return () => {
+            window.electron.removeLicenseExpiredListener();
+        };
+    }, []);
+
     const signUp = async (credentials) => {
         try {
             setLoading(true);
