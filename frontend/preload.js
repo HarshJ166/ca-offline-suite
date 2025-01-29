@@ -84,11 +84,14 @@ contextBridge.exposeInMainWorld("electron", {
   getRecentReports: () => ipcRenderer.invoke("get-recent-reports"),
   getFailedStatements: (referenceId) => ipcRenderer.invoke("get-failed-statements", referenceId),
 
+  onLicenseExpired: (callback) => ipcRenderer.on('navigateToLogin', callback),
+  removeLicenseExpiredListener: () => ipcRenderer.removeAllListeners('navigateToLogin'),
+
   // Add auto-update related methods
   updates: {
-    checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
-    downloadUpdate: () => ipcRenderer.invoke('download-update'),
-    installUpdate: () => ipcRenderer.invoke('install-update'),
+    checkForUpdates: () => ipcRenderer.invoke('check-for-updates', () => {}),
+    // downloadUpdate: () => ipcRenderer.invoke('download-update'),
+    // installUpdate: () => ipcRenderer.invoke('install-update'),
     onUpdateStatus: (callback) => 
       ipcRenderer.on('update-status', (_, status) => callback(status)),
     onUpdateProgress: (callback) => 
