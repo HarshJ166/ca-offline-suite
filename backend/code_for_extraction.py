@@ -727,7 +727,7 @@ def outputs_to_objects(outputs, img_size, id2label):
     return objects
 
 def detect_table_columns(image):
-    structure_model = TableTransformerForObjectDetection.from_pretrained(os.path.join(BASE_DIR, "models", "local_model"))
+    structure_model = TableTransformerForObjectDetection.from_pretrained(os.path.join(BASE_DIR, "local_model"))
     # structure_model = TableTransformerForObjectDetection.from_pretrained("./local_model")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"

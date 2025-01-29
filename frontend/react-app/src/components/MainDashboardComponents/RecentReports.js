@@ -604,7 +604,7 @@ const RecentReports = ({ key }) => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center text-green-600 font-semibold">
+                <div className="text-center text-grey font-bold opacity-70">
                   Report Processed Successfully
                 </div>
               )}

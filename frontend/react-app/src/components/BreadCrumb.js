@@ -53,7 +53,7 @@ export function BreadcrumbDynamic({ items, className = "py-4 px-8" }) {
       location.pathname
     );
     const individualDashboardMatch = matchPath(
-      "/individual-dashboard/:caseId/:defaultTab",
+      "/individual-dashboard/:caseId/:individualId/:defaultTab",
       location.pathname
     );
     return caseDashboardMatch || individualDashboardMatch;
