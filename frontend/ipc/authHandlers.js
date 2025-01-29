@@ -71,7 +71,8 @@ function registerAuthHandlers() {
 
     // Get user session
     ipcMain.handle('auth:getUser', () => {
-        return sessionManager.user;
+        log.info("GetUser IPCMAIN : ", sessionManager.getUser());
+        return sessionManager.getUser();
     });
 
     // Update user data
