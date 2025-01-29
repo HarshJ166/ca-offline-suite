@@ -12,6 +12,13 @@ import {
 import { Button } from "../ui/button";
 import { useToast } from "../../hooks/use-toast";
 import { CircularProgress } from "../ui/circularprogress";
+import {
+  Select,
+  SelectContent,
+  SelectTrigger,
+  SelectValue,
+  SelectItem,
+} from "../ui/select";
 
 const GenerateReportForm = ({
   currentCaseName = null,
@@ -38,6 +45,85 @@ const GenerateReportForm = ({
   const [toastId, setToastId] = useState(null);
   const progressIntervalRef = useRef(null);
   // console.log("Case Name: ", currentCaseName);
+  const [financialYear, setFinancialYear] = useState("");
+  const [availableYears, setAvailableYears] = useState([]);
+
+  const getFinancialYearDates = (fyString) => {
+    if (!fyString) return { startDate: "", endDate: "" };
+
+    const [startYear, endYear] = fyString
+      .split("-")
+      .map((year) => parseInt(year));
+    const startDate = `${startYear}-04-01`; // April 1st of start year
+    const endDate = `${endYear}-03-31`; // March 31st of end year
+
+    return { startDate, endDate };
+  };
+
+  // Modified financial year change handler
+  const handleFinancialYearChange = (selectedYear) => {
+    setFinancialYear(selectedYear);
+
+    if (!selectedYear) {
+      // If no year is selected, clear the dates
+      setFileDetails((prevDetails) =>
+        prevDetails.map((detail) => ({
+          ...detail,
+          start_date: "",
+          end_date: "",
+        }))
+      );
+      return;
+    }
+
+    // Get dates for the selected financial year
+    const { startDate, endDate } = getFinancialYearDates(selectedYear);
+
+    // Update all file details with new dates
+    setFileDetails((prevDetails) =>
+      prevDetails.map((detail) => ({
+        ...detail,
+        start_date: startDate,
+        end_date: endDate,
+      }))
+    );
+  };
+
+  useEffect(() => {
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    const currentFY = currentMonth < 3 ? currentYear - 1 : currentYear;
+
+    const years = [];
+    for (let i = 0; i < 5; i++) {
+      const startYear = currentFY - i;
+      const endYear = startYear + 1;
+      years.push(`${startYear}-${endYear}`);
+    }
+
+    setAvailableYears(years);
+    // Don't set a default financial year, let user select
+  }, []);
+
+  // Rest of your component code remains the same, but replace the financial year Select component with:
+  const renderFinancialYearSelect = () => (
+    <Select value={financialYear} onValueChange={handleFinancialYearChange}>
+      <SelectTrigger className="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all">
+        <SelectValue placeholder="Select Financial Year" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="placeholder">Select Financial Year</SelectItem>
+        {availableYears.map((year) => (
+          <SelectItem key={year} value={year}>
+            {year}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  console.log("Financial Year: ", financialYear);
 
   // Load the last case number from localStorage on component mount
   useEffect(() => {
@@ -104,8 +190,8 @@ const GenerateReportForm = ({
               {progress < 90
                 ? "Processing your bank statements..."
                 : progress < 100
-                  ? "Finalizing report generation..."
-                  : "Report generated successfully!"}
+                ? "Finalizing report generation..."
+                : "Report generated successfully!"}
             </p>
           </div>
         ),
@@ -174,9 +260,12 @@ const GenerateReportForm = ({
     return `${day}-${month}-${year}`;
   };
 
+  console.log("Current Case Name: ", caseName);
+
   // In GenerateReportForm.js, modify the handleSubmit function:
 
   const handleSubmit = async (e) => {
+    console.log("Inside handleSubmit..", caseName);
     e.preventDefault();
 
     const validationErrors = [];
@@ -195,7 +284,8 @@ const GenerateReportForm = ({
       simulateProgress,
       convertDateFormat,
       "CASE_1",
-      caseName
+      caseName,
+      financialYear
     );
 
     // if (selectedFiles.length === 0) {
@@ -324,8 +414,42 @@ const GenerateReportForm = ({
 
   const handleFileChange = (e) => {
     if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setSelectedFiles((prevFiles) => [...prevFiles, ...files]);
+      const newFiles = Array.from(e.target.files);
+
+      // Combine new files with existing files
+      const combinedFiles = [...selectedFiles, ...newFiles];
+
+      // Remove duplicates based on file name and size
+      const uniqueFiles = combinedFiles.filter(
+        (file, index, self) =>
+          index ===
+          self.findIndex((f) => f.name === file.name && f.size === file.size)
+      );
+
+      setSelectedFiles(uniqueFiles);
+
+      // Create file details for all files
+      const newFileDetails = uniqueFiles.map((file, index) => {
+        // Check if this file already has details from previous selection
+        const existingDetailIndex = selectedFiles.findIndex(
+          (existingFile) =>
+            existingFile.name === file.name && existingFile.size === file.size
+        );
+
+        const existingDetail =
+          existingDetailIndex !== -1 ? fileDetails[existingDetailIndex] : {};
+
+        return {
+          file,
+          previewUrl: URL.createObjectURL(file),
+          password: existingDetail.password || "",
+          start_date: existingDetail.start_date || "",
+          end_date: existingDetail.end_date || "",
+          bankName: existingDetail.bankName || "",
+        };
+      });
+
+      setFileDetails(newFileDetails);
     }
   };
 
@@ -428,10 +552,11 @@ const GenerateReportForm = ({
                   value={currentCaseName || caseName} // Set the current value, fallback to empty if undefined
                   onChange={(e) => setCaseName(e.target.value)} // Update caseName state
                   disabled={currentCaseName != null}
-                  className={`w-full px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 focus:outline-none ${currentCaseName == null
+                  className={`w-full px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 focus:outline-none ${
+                    currentCaseName == null
                       ? "focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500"
                       : "cursor-not-allowed"
-                    } transition-all border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm`}
+                  } transition-all border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm`}
                 />
               </div>
             </div>
@@ -441,8 +566,9 @@ const GenerateReportForm = ({
                 Bank Statements
               </label>
               <div
-                className={`relative ${isDragging ? "ring-2 ring-[#3498db] dark:ring-blue-500" : ""
-                  }`}
+                className={`relative ${
+                  isDragging ? "ring-2 ring-[#3498db] dark:ring-blue-500" : ""
+                }`}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}
@@ -499,7 +625,7 @@ const GenerateReportForm = ({
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                               <div>
                                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                   Password
@@ -517,6 +643,12 @@ const GenerateReportForm = ({
                                   placeholder="Enter password"
                                   className="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all"
                                 />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Financial Year
+                                </label>
+                                {renderFinancialYearSelect()}
                               </div>
                               <div>
                                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">

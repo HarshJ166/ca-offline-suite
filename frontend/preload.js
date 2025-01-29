@@ -5,8 +5,9 @@ const { generateReportIpc } = require("./ipc/generateReport");
 contextBridge.exposeInMainWorld("electron", {
   openFile: (filePath) => ipcRenderer.invoke("open-file", filePath),
 
-  getTransactions: (caseId) => ipcRenderer.invoke("get-transactions", caseId),
-
+  getTransactions: (caseId,individualId) => ipcRenderer.invoke("get-transactions", caseId,individualId),
+  getTransactionsCount: (caseId) =>
+    ipcRenderer.invoke("get-transactions-count", caseId),
   getEodBalance: (caseId) => ipcRenderer.invoke("get-eod-balance", caseId),
   getSummary: (caseId) => ipcRenderer.invoke("get-summary", caseId),
   getTransactionsByDebtor: (caseId) =>
@@ -48,7 +49,15 @@ contextBridge.exposeInMainWorld("electron", {
   generateReportIpc: (result, reportName) =>
     ipcRenderer.invoke("generate-report", result, reportName),
 
-  addPdfIpc: (data, caseId) => ipcRenderer.invoke("add-pdf", data, caseId),    
+  getOpportunityToEarn: (caseId) =>
+    ipcRenderer.invoke("getOpportunityToEarn", caseId),
+
+  addPdfIpc: (data, caseId) => ipcRenderer.invoke("add-pdf", data, caseId),
+
+  deleteReport: (caseId) => ipcRenderer.invoke("delete-report", caseId),
+
+  downloadExcelReport: (data) =>
+    ipcRenderer.invoke("download-excel-report", data),
 
   user: {
     getData: (userId) => ipcRenderer.invoke("user:get-data", userId),
@@ -73,6 +82,7 @@ contextBridge.exposeInMainWorld("electron", {
   },
 
   getRecentReports: () => ipcRenderer.invoke("get-recent-reports"),
+  getFailedStatements: (referenceId) => ipcRenderer.invoke("get-failed-statements", referenceId),
 
   // Add auto-update related methods
   updates: {

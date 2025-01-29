@@ -1,5 +1,6 @@
 const { ipcMain } = require('electron');
 const sessionManager = require('../SessionManager');
+const log = require('electron-log');
 const licenseManager = require('../LicenseManager');
 const db = require('../db/db');
 const { users } = require('../db/schema/User');
@@ -8,6 +9,7 @@ const bcrypt = require('bcrypt');
 const { eq, exists, sql } = require("drizzle-orm");
 
 function registerAuthHandlers() {
+    log.info('Registering auth IPC handlers');
     // Handle login
     ipcMain.handle('auth:login', async (event, credentials) => {
         try {
@@ -28,6 +30,27 @@ function registerAuthHandlers() {
             if (!isPasswordValid) {
                 throw new Error('Invalid email or password'); // Incorrect password
             }
+
+            // Set the user session
+            const licenseKey = await licenseManager.getLicenseKey();
+            console.log("License key:", licenseKey);
+
+            if (!licenseKey) {
+                throw new Error('License key not found');
+            }
+
+            // Validate the license
+            const result = await licenseManager.validateLicense(licenseKey, credentials.email);
+            console.log("License activation result:", result);
+
+            if (!result.success) {
+                throw new Error('Invalid license key');
+            }
+
+            const remainingSeconds = licenseManager.calculateRemainingSeconds(result.data.expiry_timestamp);
+            sessionManager.startLicenseCountdown(5);
+
+            sessionManager.setUser(user);
 
             return { success: true, user: credentials };
         } catch (error) {
@@ -63,10 +86,11 @@ function registerAuthHandlers() {
 
     ipcMain.handle("auth:signUp", async (event, credentials) => {
 
-        const result = await licenseManager.validateAndStoreLicense(credentials);
+        const result = await licenseManager.validateLicense(credentials.licenseKey, credentials.email);
         console.log("License activation result:", result);
 
         if (result.success) {
+
             // const userAlreadyExists = await db.select(
             //     exists(db.select().from(users).where(eq(users.email, credentials.email)))
             // );
@@ -86,17 +110,30 @@ function registerAuthHandlers() {
             const dateJoined = new Date();
 
             // console.log("dateJoined : ", dateJoined, "HashPassword : ", hashedPassword);
+            let newUser;
+            try {
 
-            const newUser = await db
-                .insert(users)
-                .values({
-                    // name: credentials.name || credentials.email.split("@")[0],
-                    name: credentials.email,
-                    email: credentials.email,
-                    password: hashedPassword,
-                    dateJoined: dateJoined,
-                })
-                .returning();
+                newUser = await db
+                    .insert(users)
+                    .values({
+                        // name: credentials.name || credentials.email.split("@")[0],
+                        name: credentials.email,
+                        email: credentials.email,
+                        password: hashedPassword,
+                        dateJoined: dateJoined,
+                    })
+                    .returning();
+            } catch (err) {
+                log.info("Error in creating new user : ", err);
+                return { success: false, error: "Failed to register user." };
+            }
+
+            const remainingSeconds = licenseManager.calculateRemainingSeconds(result.data.expiry_timestamp);
+            const storeResult = await licenseManager.storeLicense({ licenseKey: credentials.licenseKey, email: credentials.email });
+
+            if (storeResult.success) {
+                sessionManager.startLicenseCountdown(remainingSeconds);
+            }
 
             return {
                 success: true,
@@ -107,7 +144,7 @@ function registerAuthHandlers() {
 
         return {
             success: false,
-            error: "Failed to register user.",
+            error: result.error,
         }
 
     });

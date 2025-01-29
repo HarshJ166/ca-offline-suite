@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -18,7 +18,6 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { useToast } from "../../hooks/use-toast";
 import { Badge } from "../ui/badge";
-import { useState, useEffect } from "react";
 import { cn } from "../../lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Eye, Plus, Trash2, Info, Search, Edit2, X } from "lucide-react";
@@ -45,29 +44,33 @@ import CategoryEditModal from "./CategoryEditModal";
 import GenerateReportForm from "../Elements/ReportForm";
 import { CircularProgress } from "../ui/circularprogress";
 
+
+import PDFMarkerModal from "./PdfMarkerModal"
+
+
 const RecentReports = ({ key }) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  // const [currentInfoIndex, setCurrentInfoIndex] = useState(0);
   const [isCategoryEditOpen, setIsCategoryEditOpen] = useState(false);
   const [isAddPdfModalOpen, setIsAddPdfModalOpen] = useState(false);
-  const [isFirstInfo, setIsFirstInfo] = useState();
-  const [isLastInfo, setIsLastInfo] = useState();
   const itemsPerPage = 10;
   const [currentCaseName, setCurrentCaseName] = useState("");
   const [currentCaseId, setCurrentCaseId] = useState("");
-
   const [recentReports, setRecentReports] = useState([]);
+  const [selectedReportFailedData, setSelectedReportFailedData] = useState(null);
+
+  const [isFirstInfo, setIsFirstInfo] = useState(true);
+  const [isLastInfo, setIsLastInfo] = useState(false);
+
+  const [isMarkerModalOpen, setIsMarkerModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchReports = async () => {
       try {
         const result = await window.electron.getRecentReports();
-        console.log("Fetched reports:", result);
-
         const formattedReports = result
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
           .map((report) => ({
@@ -91,7 +94,6 @@ const RecentReports = ({ key }) => {
           }));
 
         setRecentReports(formattedReports);
-        // toast({ title: "Success", description: "Reports loaded successfully." });
       } catch (error) {
         toast({
           title: "Error",
@@ -105,14 +107,51 @@ const RecentReports = ({ key }) => {
 
     fetchReports();
   }, []);
+  const handleDetails = async (reportId) => {
+    setIsLoading(true);
+  
+    try {
+      const failedStatements = await window.electron.getFailedStatements(reportId);
+      
+      // Process failed statements with extensive error checking
+      const processedFailedData = failedStatements.map(item => {
+        if (!item || !item.data) {
+          return null;
+        }
 
-  const handleDetails = (statements_length) => {
-    console.log("Clicked on details");
-    if (statements_length > 0) {
-      setIsFirstInfo(true);
-      setIsLastInfo(statements_length - 1 === 0);
+        try {
+          const parsedData = JSON.parse(item.data);
+          return {
+            ...item,
+            parsedContent: {
+              paths: Array.isArray(parsedData.paths) ? parsedData.paths : [],
+              passwords: Array.isArray(parsedData.passwords) ? parsedData.passwords : [],
+              startDates: Array.isArray(parsedData.start_dates) ? parsedData.start_dates : [],
+              endDates: Array.isArray(parsedData.end_dates) ? parsedData.end_dates : [],
+              columns: Array.isArray(parsedData.respective_list_of_columns) 
+                ? parsedData.respective_list_of_columns 
+                : []
+            }
+          };
+        } catch (parseError) {
+          console.error('Failed to parse data:', parseError);
+          return null;
+        }
+      }).filter(item => item !== null); // Remove null entries
+
+      console.log("Processed failed data:", processedFailedData);
+      setSelectedReportFailedData(processedFailedData);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to load details: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
+
 
   const handlePrevInfo = (statements_length, currentInfoIndex) => {
     console.log(
@@ -211,6 +250,8 @@ const RecentReports = ({ key }) => {
       Failed: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
     };
 
+
+
     return (
       <Badge
         variant="outline"
@@ -225,27 +266,41 @@ const RecentReports = ({ key }) => {
   //     console.log('Clicked on add report');
   // };
 
-  const handleDeleteReport = (reportName) => {
-    setRecentReports(
-      recentReports.filter((report) => report.reportName !== reportName)
-    );
-    if ((recentReports.length - 1) % 10 === 0) {
-      if (currentPage > 1) {
-        setCurrentPage(currentPage - 1);
-      }
+  const handleDeleteReport = async (reportId) => {
+    try {
+      // Optimistically update the state before confirming deletion
+      const updatedReports = recentReports.filter(
+        (report) => report.id !== reportId
+      );
+      setRecentReports(updatedReports);
+
+      // Call the API to delete the report
+      await window.electron.deleteReport(reportId);
+
+      toast({
+        title: "Success",
+        description: "Report deleted successfully.",
+        variant: "success",
+      });
+    } catch (error) {
+      // Roll back the state if the deletion fails
+      setRecentReports((prev) => [
+        ...prev,
+        recentReports.find((r) => r.id === reportId),
+      ]);
+      toast({
+        title: "Error",
+        description: `Failed to delete the report: ${error.message}`,
+        variant: "destructive",
+      });
     }
-    toast({
-      title: "Report Deleted",
-      description: "The report has been removed from your list.",
-      variant: "destructive",
-    });
   };
 
   const handleView = (caseId) => {
     console.log("case", caseId);
-    console.log({ isLoading });
     setIsLoading(true);
     navigate(`/case-dashboard/${caseId}/defaultTab`);
+    console.log("in handle view");
     setIsLoading(false);
   };
 
@@ -263,7 +318,7 @@ const RecentReports = ({ key }) => {
     simulateProgress,
     convertDateFormat,
     caseId,
-    caseName,
+    caseName
   ) => {
     if (selectedFiles.length === 0) {
       toast({
@@ -317,9 +372,12 @@ const RecentReports = ({ key }) => {
         })
       );
 
-      const result = await window.electron.addPdfIpc({
-        files: filesWithContent,
-      }, currentCaseId);
+      const result = await window.electron.addPdfIpc(
+        {
+          files: filesWithContent,
+        },
+        currentCaseId
+      );
 
       if (result.success) {
         clearInterval(progressIntervalRef.current);
@@ -372,8 +430,46 @@ const RecentReports = ({ key }) => {
     setIsAddPdfModalOpen(false);
   };
 
+  const handleOpenMarker = () => {
+    if (selectedReportFailedData && selectedReportFailedData[0] && selectedReportFailedData[0].parsedContent) {
+      const pdfPath = selectedReportFailedData[0].parsedContent.paths[0]
+      console.log("Opening marker with pdfPath:", pdfPath)
+      setIsMarkerModalOpen(true)
+    } else {
+      console.error("No PDF path available")
+      toast({
+        title: "Error",
+        description: "No PDF path available for this report",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleSaveMarkerData = (data) => {
+    // Handle saving marker data here
+    console.log("Saved marker data:", data)
+    setIsMarkerModalOpen(false)
+  }
+
+
+
   return (
     <Card>
+      <PDFMarkerModal
+        isOpen={isMarkerModalOpen}
+        onClose={() => setIsMarkerModalOpen(false)}
+        onSave={handleSaveMarkerData}
+        pdfPath={
+          selectedReportFailedData && selectedReportFailedData[0]
+            ? selectedReportFailedData[0].parsedContent?.paths[0]
+            : null
+        }
+        initialConfig={
+          selectedReportFailedData && selectedReportFailedData[0]
+            ? selectedReportFailedData[0].parsedContent?.columns
+            : []
+        }
+      />
       <CategoryEditModal open={isCategoryEditOpen} onOpenChange={toggleEdit} />
 
       <CardHeader>
@@ -453,71 +549,75 @@ const RecentReports = ({ key }) => {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-black/5"
-                        onClick={() => handleDetails(report.statements.length)}
-                      >
-                        <Info className="h-4 w-4 " />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="max-w-2xl bg-white shadow-lg border-0 dark:bg-slate-950">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="text-xl font-medium text-black bg-black/[0.03] -mx-6 -mt-6 p-4 border-b border-black/10 dark:bg-slate-900 dark:text-slate-300">
-                          Report Information
-                        </AlertDialogTitle>
-                        <div className="py-6">
-                          <h3 className="text-base font-medium text-black dark:text-slate-400">
-                            {report.id}
-                          </h3>
-                          <div className="mt-6 space-y-4 ">
-                            {report.statements.map((doc, idx) => (
-                              <div
-                                key={idx}
-                                className="bg-black/[0.02] hover:bg-black/[0.04] transition-colors p-4 rounded-md border border-black/5 dark:bg-slate-800"
-                              >
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-sm font-medium text-black/40 dark:text-white">
-                                    Path:
-                                  </span>
-                                  <span className="text-sm text-black/70 dark:text-white">
-                                    {doc.ifscCode}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hover:bg-black/5"
+              onClick={() => handleDetails(report.id)}
+            >
+              <Info className="h-4 w-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent className="max-w-2xl bg-white shadow-lg border-0 dark:bg-slate-950">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-xl font-medium text-black bg-black/[0.03] -mx-6 -mt-6 p-4 border-b border-black/10 dark:bg-slate-900 dark:text-slate-300">
+                Report Details
+              </AlertDialogTitle>
+            </AlertDialogHeader>
+            <div className="p-6 overflow-auto max-h-[400px]">
+              {selectedReportFailedData && selectedReportFailedData.some(item => item.parsedContent && (
+                item.parsedContent.paths.length > 0 || 
+                item.parsedContent.passwords.length > 0 || 
+                item.parsedContent.startDates.length > 0 || 
+                item.parsedContent.endDates.length > 0 || 
+                (item.parsedContent.columns && item.parsedContent.columns.length > 0)
+              )) ? (
+                <div>
+                  {selectedReportFailedData.map((failedItem, index) => (
+                    <div key={index} className="mb-4 border-b pb-4">
+                      <h3 className="font-semibold mb-2">Failed Statement {index + 1}</h3>
+                      {failedItem.parsedContent ? (
+                        <div className="flex gap-2">
+                          <p className="flex-[4.5]"><strong>Path:</strong> {failedItem.parsedContent.paths.length > 0 ? failedItem.parsedContent.paths.join(', ') : 'N/A'}</p>
+                          {/* <p><strong>Passwords:</strong> {failedItem.parsedContent.passwords.length > 0 ? failedItem.parsedContent.passwords.join(', ') : 'N/A'}</p>
+                          <p><strong>Start Dates:</strong> {failedItem.parsedContent.startDates.length > 0 ? failedItem.parsedContent.startDates.join(', ') : 'N/A'}</p>
+                          <p><strong>End Dates:</strong> {failedItem.parsedContent.endDates.length > 0 ? failedItem.parsedContent.endDates.join(', ') : 'N/A'}</p>
+                          {failedItem.parsedContent.columns && failedItem.parsedContent.columns.length > 0 && (
+                            <p><strong>Columns:</strong> {failedItem.parsedContent.columns[0].join(', ')}</p>
+                          )} */}
+                        {/* Show a rectify button here shadcn */}
+                         <Button variant="secondary" size="sm" className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors" onClick={handleOpenMarker}>
+                          Rectify
+                         </Button>
+
+                      
                         </div>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter className="border-t border-black/10 pt-6">
-                        <div className="flex justify-between w-full gap-3">
-                          {/* <Button
-                            variant="outline"
-                            onClick={() => handlePrevInfo(report.statements.length, index)}
-                            disabled={isFirstInfo}
-                            className="px-6 bg-transparent border-black/10 text-black/70 hover:bg-black/[0.03] hover:border-black/20 hover:text-black disabled:opacity-30 dark:text-white dark:border-white/10 dark:bg-slate-900"
-                          >
-                            Previous
-                          </Button> */}
-                          <AlertDialogCancel className="px-8 bg-black text-white hover:bg-black/90 hover:text-white dark:bg-white dark:text-black">
-                            Close
-                          </AlertDialogCancel>
-                          {/* <Button
-                            variant="outline"
-                            onClick={() => handleNextInfo(report.statements.length, index)}
-                            disabled={isLastInfo}
-                            className="px-6 bg-transparent border-black/10 text-black/70 hover:bg-black/[0.03] hover:border-black/20 hover:text-black disabled:opacity-30 dark:text-white dark:border-white/10 dark:bg-slate-900"
-                          >
-                            Next
-                          </Button> */}
-                        </div>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </TableCell>
+
+                      ) : (
+                        <pre className="whitespace-pre-wrap break-all">
+                          {JSON.stringify(failedItem, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-green-600 font-semibold">
+                  Report Processed Successfully
+                </div>
+              )}
+            </div>
+            <AlertDialogFooter className="border-t border-black/10 pt-6">
+              <AlertDialogCancel className="px-8 bg-black text-white hover:bg-black/90 hover:text-white dark:bg-white dark:text-black">
+                Close
+              </AlertDialogCancel>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </TableCell>
+
               </TableRow>
             ))}
           </TableBody>
@@ -592,6 +692,7 @@ const RecentReports = ({ key }) => {
           </div>
         </div>
       )}
+   
     </Card>
   );
 };

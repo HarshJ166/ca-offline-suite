@@ -65,7 +65,7 @@ function App() {
                 path="/case-dashboard/:caseId/:defaultTab"
                 element={
                   <PrivateRoute>
-                    <IndividualDashboard />
+                    <CaseDashboard />
                   </PrivateRoute>
                 }
               />

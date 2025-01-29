@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search, Loader2, Save,Plus } from "lucide-react";
+import { Search, Loader2, Save, Plus } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -19,7 +19,14 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { cn } from "../../lib/utils";
 import { Checkbox } from "../ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "../ui/dialog";
 import {
   Pagination,
   PaginationContent,
@@ -40,7 +47,11 @@ import {
 import { useToast } from "../../hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
-const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) => {
+const CategoryEditTable = ({
+  data = [],
+  categoryOptions,
+  setCategoryOptions,
+}) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [transactions, setTransactions] = useState([]);
   const [filteredData, setFilteredData] = useState(data);
@@ -54,7 +65,6 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const rowsPerPage = 10;
   const { toast } = useToast();
   const [hasChanges, setHasChanges] = useState(false);
   const [currentData, setCurrentdata] = useState([]);
@@ -63,7 +73,8 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
   const [startIndex, setStartIndex] = useState(0);
   const [endIndex, setEndIndex] = useState(0);
   const [columnsToIgnore, setColumnsToIgnore] = useState(["id"]);
-  
+  const [showKeywordInput, setShowKeywordInput] = useState(false);
+
   // New states for multiple selection
   const [selectedRows, setSelectedRows] = useState([]);
   const [bulkCategoryModalOpen, setBulkCategoryModalOpen] = useState(false);
@@ -83,6 +94,9 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
   const [reasoning, setReasoning] = useState("");
   const [pendingCategoryChange, setPendingCategoryChange] = useState(null);
   const [bulkReasoning, setBulkReasoning] = useState("");
+
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [showAllRows, setShowAllRows] = useState(false);
 
   useEffect(() => {
     setTransactions(data);
@@ -104,16 +118,34 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
     // Here you can store the classification mapping
     // You might want to save this to your backend or state management system
     console.log(`Category: ${category}, Type: ${classificationType}`);
-    
+
     toast({
       title: "Category Classified",
-      description: `${category} has been classified as ${classificationType.replace('_', ' ')}`,
+      description: `${category} has been classified as ${classificationType.replace(
+        "_",
+        " "
+      )}`,
     });
   };
 
   const handleClassificationSubmit = () => {
     handleCategoryClassification(newCategoryToClassify, selectedType);
-    setShowClassificationModal(false)
+    setShowClassificationModal(false);
+
+    // Set the pending category change
+    const oldCategory =
+      currentData[pendingCategoryChange?.rowIndex]?.Category || "";
+    setPendingCategoryChange({
+      ...pendingCategoryChange,
+      newCategory: newCategoryToClassify,
+      oldCategory: oldCategory,
+    });
+
+    // Set the current transaction for the reasoning modal
+    setCurrentTransaction(currentData[pendingCategoryChange?.rowIndex]);
+
+    // Show the reasoning modal
+    setReasoningModalOpen(true);
     setSelectedType(""); // Reset for next use
   };
 
@@ -145,13 +177,13 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
   const handleCategoryChange = (rowIndex, newCategory) => {
     const dataOnUi = [...currentData];
     const oldCategory = dataOnUi[rowIndex].Category;
-    
+
     // Store pending change and show reasoning dialog
     setPendingCategoryChange({
       rowIndex,
       newCategory,
       oldCategory,
-      transaction: dataOnUi[rowIndex]
+      transaction: dataOnUi[rowIndex],
     });
     setCurrentTransaction(dataOnUi[rowIndex]);
     setReasoningModalOpen(true);
@@ -159,24 +191,25 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
 
   const confirmCategoryChange = () => {
     if (!pendingCategoryChange) return;
-    
+
     const { rowIndex, newCategory, oldCategory } = pendingCategoryChange;
     const dataOnUi = [...currentData];
     dataOnUi[rowIndex].Category = newCategory;
     setCurrentdata(dataOnUi);
 
-    const modifiedObject = { 
-      ...dataOnUi[rowIndex], 
+    const modifiedObject = {
+      ...dataOnUi[rowIndex],
       oldCategory,
-      keyword:reasoning 
+      keyword: showKeywordInput ? reasoning : "", // Only include reasoning if checkbox was checked
     };
     setModifiedData([...modifiedData, modifiedObject]);
     setHasChanges(true);
-    
+
     // Reset states
     setReasoningModalOpen(false);
     setPendingCategoryChange(null);
     setReasoning("");
+    setShowKeywordInput(false); // Reset checkbox state
   };
 
   // New function to handle bulk category change
@@ -184,15 +217,15 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
   const handleBulkCategoryChange = () => {
     const dataOnUi = [...filteredData];
     const newModifiedData = [...modifiedData];
-    
-    globalSelectedRows.forEach(globalIndex => {
+
+    globalSelectedRows.forEach((globalIndex) => {
       const oldCategory = dataOnUi[globalIndex].Category;
       dataOnUi[globalIndex].Category = selectedBulkCategory;
 
       const modifiedObject = {
         ...dataOnUi[globalIndex],
         oldCategory,
-        reasoning: bulkReasoning
+        reasoning: bulkReasoning,
       };
 
       newModifiedData.push(modifiedObject);
@@ -216,7 +249,7 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
   // Function to handle row selection
   const toggleRowSelection = (index) => {
     const globalIndex = startIndex + index;
-    setGlobalSelectedRows(prev => {
+    setGlobalSelectedRows((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(globalIndex)) {
         newSet.delete(globalIndex);
@@ -227,10 +260,10 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
     });
   };
 
-   // Modify toggleSelectAll for current page
-   const toggleSelectAll = () => {
+  // Modify toggleSelectAll for current page
+  const toggleSelectAll = () => {
     const newGlobalSelected = new Set(globalSelectedRows);
-    const allCurrentPageSelected = filteredData.every((_, index) => 
+    const allCurrentPageSelected = filteredData.every((_, index) =>
       newGlobalSelected.has(startIndex + index)
     );
 
@@ -245,7 +278,7 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
         newGlobalSelected.add(startIndex + index);
       });
     }
-    
+
     setGlobalSelectedRows(newGlobalSelected);
   };
 
@@ -256,11 +289,10 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
         : [...prev, category]
     );
   };
-    // Filter categories based on search term
-    const filteredCategories = categoryOptions.filter((category) =>
-      category.toLowerCase().includes(categorySearchTerm.toLowerCase())
-    );
-  
+  // Filter categories based on search term
+  const filteredCategories = categoryOptions.filter((category) =>
+    category.toLowerCase().includes(categorySearchTerm.toLowerCase())
+  );
 
   const handleSelectAll = () => {
     const visibleCategories = getFilteredUniqueValues(currentFilterColumn);
@@ -324,28 +356,40 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
     setCategorySearchTerm(e.target.value);
   };
 
-  // Function to add new category
- const handleAddCategory = (newCategory) => {
-  if (newCategory && !categoryOptions.includes(newCategory)) {
-    setNewCategoryToClassify(newCategory);
-    setShowClassificationModal(true);
-    const updatedOptions = [...categoryOptions, newCategory].sort();
-    setCategoryOptions(updatedOptions);
-    return true;
-  }
-  return false;
-};
+  console.log("category search term", categorySearchTerm);
+  console.log("selected Categories", selectedCategories);
 
+  // Function to add new category
+  const handleAddCategory = (newCategory, rowIndex) => {
+    if (newCategory && !categoryOptions.includes(newCategory)) {
+      setNewCategoryToClassify(newCategory);
+      // Store the row index with the pending change
+      setPendingCategoryChange({
+        rowIndex,
+        newCategory: newCategory,
+        oldCategory: currentData[rowIndex]?.Category || "",
+      });
+      setShowClassificationModal(true);
+      const updatedOptions = [...categoryOptions, newCategory].sort();
+      setCategoryOptions(updatedOptions);
+      return true;
+    }
+    return false;
+  };
 
   useEffect(() => {
-    const totalPagesTemp = Math.ceil(filteredData.length / rowsPerPage);
+    const totalPagesTemp = showAllRows
+      ? 1
+      : Math.ceil(filteredData.length / rowsPerPage);
     setTotalPages(totalPagesTemp);
-    const startIndexTemp = (currentPage - 1) * rowsPerPage;
+    const startIndexTemp = showAllRows ? 0 : (currentPage - 1) * rowsPerPage;
     setStartIndex(startIndexTemp);
-    const endIndexTemp = startIndexTemp + rowsPerPage;
+    const endIndexTemp = showAllRows
+      ? filteredData.length
+      : startIndexTemp + rowsPerPage;
     setEndIndex(endIndexTemp);
     setCurrentdata(filteredData.slice(startIndexTemp, endIndexTemp));
-  }, [filteredData, currentPage]);
+  }, [filteredData, currentPage, rowsPerPage, showAllRows]);
 
   const getPageNumbers = () => {
     const pageNumbers = [];
@@ -375,8 +419,8 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
     try {
       setIsLoading(true);
 
-      console.log({"Form Submitted":modifiedData});
-      
+      console.log({ "Form Submitted": modifiedData });
+
       // const response = await fetch('/api/update-categories', {
       //   method: 'POST',
       //   headers: {
@@ -394,7 +438,6 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
         title: "Changes saved successfully",
         description: "All category updates have been saved",
       });
-
     } catch (error) {
       toast({
         title: "Error saving changes",
@@ -408,555 +451,640 @@ const CategoryEditTable = ({ data = [], categoryOptions,setCategoryOptions }) =>
 
   return (
     <div className="relative min-h-screen flex flex-col">
-
-    <Card className="flex-1 pb-14">
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div className="space-y-2">
-            <CardTitle>Edit Categories</CardTitle>
-            <CardDescription>View and manage your categories</CardDescription>
+      <Card className="flex-1 pb-14">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div className="space-y-2">
+              <CardTitle>Edit Categories</CardTitle>
+              <CardDescription>View and manage your categories</CardDescription>
+            </div>
+            <div className="relative flex items-center gap-2">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                className="pl-10 w-[400px]"
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+              <select
+                className="p-2 border rounded-md text-sm dark:bg-slate-800 dark:border-slate-700 w-[120px]"
+                value={showAllRows ? "all" : rowsPerPage}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "all") {
+                    setShowAllRows(true);
+                    setCurrentPage(1);
+                  } else {
+                    setShowAllRows(false);
+                    setRowsPerPage(Number(value));
+                    setCurrentPage(1);
+                  }
+                }}
+              >
+                <option value="5">5 rows</option>
+                <option value="10">10 rows</option>
+                <option value="20">20 rows</option>
+                <option value="50">50 rows</option>
+                <option value="100">100 rows</option>
+                <option value="all">Show all</option>
+              </select>
+              <Button variant="default" onClick={() => clearFilters()}>
+                Clear Filters
+              </Button>
+            </div>
           </div>
-          <div className="relative flex items-center gap-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              className="pl-10 w-[400px]"
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-            />
-            <Button variant="default" onClick={() => clearFilters()}>
-              Clear Filters
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="relative">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                <Checkbox
-                    checked={
-                      currentData.length > 0 &&
-                      currentData.every((_, index) => 
-                        globalSelectedRows.has(startIndex + index)
-                      )
-                    }
-                    onCheckedChange={toggleSelectAll}
-                  />
-                </TableHead>
-                {columns.map((column) => (
-                  <TableHead key={column}>
-                    <div className="flex items-center gap-2">
-                      {column.charAt(0).toUpperCase() +
-                        column.slice(1).toLowerCase()}
-                      {column.toLowerCase() !== "description" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => {
-                            if (numericColumns.includes(column)) {
-                              setCurrentNumericColumn(column);
-                              setNumericFilterModalOpen(true);
-                            } else {
-                              setCurrentFilterColumn(column);
-                              setSelectedCategories([]);
-                              setCategorySearchTerm("");
-                              setFilterModalOpen(true);
-                            }
-                          }}
-                        >
-                          ▼
-                        </Button>
-                      )}
-                    </div>
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {currentData.length === 0 ? (
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={columns.length + 1} className="text-center">
-                    No matching results found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                currentData.map((row, index) => (
-                  <TableRow key={index} className={cn(selectedRows.includes(index) && "bg-muted/50")}>
-                    <TableCell>
+                  <TableHead className="text-center flex gap-2 items-center">
+                    <div className="flex items-center gap-2">
+                      <p className={"whitespace-nowrap"}>Select All</p>
+                    </div>
                     <Checkbox
-                      checked={globalSelectedRows.has(startIndex + index)}
-                      onCheckedChange={() => toggleRowSelection(index)}
+                      checked={
+                        currentData.length > 0 &&
+                        currentData.every((_, index) =>
+                          globalSelectedRows.has(startIndex + index)
+                        )
+                      }
+                      onCheckedChange={toggleSelectAll}
                     />
-                    </TableCell>
-                    {columns.map((column) => (
-                      <TableCell
-                        key={column}
-                        className="max-w-[200px] group relative"
-                      >
-                        {column.toLowerCase() === "category" ? (
-                          <Select
-                            value={row[column]}
-                            onValueChange={(value) => handleCategoryChange(index, value)}
-                            className="w-full"
-                            disabled={globalSelectedRows.has(startIndex + index)}
+                  </TableHead>
+                  {columns.map((column) => (
+                    <TableHead key={column}>
+                      <div className="flex items-center gap-2 whitespace-nowrap ">
+                        {column.charAt(0).toUpperCase() +
+                          column.slice(1).toLowerCase()}
+                        {column.toLowerCase() !== "description" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              if (numericColumns.includes(column)) {
+                                setCurrentNumericColumn(column);
+                                setNumericFilterModalOpen(true);
+                              } else {
+                                setCurrentFilterColumn(column);
+                                setSelectedCategories([]);
+                                setCategorySearchTerm("");
+                                setFilterModalOpen(true);
+                              }
+                            }}
                           >
-                            <SelectTrigger className="w-full">
-                              <SelectValue>{row[column]}</SelectValue>
-                            </SelectTrigger>
-                            <SelectContent
-                              onCloseAutoFocus={(e) => {
-                                // Prevent the default focus behavior
-                                e.preventDefault();
-                              }}                            
+                            ▼
+                          </Button>
+                        )}
+                      </div>
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {currentData.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length + 1}
+                      className="text-center"
+                    >
+                      No matching results found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  currentData.map((row, index) => (
+                    <TableRow
+                      key={index}
+                      className={cn(
+                        selectedRows.includes(index) && "bg-muted/50"
+                      )}
+                    >
+                      <TableCell className="text-center">
+                        <Checkbox
+                          checked={globalSelectedRows.has(startIndex + index)}
+                          onCheckedChange={() => toggleRowSelection(index)}
+                        />
+                      </TableCell>
+                      {columns.map((column) => (
+                        <TableCell
+                          key={column}
+                          className="max-w-[200px] group relative"
+                        >
+                          {column.toLowerCase() === "category" ? (
+                            <Select
+                              value={row[column]}
+                              onValueChange={(value) =>
+                                handleCategoryChange(index, value)
+                              }
+                              className="w-full"
+                              disabled={globalSelectedRows.has(
+                                startIndex + index
+                              )}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue>{row[column]}</SelectValue>
+                              </SelectTrigger>
+                              <SelectContent
+                                onCloseAutoFocus={(e) => {
+                                  // Prevent the default focus behavior
+                                  e.preventDefault();
+                                }}
                               >
-                              <div className="p-2 border-b flex gap-2">
-                                <div className="relative flex-1">
-                                  <Input
-                                    placeholder="Search categories..."
-                                    value={categorySearchTerm}
-                                    onChange={(e) =>
-                                      handleCategorySearch(e)
-                                    }
-                                    // Add these handlers
-                                    onFocus={() => setIsSearchInputFocused(true)}
-                                    onBlur={() => setIsSearchInputFocused(false)}
-                                    // Prevent the select's keyboard navigation from interfering
-                                    onKeyDown={(e) => {
-                                      e.stopPropagation();
-                                    }}
-                                    // Prevent any click events from bubbling up to the Select
+                                <div className="p-2 border-b flex gap-2">
+                                  <div className="relative flex-1">
+                                    <Input
+                                      placeholder="Search categories..."
+                                      value={categorySearchTerm}
+                                      onChange={(e) => handleCategorySearch(e)}
+                                      // Add these handlers
+                                      onFocus={() =>
+                                        setIsSearchInputFocused(true)
+                                      }
+                                      onBlur={() =>
+                                        setIsSearchInputFocused(false)
+                                      }
+                                      // Prevent the select's keyboard navigation from interfering
+                                      onKeyDown={(e) => {
+                                        e.stopPropagation();
+                                      }}
+                                      // Prevent any click events from bubbling up to the Select
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                      }}
+                                    />
+                                  </div>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="px-2 h-10"
                                     onClick={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                    }}
-                                  />
-                                </div>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="px-2 h-10"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    if (categorySearchTerm.trim()) {
-                                      const added = handleAddCategory(
-                                        categorySearchTerm.trim()
-                                      );
-                                      if (added) {
-                                        handleCategoryChange(
-                                          index,
-                                          categorySearchTerm.trim()
+                                      if (categorySearchTerm.trim()) {
+                                        const added = handleAddCategory(
+                                          categorySearchTerm.trim(),
+                                          index // Pass the row index
                                         );
-                                        setCategorySearchTerm("");
-                                        toast({
-                                          title: "Category Added",
-                                          description: `Added new category: ${categorySearchTerm.trim()}`,
-                                        });
+                                        if (added) {
+                                          setCategorySearchTerm("");
+                                        }
                                       }
-                                    }
-                                  }}
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </Button>
-                              </div>
-                              <div className="max-h-[200px] overflow-y-auto">
-                                {filteredCategories.length > 0 ? (
-                                  filteredCategories.map((category) => (
-                                    <SelectItem key={category} value={category}>
-                                      {category}
-                                    </SelectItem>
-                                  ))
-                                ) : (
-                                  <div className="p-4 max-w-[300px] text-center text-muted-foreground">
-                                    <p className="text-md">No matching categories found</p>
-                                    <p className="text-sm mt-1">Click the <Plus className="h-3 w-3 inline-block mx-1" /> icon above to add "{categorySearchTerm}" as a new category</p>
-                                  </div>
-                                )}
-                              </div>
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <div className="truncate">{row[column]}</div>
-                        )}
-                        {column.toLowerCase() === "description" && (
-                          <div className="absolute left-0 top-10 hidden group-hover:block bg-black text-white text-sm rounded p-2 z-50 whitespace-normal min-w-[200px] max-w-[400px]">
-                            {row[column]}
-                          </div>
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-     
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-6">
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.max(prev - 1, 1))
-                    }
-                    className={cn(
-                      "cursor-pointer",
-                      currentPage === 1 && "pointer-events-none opacity-50"
-                    )}
-                  />
-                </PaginationItem>
-                {getPageNumbers().map((pageNumber, index) => (
-                  <PaginationItem key={index}>
-                    {pageNumber === "ellipsis" ? (
-                      <PaginationEllipsis />
-                    ) : (
-                      <PaginationLink
-                        onClick={() => setCurrentPage(pageNumber)}
-                        isActive={currentPage === pageNumber}
-                        className="cursor-pointer"
-                      >
-                        {pageNumber}
-                      </PaginationLink>
-                    )}
-                  </PaginationItem>
-                ))}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                    }
-                    className={cn(
-                      "cursor-pointer",
-                      currentPage === totalPages &&
-                        "pointer-events-none opacity-50"
-                    )}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+                                    }}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                <div className="max-h-[200px] overflow-y-auto">
+                                  {filteredCategories.length > 0 ? (
+                                    filteredCategories.map((category) => (
+                                      <SelectItem
+                                        key={category}
+                                        value={category}
+                                      >
+                                        {category}
+                                      </SelectItem>
+                                    ))
+                                  ) : (
+                                    <div className="p-4 max-w-[300px] text-center text-muted-foreground">
+                                      <p className="text-md">
+                                        No matching categories found
+                                      </p>
+                                      <p className="text-sm mt-1">
+                                        Click the{" "}
+                                        <Plus className="h-3 w-3 inline-block mx-1" />{" "}
+                                        icon above to add "{categorySearchTerm}"
+                                        as a new category
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className="truncate">{row[column]}</div>
+                          )}
+                          {column.toLowerCase() === "description" && (
+                            <div className="absolute left-0 top-10 hidden group-hover:block bg-black text-white text-sm rounded p-2 z-50 whitespace-normal min-w-[200px] max-w-[400px]">
+                              {row[column]}
+                            </div>
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
-        )}
-      </CardContent>
 
-      
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-6">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.max(prev - 1, 1))
+                      }
+                      className={cn(
+                        "cursor-pointer",
+                        currentPage === 1 && "pointer-events-none opacity-50"
+                      )}
+                    />
+                  </PaginationItem>
+                  {getPageNumbers().map((pageNumber, index) => (
+                    <PaginationItem key={index}>
+                      {pageNumber === "ellipsis" ? (
+                        <PaginationEllipsis />
+                      ) : (
+                        <PaginationLink
+                          onClick={() => setCurrentPage(pageNumber)}
+                          isActive={currentPage === pageNumber}
+                          className="cursor-pointer"
+                        >
+                          {pageNumber}
+                        </PaginationLink>
+                      )}
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                      }
+                      className={cn(
+                        "cursor-pointer",
+                        currentPage === totalPages &&
+                          "pointer-events-none opacity-50"
+                      )}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </CardContent>
 
-
-      {/* Category Filter Modal */}
-      {filterModalOpen && (
-        <Dialog open={filterModalOpen} onOpenChange={setFilterModalOpen}>
-          <DialogContent className="sm:max-w-[400px]">
-            <DialogHeader>
-              <DialogTitle>Filter {currentFilterColumn}</DialogTitle>
-              <p className="text-sm text-gray-600">
-                Make changes to your filter here. Click save when you're done.
-              </p>
-            </DialogHeader>
-            <Input
-              type="text"
-              placeholder="Search categories..."
-              value={categorySearchTerm}
-              onChange={(e) => setCategorySearchTerm(e.target.value)}
-              className="mb-4"
-            />
-            <div className="max-h-60 overflow-y-auto space-y-[1px] mb-4">
-              {getFilteredUniqueValues(currentFilterColumn).map((value) => (
-                <label
-                  key={value}
-                  className="flex items-center gap-1 p-2 hover:bg-gray-50 rounded-md cursor-pointer"
+        {/* Category Filter Modal */}
+        {filterModalOpen && (
+          <Dialog open={filterModalOpen} onOpenChange={setFilterModalOpen}>
+            <DialogContent className="sm:max-w-[400px]">
+              <DialogHeader>
+                <DialogTitle>Filter {currentFilterColumn}</DialogTitle>
+                <p className="text-sm text-gray-600">
+                  Make changes to your filter here. Click save when you're done.
+                </p>
+              </DialogHeader>
+              <Input
+                type="text"
+                placeholder="Search categories..."
+                value={categorySearchTerm}
+                onChange={(e) => setCategorySearchTerm(e.target.value)}
+                className="mb-4"
+              />
+              <div className="max-h-60 overflow-y-auto space-y-[1px] mb-4">
+                {getFilteredUniqueValues(currentFilterColumn).map((value) => (
+                  <label
+                    key={value}
+                    className="flex items-center gap-1 p-2 hover:bg-gray-50 rounded-md cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={selectedCategories.includes(value)}
+                      onCheckedChange={() => handleCategorySelect(value)}
+                    />
+                    <span className="text-gray-700">{value}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={handleSelectAll}>
+                  Select All
+                </Button>
+                <Button
+                  variant="default"
+                  className="bg-black hover:bg-gray-800"
+                  onClick={handleColumnFilter}
                 >
-                  <Checkbox
-                    checked={selectedCategories.includes(value)}
-                    onCheckedChange={() => handleCategorySelect(value)}
-                  />
-                  <span className="text-gray-700">{value}</span>
-                </label>
-              ))}
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={handleSelectAll}>
-                Select All
-              </Button>
-              <Button
-                variant="default"
-                className="bg-black hover:bg-gray-800"
-                onClick={handleColumnFilter}
-              >
-                Save changes
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+                  Save changes
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
 
-      {/* Numeric Filter Modal */}
-      {numericFilterModalOpen && (
-        <Dialog
-          open={numericFilterModalOpen}
-          onOpenChange={setNumericFilterModalOpen}
-        >
-          <DialogContent className="sm:max-w-[400px]">
-            <DialogHeader>
-              <DialogTitle>Filter {currentNumericColumn}</DialogTitle>
-              <p className="text-sm text-gray-600">
-                Set the minimum and maximum values for the filter.
-              </p>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Minimum Value</Label>
-                <Input
-                  type="number"
-                  value={minValue}
-                  onChange={(e) => setMinValue(e.target.value)}
-                />
+        {/* Numeric Filter Modal */}
+        {numericFilterModalOpen && (
+          <Dialog
+            open={numericFilterModalOpen}
+            onOpenChange={setNumericFilterModalOpen}
+          >
+            <DialogContent className="sm:max-w-[400px]">
+              <DialogHeader>
+                <DialogTitle>Filter {currentNumericColumn}</DialogTitle>
+                <p className="text-sm text-gray-600">
+                  Set the minimum and maximum values for the filter.
+                </p>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Minimum Value</Label>
+                  <Input
+                    type="number"
+                    value={minValue}
+                    onChange={(e) => setMinValue(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Maximum Value</Label>
+                  <Input
+                    type="number"
+                    value={maxValue}
+                    onChange={(e) => setMaxValue(e.target.value)}
+                  />
+                </div>
               </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setNumericFilterModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  className="bg-black hover:bg-gray-800"
+                  onClick={() => {
+                    handleNumericFilter(
+                      currentNumericColumn,
+                      minValue,
+                      maxValue
+                    );
+                    setNumericFilterModalOpen(false);
+                  }}
+                >
+                  Save changes
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Bulk Category Update Modal */}
+        <Dialog
+          open={bulkCategoryModalOpen}
+          onOpenChange={setBulkCategoryModalOpen}
+        >
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Update Multiple Categories</DialogTitle>
+              <DialogDescription>
+                Select a new category for the {globalSelectedRows.size} selected
+                transactions
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <Select
+                value={selectedBulkCategory}
+                onValueChange={setSelectedBulkCategory}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select new category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categoryOptions.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <div className="space-y-2">
-                <Label>Maximum Value</Label>
+                <Label>
+                  What common keywords in these transactions made you choose "
+                  {selectedBulkCategory}" as their category?
+                </Label>
                 <Input
-                  type="number"
-                  value={maxValue}
-                  onChange={(e) => setMaxValue(e.target.value)}
+                  value={bulkReasoning}
+                  onChange={(e) => setBulkReasoning(e.target.value)}
+                  placeholder="Enter keyword..."
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-2">
+
+            <DialogFooter>
               <Button
                 variant="ghost"
-                onClick={() => setNumericFilterModalOpen(false)}
+                onClick={() => setBulkCategoryModalOpen(false)}
               >
                 Cancel
               </Button>
               <Button
                 variant="default"
-                className="bg-black hover:bg-gray-800"
                 onClick={() => {
-                  handleNumericFilter(currentNumericColumn, minValue, maxValue);
-                  setNumericFilterModalOpen(false);
+                  setBulkCategoryModalOpen(false);
+                  setConfirmationModalOpen(true);
                 }}
+                disabled={!selectedBulkCategory || !bulkReasoning}
               >
-                Save changes
+                Update Categories
               </Button>
-            </div>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
-      )}
 
-      {/* Bulk Category Update Modal */}
-      <Dialog open={bulkCategoryModalOpen} onOpenChange={setBulkCategoryModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Update Multiple Categories</DialogTitle>
-            <DialogDescription>
-              Select a new category for the {globalSelectedRows.size} selected transactions
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <Select
-              value={selectedBulkCategory}
-              onValueChange={setSelectedBulkCategory}
+        {/* Confirmation Modal */}
+        <Dialog
+          open={confirmationModalOpen}
+          onOpenChange={setConfirmationModalOpen}
+        >
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Confirm Category Update</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to update the category to "
+                {selectedBulkCategory}" for {globalSelectedRows.size}{" "}
+                transactions?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => setConfirmationModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button variant="default" onClick={handleBulkCategoryChange}>
+                Confirm Update
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Classification modal */}
+        <Dialog
+          open={showClassificationModal}
+          onOpenChange={() => setShowClassificationModal(false)}
+        >
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Classify New Category</DialogTitle>
+              <DialogDescription>
+                Please classify "{newCategoryToClassify}" into one of the
+                following types
+              </DialogDescription>
+            </DialogHeader>
+
+            <RadioGroup
+              value={selectedType}
+              onValueChange={setSelectedType}
+              className="space-y-3"
             >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select new category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categoryOptions.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="income" id="income" />
+                <Label htmlFor="income">Income</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem
+                  value="important_expenses"
+                  id="important_expenses"
+                />
+                <Label htmlFor="important_expenses">Important Expenses</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="other_expenses" id="other_expenses" />
+                <Label htmlFor="other_expenses">Other Expenses</Label>
+              </div>
+            </RadioGroup>
 
-            <div className="space-y-2">
-              <Label>
-                What common keywords in these transactions made you choose "{selectedBulkCategory}" as their category?
-              </Label>
-              <Input
-                value={bulkReasoning}
-                onChange={(e) => setBulkReasoning(e.target.value)}
-                placeholder="Enter keyword..."
-              />
-            </div>
-          </div>
+            <DialogFooter>
+              <Button
+                variant="default"
+                onClick={handleClassificationSubmit}
+                disabled={!selectedType}
+              >
+                Save Classification
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setBulkCategoryModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => {
-                setBulkCategoryModalOpen(false);
-                setConfirmationModalOpen(true);
-              }}
-              disabled={!selectedBulkCategory || !bulkReasoning}
-            >
-              Update Categories
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {/* Reasoning Modal for Single Category Change */}
+        <Dialog open={reasoningModalOpen} onOpenChange={setReasoningModalOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle className="mb-2">
+                Category Change Reasoning
+              </DialogTitle>
+              <DialogDescription>
+                Transaction Details:
+                {currentTransaction && (
+                  <div className="mt-2 p-3 bg-muted rounded-md">
+                    <p>
+                      <strong>Description:</strong>{" "}
+                      {currentTransaction.Description}
+                    </p>
+                    <p>
+                      <strong>Category Change:</strong>{" "}
+                      {pendingCategoryChange?.oldCategory} →{" "}
+                      {pendingCategoryChange?.newCategory}
+                    </p>
+                  </div>
+                )}
+              </DialogDescription>
+            </DialogHeader>
 
-      {/* Confirmation Modal */}
-      <Dialog open={confirmationModalOpen} onOpenChange={setConfirmationModalOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Confirm Category Update</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to update the category to "{selectedBulkCategory}" for {globalSelectedRows.size} transactions?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setConfirmationModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              onClick={handleBulkCategoryChange}
-            >
-              Confirm Update
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="show-keywords"
+                  checked={showKeywordInput}
+                  onCheckedChange={setShowKeywordInput}
+                />
+                <Label htmlFor="show-keywords">
+                  Add keywords for category change
+                </Label>
+              </div>
 
-      {/* Classification modal */}
-      <Dialog open={showClassificationModal} onOpenChange={() => setShowClassificationModal(false)}>
-      <DialogContent className="sm:max-w-[400px]">
-        <DialogHeader>
-          <DialogTitle>Classify New Category</DialogTitle>
-          <DialogDescription>
-            Please classify "{newCategoryToClassify}" into one of the following types
-          </DialogDescription>
-        </DialogHeader>
-        
-        <RadioGroup value={selectedType} onValueChange={setSelectedType} className="space-y-3">
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="income" id="income" />
-            <Label htmlFor="income">Income</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="important_expenses" id="important_expenses" />
-            <Label htmlFor="important_expenses">Important Expenses</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="other_expenses" id="other_expenses" />
-            <Label htmlFor="other_expenses">Other Expenses</Label>
-          </div>
-        </RadioGroup>
-
-        <DialogFooter>
-          <Button
-            variant="default"
-            onClick={handleClassificationSubmit}
-            disabled={!selectedType}
-          >
-            Save Classification
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-
-    {/* Reasoning Modal for Single Category Change */}
-    <Dialog open={reasoningModalOpen} onOpenChange={setReasoningModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Category Change Reasoning</DialogTitle>
-            <DialogDescription>
-              Transaction Details:
-              {currentTransaction && (
-                <div className="mt-2 p-3 bg-muted rounded-md">
-                  <p><strong>Description:</strong> {currentTransaction.Description}</p>
-                  <p><strong>Amount:</strong> {currentTransaction.Amount}</p>
-                  <p><strong>Category Change:</strong> {pendingCategoryChange?.oldCategory} → {pendingCategoryChange?.newCategory}</p>
+              {showKeywordInput && (
+                <div className="space-y-2">
+                  <Label>
+                    What keywords from the description made you change the
+                    category from "{pendingCategoryChange?.oldCategory}" to "
+                    {pendingCategoryChange?.newCategory}"?
+                  </Label>
+                  <Input
+                    value={reasoning}
+                    onChange={(e) => setReasoning(e.target.value)}
+                    placeholder="Enter Keyword..."
+                  />
                 </div>
               )}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <Label>
-              What keywords from the description made you change the category from "{pendingCategoryChange?.oldCategory}" to "{pendingCategoryChange?.newCategory}"?
-            </Label>
-            <Input
-              value={reasoning}
-              onChange={(e) => setReasoning(e.target.value)}
-              placeholder="Enter Keyword..."
-            />
-          </div>
+            </div>
 
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setReasoningModalOpen(false);
-                setPendingCategoryChange(null);
-                setReasoning("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              onClick={confirmCategoryChange}
-              disabled={!reasoning}
-            >
-              Confirm Change
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    
-      {/* Loading Overlay */}
-      {isLoading && (
-        <div className="fixed inset-0 bg-white bg-opacity-80 backdrop-blur-sm flex items-center justify-center">
-          <Loader2 className="animate-spin h-8 w-8 text-[#3498db]" />
-        </div>
-      )}
-    </Card>
-    
-        {/* Fixed bottom actions bar */}
-        {(hasChanges || globalSelectedRows.size > 0) && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg flex justify-end gap-2 z-50">
-            {globalSelectedRows.size > 0 && (
+            <DialogFooter>
               <Button
-                variant="secondary"
-                onClick={() => setBulkCategoryModalOpen(true)}
+                variant="ghost"
+                onClick={() => {
+                  setReasoningModalOpen(false);
+                  setPendingCategoryChange(null);
+                  setReasoning("");
+                  setShowKeywordInput(false); // Reset checkbox state
+                }}
               >
-                Update Selected ({globalSelectedRows.size})
+                Cancel
               </Button>
-            )}
-            {hasChanges && (
               <Button
-                onClick={handleSaveChanges}
-                disabled={isLoading}
-                className="flex items-center gap-2"
+                variant="default"
+                onClick={confirmCategoryChange}
+                disabled={showKeywordInput && !reasoning} // Only disable if checkbox is checked and no reasoning provided
               >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                Save Changes
+                Confirm Change
               </Button>
-            )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Loading Overlay */}
+        {isLoading && (
+          <div className="fixed inset-0 bg-white bg-opacity-80 backdrop-blur-sm flex items-center justify-center">
+            <Loader2 className="animate-spin h-8 w-8 text-[#3498db]" />
           </div>
         )}
+      </Card>
+
+      {/* Fixed bottom actions bar */}
+      {(hasChanges || globalSelectedRows.size > 0) && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg flex justify-end gap-2 z-50">
+          {globalSelectedRows.size > 0 && (
+            <Button
+              variant="secondary"
+              onClick={() => setBulkCategoryModalOpen(true)}
+            >
+              Update Selected ({globalSelectedRows.size})
+            </Button>
+          )}
+          {hasChanges && (
+            <Button
+              onClick={handleSaveChanges}
+              disabled={isLoading}
+              className="flex items-center gap-2"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              Save Changes
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
