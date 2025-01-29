@@ -276,11 +276,6 @@ const handleFileDetailChange = (index, field, value) => {
         description: (
           <div className="mt-2 w-full flex flex-col gap-2">
             <div className="flex items-center gap-4">
-//               <CircularProgress
-//                 value={progress}
-//                 showValue={false}
-//                 className="w-full"
-//               />
 
               <CircularProgress value={progress} className="w-full" />
               {/* <span className="text-sm font-medium">{progress}%</span> */}
