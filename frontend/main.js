@@ -42,9 +42,24 @@ const isDev = process.env.NODE_ENV === "development";
 autoUpdater.autoDownload = false;
 autoUpdater.disableWebInstaller = true;
 autoUpdater.allowPrerelease = true;
+
+// Platform specific configurations
 if (process.platform === 'darwin') {
   autoUpdater.allowDowngrade = true;
+} else if (process.platform === 'win32') {
+  app.setAppUserModelId('com.electron.electronapp');
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.allowDowngrade = false;
 }
+
+// Log update configuration
+log.info('Update Configuration:', {
+  platform: process.platform,
+  appVersion: app.getVersion(),
+  autoDownload: autoUpdater.autoDownload,
+  allowPrerelease: autoUpdater.allowPrerelease,
+  feedURL: autoUpdater.getFeedURL()
+});
 log.info("process.env.NODE_ENV", process.env.NODE_ENV);
 
 // Allow updates without code signing in development
@@ -411,8 +426,23 @@ async function createWindow() {
 
   ipcMain.handle('install-update', () => {
     log.info('Update installation requested. Quitting app and installing update...');
-    autoUpdater.quitAndInstall(false, true);
+    if (process.platform === 'win32') {
+      // For Windows, we want to restart the app after update
+      autoUpdater.quitAndInstall(true, true);
+    } else {
+      // For macOS, let the user choose when to restart
+      autoUpdater.quitAndInstall(false, true);
+    }
   });
+
+  // Add platform-specific update settings
+  if (process.platform === 'win32') {
+    ipcMain.handle('get-update-location', () => {
+      const updatePath = path.join(app.getPath('temp'), 'cyphersol-updates');
+      log.info('Windows update location:', updatePath);
+      return updatePath;
+    });
+  }
 
   // Handle file saving to temp directory
   ipcMain.handle("save-file-to-temp", async (event, fileBuffer) => {
