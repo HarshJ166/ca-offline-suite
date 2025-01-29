@@ -35,11 +35,78 @@ log.transports.file.level = "info"; // Only log info level and above in the log 
 autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = 'info';
 
-log.info("Working Directory:", process.cwd());
-
 // Instead of electron-is-dev, we'll use this simple check
 const isDev = process.env.NODE_ENV === "development";
+
+// Configure autoUpdater for testing without code signing
+autoUpdater.autoDownload = false;
+autoUpdater.disableWebInstaller = true;
+autoUpdater.allowPrerelease = true;
+if (process.platform === 'darwin') {
+  autoUpdater.allowDowngrade = true;
+}
 log.info("process.env.NODE_ENV", process.env.NODE_ENV);
+
+// Allow updates without code signing in development
+if (isDev) {
+  autoUpdater.forceDevUpdateConfig = true;
+}
+
+autoUpdater.autoDownload = false;
+autoUpdater.allowDowngrade = false;
+autoUpdater.allowPrerelease = false;
+
+// Configure autoUpdater for GitHub repository
+autoUpdater.setFeedURL({
+  provider: 'github',
+  owner: 'Shama-Cyphersol',
+  repo: 'ca-offline-suite'
+});
+
+// Auto-update event handlers with detailed logging
+autoUpdater.on('checking-for-update', () => {
+  log.info('Checking for updates...');
+  win?.webContents.send('update-status', 'checking');
+});
+
+autoUpdater.on('update-available', (info) => {
+  log.info('Update available. Current version:', app.getVersion());
+  log.info('New version:', info.version);
+  log.info('Release date:', info.releaseDate);
+  win?.webContents.send('update-status', 'available', info);
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  log.info('Update not available. Current version:', app.getVersion());
+  log.info('Latest version:', info?.version);
+  win?.webContents.send('update-status', 'not-available');
+});
+
+autoUpdater.on('download-progress', (progress) => {
+  const logMessage = `
+    Download progress:
+    • Speed: ${progress.bytesPerSecond} bytes/s
+    • Downloaded: ${progress.transferred} bytes
+    • Total: ${progress.total} bytes
+    • Percent: ${progress.percent}%
+  `;
+  log.info(logMessage);
+  win?.webContents.send('update-progress', progress);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  log.info('Update downloaded. Version:', info.version);
+  log.info('Release notes:', info.releaseNotes);
+  win?.webContents.send('update-downloaded', info);
+});
+
+autoUpdater.on('error', (err) => {
+  log.error('Auto-updater error:', err.message);
+  log.error('Error details:', err);
+  win?.webContents.send('update-error', err.message);
+});
+
+log.info("Working Directory:", process.cwd());
 
 const BASE_DIR = isDev ? __dirname : app.getPath("module");
 log.info("current directory", app.getAppPath());
@@ -291,6 +358,61 @@ async function createWindow() {
   registerReportHandlers(TMP_DIR);
   registerAuthHandlers();
   registerOpportunityToEarnIpc();
+
+  // Auto-update IPC handlers with detailed logging
+  ipcMain.handle('check-for-updates', async () => {
+    log.info('Manual update check requested');
+    if (isDev) {
+      const msg = 'Skip update check in dev mode';
+      log.info(msg);
+      return msg;
+    }
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      log.info('Check for updates result:', result);
+      return result;
+    } catch (err) {
+      log.error('Check for updates failed:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('download-update', async () => {
+    log.info('Update download requested');
+    try {
+      // Backup database before update
+      const dbPath = path.join(app.getPath('userData'), 'database.sqlite');
+      const backupDir = path.join(app.getPath('userData'), 'backups');
+      
+      log.info('Creating backup directory:', backupDir);
+      if (!fs.existsSync(backupDir)) {
+        fs.mkdirSync(backupDir, { recursive: true });
+      }
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupPath = path.join(backupDir, `db-backup-${timestamp}.sqlite`);
+      
+      log.info('Creating database backup:', backupPath);
+      if (fs.existsSync(dbPath)) {
+        fs.copyFileSync(dbPath, backupPath);
+        log.info('Database backup created successfully');
+      } else {
+        log.info('No database found to backup');
+      }
+
+      const result = await autoUpdater.downloadUpdate();
+      log.info('Update download completed');
+      return result;
+    } catch (err) {
+      log.error('Update download failed:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('install-update', () => {
+    log.info('Update installation requested. Quitting app and installing update...');
+    autoUpdater.quitAndInstall(false, true);
+  });
 
   // Handle file saving to temp directory
   ipcMain.handle("save-file-to-temp", async (event, fileBuffer) => {
