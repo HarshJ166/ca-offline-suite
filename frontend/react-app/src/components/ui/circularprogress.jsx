@@ -1,4 +1,4 @@
-import  React,{forwardRef,useEffect,useState} from "react";
+import React, { forwardRef, useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -80,7 +80,7 @@ const CircularProgress = forwardRef(
             />
           ) : (
             <span className="text-xs font-medium text-blue-500">
-              {displayValue}%
+              {/* {displayValue}% */}
             </span>
           )}
         </div>

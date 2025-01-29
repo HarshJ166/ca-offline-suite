@@ -1,5 +1,6 @@
 import React from "react";
 import { Card } from "../ui/card";
+import { Checkbox } from "../ui/checkbox";
 
 const ToggleStrip = ({ columns, selectedColumns, setSelectedColumns }) => {
   const toggleColumn = (column) => {
@@ -19,38 +20,38 @@ const ToggleStrip = ({ columns, selectedColumns, setSelectedColumns }) => {
   const isAllSelected = selectedColumns.length === columns.length;
 
   return (
-    <Card>
-      <div className="relative flex items-center gap-2 p-3 pt-2 rounded-md ">
-        <div className="absolute top-0 left-0 h-full w-full rounded-md "></div>
-        <div className="flex flex-wrap gap-2 z-10 justify-center">
-          <button
-            onClick={toggleSelectAll}
-            className="text-sm font-medium text-slate-500 dark:text-slate-500 whitespace-nowrap"
-          >
+    <Card className="p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <div
+          className="flex items-center gap-2 cursor-pointer"
+          onClick={toggleSelectAll}
+        >
+          <Checkbox checked={isAllSelected} onCheckedChange={toggleSelectAll} />
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
             {isAllSelected ? "Deselect All" : "Select All"}
-          </button>
-          {columns.map((column) => (
-            <div
-              key={column}
-              className={`relative px-4 py-2 text-xs whitespace-nowrap font-medium cursor-pointer transition-transform duration-300 ${
+          </span>
+        </div>
+        {columns.map((column) => (
+          <div
+            key={column}
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => toggleColumn(column)}
+          >
+            <Checkbox
+              checked={selectedColumns.includes(column)}
+              onCheckedChange={() => toggleColumn(column)}
+            />
+            <span
+              className={`text-sm font-medium transition-colors duration-300 ${
                 selectedColumns.includes(column)
                   ? "text-slate-900 dark:text-slate-300 font-semibold"
-                  : "text-slate-500 dark:text-slate-500 "
+                  : "text-slate-500 dark:text-slate-500"
               }`}
-              onClick={() => toggleColumn(column)}
             >
               {column}
-              {selectedColumns.includes(column) && (
-                <div
-                  className="absolute bottom-0 left-0 w-[90%] h-1 bg-slate-900 dark:bg-slate-300 rounded-full transition-all duration-300"
-                  style={{
-                    transform: "scaleX(1)",
-                  }}
-                ></div>
-              )}
-            </div>
-          ))}
-        </div>
+            </span>
+          </div>
+        ))}
       </div>
     </Card>
   );
