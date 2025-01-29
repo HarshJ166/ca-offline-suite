@@ -29,9 +29,11 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import logo from "../data/assets/logo.png";
+import { useAuth } from "../contexts/AuthContext";
 // import logoDark from "../data/assets/cyphersol-logo-dark.png";
 
 const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
+  const { logout, setError } = useAuth();
   const navigate = useNavigate();
   const { isCollapsed } = useSidebar();
   const [user] = React.useState({
@@ -51,6 +53,19 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
   //   }));
   // };
 
+  const handleLogout = async () => {
+    try {
+      const loggedOut = await logout();
+      if (loggedOut) {
+        console.log("User logged out successfully");
+      } else {
+        console.error("Failed to log out on the frontend");
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      setError(error.message); // Display the error to the user via context
+    }
+  };
 
   const MenuItem = ({ item, level = 0 }) => {
     const hasSubmenu = item.items?.length > 0;
@@ -58,13 +73,11 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
     return (
       <div className="w-full">
         <button
-          className={`w-full flex items-center justify-start p-2 rounded-md transition-all duration-200 ease-in-out ${
-            level > 0 ? "ml-4" : ""
-          } ${
-            activeTab === item.title && !hasSubmenu
+          className={`w-full flex items-center justify-start p-2 rounded-md transition-all duration-200 ease-in-out ${level > 0 ? "ml-4" : ""
+            } ${activeTab === item.title && !hasSubmenu
               ? "bg-gray-300 text-black font-semibold dark:bg-slate-300"
               : "text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
-          } ${isCollapsed ? "justify-center" : ""}`}
+            } ${isCollapsed ? "justify-center" : ""}`}
           onClick={() => !hasSubmenu && setActiveTab(item.title)} // Only set active tab if no submenu
         >
           <div className="flex items-center gap-3">
@@ -146,7 +159,7 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>
         </DropdownMenuItem>
@@ -162,9 +175,8 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
             // handle dark logo too
             src={logo}
             alt="Logo"
-            className={`h-12 cursor-pointer transition-all duration-300 ${
-              isCollapsed ? "w-8" : "w-auto"
-            }`}
+            className={`h-12 cursor-pointer transition-all duration-300 ${isCollapsed ? "w-8" : "w-auto"
+              }`}
             onClick={() => navigate("/")}
           />
         </div>
