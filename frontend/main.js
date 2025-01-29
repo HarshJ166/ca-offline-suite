@@ -29,6 +29,10 @@ const portscanner = require("portscanner");  // Import portscanner
 log.transports.console.level = "debug"; // Set the log level
 log.transports.file.level = "info"; // Only log info level and above in the log file
 
+// Configure autoUpdater logging
+autoUpdater.logger = log;
+autoUpdater.logger.transports.file.level = 'info';
+
 log.info("Working Directory:", process.cwd());
 
 // Instead of electron-is-dev, we'll use this simple check
@@ -216,7 +220,7 @@ async function createWindow() {
   });
 
   if (isDev) {
-    win.loadURL("http://localhost:3000");
+    mainWindow.loadURL("http://localhost:3000");
   } else {
     // Use absolute path resolution for production
     const prodPath = path.resolve(
@@ -371,11 +375,14 @@ app.whenReady().then(async () => {
     createProtocol();
     createWindow();
 
-    // try {
-    //   createUser();  // Handle user creation after SessionManager is ready
-    // } catch (dbError) {
-    //   console.error("User creation error:", dbError);
-    // }
+    // Initial update check after 1 minute
+    if (!isDev) {
+      setTimeout(() => {
+        autoUpdater.checkForUpdates().catch(err => {
+          log.error('Error in initial update check:', err);
+        });
+      }, 60 * 1000);
+    }
   } catch (error) {
     log.error("Failed to initialize App:", error);
     // Optionally handle the error, e.g., show an error dialog or quit the app
