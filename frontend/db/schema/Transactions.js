@@ -13,6 +13,7 @@ const transactions = sqliteTable("transactions", {
   type: text("type").notNull(),
   balance: real("balance").notNull(),
   // add default value in the entity
+  bank: text("bank").notNull().default("unknown"),
   entity: text("entity").notNull().default("unknown"),
 });
 

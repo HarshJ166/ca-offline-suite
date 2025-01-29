@@ -222,6 +222,7 @@ const AccountNumNameManager = ({ caseId }) => {
 
   return (
     <div className="p-8 space-y-8">
+      
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -265,7 +266,7 @@ const AccountNumNameManager = ({ caseId }) => {
                   </TableCell>
                   <TableCell>
                     <div
-                      className="truncate max-w-full"
+                      className="truncate max-w-96"
                       title={statement.filePath}
                     >
                       {statement.filePath}
@@ -277,7 +278,7 @@ const AccountNumNameManager = ({ caseId }) => {
                       onChange={(e) =>
                         handleNameChange(statement.id, e.target.value)
                       }
-                      className="max-w-[200px]"
+                      className="max-w-52"
                     />
                   </TableCell>
                   <TableCell>
@@ -286,7 +287,7 @@ const AccountNumNameManager = ({ caseId }) => {
                       onChange={(e) =>
                         handleAccNumberChange(statement.id, e.target.value)
                       }
-                      className="max-w-[200px]"
+                      className="max-w-52"
                     />
                   </TableCell>
                   <TableCell>
