@@ -168,9 +168,9 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
   };
 
   // Pagination calculations
-  const totalPages = showAllRows ? 1 : Math.ceil(filteredData.length / rowsPerPage);
-  const startIndex = showAllRows ? 0 : (currentPage - 1) * rowsPerPage;
-  const endIndex = showAllRows ? filteredData.length : (startIndex + rowsPerPage);
+  const totalPages = showAllRows || source === "summary" ? 1 : Math.ceil(filteredData.length / rowsPerPage);
+  const startIndex = showAllRows || source === "summary" ? 0 : (currentPage - 1) * rowsPerPage;
+  const endIndex = showAllRows || source === "summary" ? filteredData.length : startIndex + rowsPerPage;
   const currentData = filteredData.slice(startIndex, endIndex);
 
   // Generate page numbers for pagination
@@ -403,28 +403,30 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
           value={searchTerm}
           onChange={(e) => handleSearch(e.target.value)}
         />
-        <select
-          className="p-2 border rounded-md text-sm dark:bg-slate-800 dark:border-slate-700 w-[120px]"
-          value={showAllRows ? 'all' : rowsPerPage}
-          onChange={(e) => {
-            const value = e.target.value;
-            if (value === 'all') {
-              setShowAllRows(true);
-              setCurrentPage(1);
-            } else {
-              setShowAllRows(false);
-              setRowsPerPage(Number(value));
-              setCurrentPage(1);
-            }
-          }}
-        >
-          <option value="5">5 rows</option>
-          <option value="10">10 rows</option>
-          <option value="20">20 rows</option>
-          <option value="50">50 rows</option>
-          <option value="100">100 rows</option>
-          <option value="all">Show all</option>
-        </select>
+        {!source === "summary" && (
+                <select
+                  className="p-2 border rounded-md text-sm dark:bg-slate-800 dark:border-slate-700 w-[120px]"
+                  value={showAllRows ? "all" : rowsPerPage}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === "all") {
+                      setShowAllRows(true);
+                      setCurrentPage(1);
+                    } else {
+                      setShowAllRows(false);
+                      setRowsPerPage(Number(value));
+                      setCurrentPage(1);
+                    }
+                  }}
+                >
+                  <option value="5">5 rows</option>
+                  <option value="10">10 rows</option>
+                  <option value="20">20 rows</option>
+                  <option value="50">50 rows</option>
+                  <option value="100">100 rows</option>
+                  <option value="all">Show all</option>
+                </select>
+              )}
         <Button
           className="dark:bg-slate-300 dark:hover:bg-slate-200"
           variant="default"
@@ -442,7 +444,9 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
             <TableHeader>
               <TableRow>
                 {columns.map((column) => (
-                  <TableHead key={column}>
+                  <TableHead key={column}
+                  className={source === "summary" ? "bg-gray-900 dark:bg-slate-800 text-white" : ""}
+                  >
                     <div className="flex items-center gap-2">
                       {column.charAt(0).toUpperCase() +
                         column.slice(1).toLowerCase()}
@@ -480,7 +484,10 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
                 </TableRow>
               ) : (
                 currentData.map((row, index) => (
-                  <TableRow key={index}>
+                  <TableRow 
+                    key={index}
+                    className={source === "summary" ? "even:bg-slate-200 even:dark:bg-slate-800 hover:bg-transparent even:hover:bg-slate-200" : ""}
+                  >
                     {columns.map((column) => (
                       <TableCell
                         key={column}
@@ -499,16 +506,18 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
                 ))
               )}
             </TableBody>
-            <TableFooter>
-              <TableRow>
-                <TableCell>Total</TableCell>
-                {columns.slice(1).map((column) => (
-                  <TableCell key={column}>
-                    {numericColumns.includes(column) ? totals[column] : ""}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableFooter>
+            {!source === "summary" && (
+              <TableFooter>
+                <TableRow>
+                  <TableCell>Total</TableCell>
+                  {columns.slice(1).map((column) => (
+                    <TableCell key={column}>
+                      {numericColumns.includes(column) ? totals[column] : ""}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableFooter>
+            )}
           </Table>
         </div>
 
