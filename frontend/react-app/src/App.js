@@ -11,6 +11,7 @@ import { SidebarProvider } from "./components/ui/sidebar";
 import { BreadcrumbProvider } from "./contexts/BreadcrumbContext";
 import { PrivateRoute } from "./components/PrivateRoute";
 import Login from "./components/Authentication/Login";
+import UpdateNotification from "./components/UpdateNotification";
 
 function App() {
   const [showIntro, setShowIntro] = useState(true);
@@ -18,6 +19,7 @@ function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="app-theme">
       {showIntro && <ElectronIntro onComplete={() => setShowIntro(false)} />}
+      <UpdateNotification />
       <SidebarProvider>
         <HashRouter>
           <BreadcrumbProvider>

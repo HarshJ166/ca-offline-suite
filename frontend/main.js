@@ -24,10 +24,15 @@ const db = require("./db/db");
 const { spawn, execFile } = require("child_process");
 const log = require("electron-log");
 const portscanner = require("portscanner");  // Import portscanner
+const { autoUpdater } = require("electron-updater");
 
 // Configure electron-log
 log.transports.console.level = "debug"; // Set the log level
 log.transports.file.level = "info"; // Only log info level and above in the log file
+
+// Configure autoUpdater logging
+autoUpdater.logger = log;
+autoUpdater.logger.transports.file.level = 'info';
 
 log.info("Working Directory:", process.cwd());
 
@@ -46,16 +51,15 @@ let pythonProcess = null;
 const BACKEND_PORT = 5000;  // Replace with the port your backend is listening to
 
 // Listen for remaining seconds updates
-sessionManager.on('remainingSecondsUpdated', (seconds) => {
-  console.log(`Remaining seconds: ${seconds}`);
-});
+// sessionManager.on('remainingSecondsUpdated', (seconds) => {
+//   console.log(`Remaining seconds: ${seconds}`);
+// });
 
 // Listen for license expiration
 sessionManager.on('licenseExpired', () => {
   log.info('License expired');
   // Optionally handle the license expiration, e.g., show a dialog or quit the app
   sessionManager.clearUser();
-
 
   win.webContents.send('navigateToLogin');
   // win?.destroy();
@@ -236,24 +240,24 @@ async function createWindow() {
   win.on('close', (event) => {
     // event.preventDefault();
     log.info('Close event triggered');
-    win.hide();
+    // win.hide();
     // if (process.platform === 'darwin') {
-    //   // Show the confirmation dialog when the close button is clicked
-    //   const choice = dialog.showMessageBoxSync(win, {
-    //     type: 'warning',
-    //     buttons: ['Yes', 'Cancel'],
-    //     defaultId: 1,
-    //     title: 'Confirm Exit',
-    //     message: 'Closing the app will log out your session. Do you want to proceed?',
-    //   });
+      // Show the confirmation dialog when the close button is clicked
+      const choice = dialog.showMessageBoxSync(win, {
+        type: 'warning',
+        buttons: ['Yes', 'Cancel'],
+        defaultId: 1,
+        title: 'Confirm Exit',
+        message: 'Closing the app will log out your session. Do you want to proceed?',
+      });
 
-    //   if (choice === 0) {
-    //     log.info('User confirmed app close. Logging out...');
-    //     // Add your session logout logic here
-    //   } else {
-    //     log.info('User canceled app close.');
-    //     event.preventDefault(); // Prevent app from closing, keeping it in the background
-    //   }
+      if (choice === 0) {
+        log.info('User confirmed app close. Logging out...');
+        // Add your session logout logic here
+      } else {
+        log.info('User canceled app close.');
+        event.preventDefault(); // Prevent app from closing, keeping it in the background
+      }
     // }
   });
   // setTimeout(() => {
@@ -371,11 +375,14 @@ app.whenReady().then(async () => {
     createProtocol();
     createWindow();
 
-    // try {
-    //   createUser();  // Handle user creation after SessionManager is ready
-    // } catch (dbError) {
-    //   console.error("User creation error:", dbError);
-    // }
+    // Initial update check after 1 minute
+    if (!isDev) {
+      setTimeout(() => {
+        autoUpdater.checkForUpdates().catch(err => {
+          log.error('Error in initial update check:', err);
+        });
+      }, 60 * 1000);
+    }
   } catch (error) {
     log.error("Failed to initialize App:", error);
     // Optionally handle the error, e.g., show an error dialog or quit the app

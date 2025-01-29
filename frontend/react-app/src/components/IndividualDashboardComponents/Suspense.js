@@ -3,25 +3,40 @@ import HorizontalBarChart from "../charts/HorizontalBarChart";
 import SuspensePieChart from "../charts/SuspensePieChart";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import DataTable from "./TableData";
+import { useParams } from "react-router-dom";
 
-const Suspense = ({ caseId }) => {
+const Suspense = () => {
   const [creditData, setCreditData] = useState([]);
   const [debitData, setDebitData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [totalCreditDebitTransactionCount, setTotalCreditDebitTransactionCount] = useState(0);
+  const [
+    totalCreditDebitTransactionCount,
+    setTotalCreditDebitTransactionCount,
+  ] = useState(0);
+  const { caseId, individualId } = useParams();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Fetch both credit and debit data
         const creditTransactions =
-          await window.electron.getTransactionsBySuspenseCredit(caseId);
+          await window.electron.getTransactionsBySuspenseCredit(
+            caseId,
+            parseInt(individualId)
+          );
         const debitTransactions =
-          await window.electron.getTransactionsBySuspenseDebit(caseId);
+          await window.electron.getTransactionsBySuspenseDebit(
+            caseId,
+            parseInt(individualId)
+          );
 
-        const totalCreditDebitTransactionCount = await window.electron.getTransactionsCount(caseId);
+        const totalCreditDebitTransactionCount =
+          await window.electron.getTransactionsCount(caseId);
         setTotalCreditDebitTransactionCount(totalCreditDebitTransactionCount);
-        console.log("totalCreditDebitTransactionCount", totalCreditDebitTransactionCount);
+        console.log(
+          "totalCreditDebitTransactionCount",
+          totalCreditDebitTransactionCount
+        );
 
         // Transform credit data
         const transformedCreditData = creditTransactions.map((item) => ({
@@ -84,71 +99,75 @@ const Suspense = ({ caseId }) => {
         </TabsList>
 
         <TabsContent value="credit">
-            {creditData.length ===0 ? (
-                <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
-                <p className="text-gray-800 text-center mt-3 font-medium text-lg">
-                  No Data Available
-                </p>
-              </div>
-            ):(
+          {creditData.length === 0 ? (
+            <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
+              <p className="text-gray-800 text-center mt-3 font-medium text-lg">
+                No Data Available
+              </p>
+            </div>
+          ) : (
             <div className="grid grid-rows-[60vh_auto] gap-4">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="w-full h-full">
-                <HorizontalBarChart
-                  data={creditData}
-                  title="Suspense Credit Chart"
-                  xAxisKey="Description"
-                  yAxisKey="Credit"
-                  config={chartConfig}
-                />
+              <div className="grid grid-cols-2 gap-6">
+                <div className="w-full h-full">
+                  <HorizontalBarChart
+                    data={creditData}
+                    title="Suspense Credit Chart"
+                    xAxisKey="Description"
+                    yAxisKey="Credit"
+                    config={chartConfig}
+                  />
+                </div>
+                <div className="w-full h-full">
+                  <SuspensePieChart
+                    data={creditData}
+                    title="Suspense Credit Chart"
+                    totalTransactionCount={
+                      totalCreditDebitTransactionCount.credit
+                    }
+                  />
+                </div>
               </div>
-              <div className="w-full h-full">
-                <SuspensePieChart
-                  data={creditData}
-                  title="Suspense Credit Chart"
-                  totalTransactionCount={totalCreditDebitTransactionCount.credit}
-                />
+              <div>
+                <DataTable data={creditData} />
               </div>
             </div>
-            <div>
-              <DataTable data={creditData} />
-            </div>
-          </div>
-            )}
-          
+          )}
         </TabsContent>
 
         <TabsContent value="debit">
-            {debitData.length === 0 ? (
-                <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
-                <p className="text-gray-800 text-center mt-3 font-medium text-lg">
-                  No Data Available
-                </p>
+          {debitData.length === 0 ? (
+            <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
+              <p className="text-gray-800 text-center mt-3 font-medium text-lg">
+                No Data Available
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-rows-[60vh_auto] gap-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="w-full h-full">
+                  <HorizontalBarChart
+                    data={debitData}
+                    title="Suspense Debit Chart"
+                    xAxisKey="Description"
+                    yAxisKey="Debit"
+                    config={chartConfig}
+                  />
+                </div>
+                <div className="w-full h-full">
+                  <SuspensePieChart
+                    data={debitData}
+                    title="Suspense Debit Chart"
+                    totalTransactionCount={
+                      totalCreditDebitTransactionCount.debit
+                    }
+                  />
+                </div>
               </div>
-            ):(<div className="grid grid-rows-[60vh_auto] gap-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="w-full h-full">
-                <HorizontalBarChart
-                  data={debitData}
-                  title="Suspense Debit Chart"
-                  xAxisKey="Description"
-                  yAxisKey="Debit"
-                  config={chartConfig}
-                />
-              </div>
-              <div className="w-full h-full">
-                <SuspensePieChart
-                  data={debitData}
-                  title="Suspense Debit Chart"
-                  totalTransactionCount={totalCreditDebitTransactionCount.debit}
-                />
+              <div>
+                <DataTable data={debitData} />
               </div>
             </div>
-            <div>
-              <DataTable data={debitData} />
-            </div>
-          </div>)}
-          
+          )}
         </TabsContent>
       </Tabs>
     </div>

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import BarLineChart from "../charts/BarLineChart";
 import DataTable from "./TableData";
+import { useParams } from "react-router-dom";
 // import investementData from "../../data/investment.json";
 
-const Investment = ({ caseId }) => {
+const Investment = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { caseId, individualId } = useParams();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -13,7 +15,8 @@ const Investment = ({ caseId }) => {
         setLoading(true);
         // Fetch transactions filtered by "debtor"
         const result = await window.electron.getTransactionsByInvestment(
-          caseId
+          caseId,
+          parseInt(individualId)
         );
         console.log("Investment transactions:", result);
         // Transform data to include only required fields

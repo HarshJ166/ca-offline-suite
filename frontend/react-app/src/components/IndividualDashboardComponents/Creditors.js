@@ -1,18 +1,23 @@
 import React, { useEffect, useState } from "react";
 import BarLineChart from "../charts/BarLineChart";
 import DataTable from "./TableData";
+import { useParams } from "react-router-dom";
 // import CreditorData from "../../data/Creditors.json";
 
-const Creditors = ({ caseId }) => {
+const Creditors = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { caseId, individualId } = useParams();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         // Fetch transactions filtered by "debtor"
-        const result = await window.electron.getTransactionsByCreditor(caseId);
+        const result = await window.electron.getTransactionsByCreditor(
+          caseId,
+          parseInt(individualId)
+        );
         console.log("Debtors' transactions:", result);
         // Transform data to include only required fields
         const transformedData = result.map((item) => ({

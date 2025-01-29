@@ -2,20 +2,28 @@ import React, { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import BarLineChart from "../charts/BarLineChart";
 import DataTable from "./TableData";
+import { useParams } from "react-router-dom";
 
-const Cash = ({ caseId }) => {
+const Cash = () => {
   const [withdrawalData, setWithdrawalData] = useState([]);
   const [depositData, setDepositData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { caseId, individualId } = useParams();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const withdrawalResponse =
-          await window.electron.getTransactionsByCashWithdrawal(caseId);
+          await window.electron.getTransactionsByCashWithdrawal(
+            caseId,
+            parseInt(individualId)
+          );
         const depositResponse =
-          await window.electron.getTransactionsByCashDeposit(caseId);
+          await window.electron.getTransactionsByCashDeposit(
+            caseId,
+            parseInt(individualId)
+          );
 
         // Transform withdrawal data
         const transformedWithdrawalData = withdrawalResponse.map((item) => ({
@@ -99,14 +107,13 @@ const Cash = ({ caseId }) => {
         </TabsList>
 
         <TabsContent value="withdrawal">
-          {withdrawalData.length === 0 ?
-          (
+          {withdrawalData.length === 0 ? (
             <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
-            <p className="text-gray-800 text-center mt-3 font-medium text-lg">
+              <p className="text-gray-800 text-center mt-3 font-medium text-lg">
                 No Data Available
-            </p>
+              </p>
             </div>
-          ): (
+          ) : (
             <>
               <div className="mb-6 w-full h-[60vh]">
                 <BarLineChart
@@ -124,12 +131,11 @@ const Cash = ({ caseId }) => {
         </TabsContent>
 
         <TabsContent value="deposit">
-          {depositData.length === 0 ? 
-          (
+          {depositData.length === 0 ? (
             <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
-            <p className="text-gray-800 text-center mt-3 font-medium text-lg">
+              <p className="text-gray-800 text-center mt-3 font-medium text-lg">
                 No Data Available
-            </p>
+              </p>
             </div>
           ) : (
             <>
@@ -145,7 +151,7 @@ const Cash = ({ caseId }) => {
                 <DataTable data={depositData} />
               </div>
             </>
-          ) }
+          )}
         </TabsContent>
       </Tabs>
     </div>
