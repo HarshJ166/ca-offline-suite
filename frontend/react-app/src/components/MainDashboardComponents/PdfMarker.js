@@ -51,7 +51,7 @@ const initialConfigTest = {
   ],
   
 }
-const PDFColumnMarker = ({ setPdfColMarkerData, pdfPath,initialConfig = initialConfigTest }) => {
+const PDFColumnMarker = ({ setPdfColMarkerData, pdfName,initialConfig = initialConfigTest }) => {
   const [columnLines, setColumnLines] = useState([])
   const [columnLabels, setColumnLabels] = useState([])
   const [pdfFile, setPdfFile] = useState(null)
@@ -99,10 +99,19 @@ const PDFColumnMarker = ({ setPdfColMarkerData, pdfPath,initialConfig = initialC
   }, [initialConfig, pdfFile])
 
   useEffect(() => {
-    if (pdfPath) {
+    console.log('pdfName from og code:', pdfName);
+    if (pdfName) {
       // Convert local file path to File object or Blob
-      console.log({marker: pdfPath})
-      fetch("E:/Workplace/Bizpedia/ca-offline-suite/narpat.pdf")
+      // get current working directory
+      window.electron.readPdfFile(pdfName).then(data => {
+        console.log('File data electron:', data);
+      })
+      .catch(err => {
+        console.error('Failed to read file electron:', err);
+      });
+  
+      
+      fetch("../../../tmp/"+pdfName)
   .then(response => {
     if (!response.ok) {
       throw new Error('Network response was not ok');
@@ -121,7 +130,7 @@ const PDFColumnMarker = ({ setPdfColMarkerData, pdfPath,initialConfig = initialC
     console.error('Error loading PDF:', error);
   });
     }
-  }, [pdfPath])
+  }, [pdfName])
 
 
 

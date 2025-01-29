@@ -64,6 +64,7 @@ const RecentReports = ({ key }) => {
 
   const [isFirstInfo, setIsFirstInfo] = useState(true);
   const [isLastInfo, setIsLastInfo] = useState(false);
+  const [pdfNameForMarker, setPdfNameForMarker] = useState(null);
 
   const [isMarkerModalOpen, setIsMarkerModalOpen] = useState(false);
 
@@ -433,7 +434,9 @@ const RecentReports = ({ key }) => {
   const handleOpenMarker = () => {
     if (selectedReportFailedData && selectedReportFailedData[0] && selectedReportFailedData[0].parsedContent) {
       const pdfPath = selectedReportFailedData[0].parsedContent.paths[0]
-      console.log("Opening marker with pdfPath:", pdfPath)
+      const pdfName = pdfPath.split('\\').pop()
+      setPdfNameForMarker(pdfName)
+      console.log("Opening marker with pdfPath:", pdfPath, "pdfName:", pdfName)
       setIsMarkerModalOpen(true)
     } else {
       console.error("No PDF path available")
@@ -459,10 +462,8 @@ const RecentReports = ({ key }) => {
         isOpen={isMarkerModalOpen}
         onClose={() => setIsMarkerModalOpen(false)}
         onSave={handleSaveMarkerData}
-        pdfPath={
-          selectedReportFailedData && selectedReportFailedData[0]
-            ? selectedReportFailedData[0].parsedContent?.paths[0]
-            : null
+        pdfName={
+          pdfNameForMarker
         }
         initialConfig={
           selectedReportFailedData && selectedReportFailedData[0]
