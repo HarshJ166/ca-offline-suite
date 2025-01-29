@@ -12,7 +12,7 @@ const PDFMarkerModal = ({
   onClose,
   onSave,
   initialConfig,
-  pdfPath
+  pdfName
 }) => {
   const handleSave = (data) => {
     onSave(data);
@@ -21,8 +21,8 @@ const PDFMarkerModal = ({
 
 
   useEffect(() => {
-    console.log("PDFMarkerModal pdfPath:", pdfPath)
-  }, [pdfPath])
+    console.log("PDFMarkerModal pdfName:", pdfName)
+  }, [pdfName])
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -31,8 +31,8 @@ const PDFMarkerModal = ({
           <DialogTitle>PDF Column Marker</DialogTitle>
         </DialogHeader>
         <div>
-      {pdfPath ? (
-        <PdfMarker setPdfColMarkerData={handleSave} initialConfig={initialConfig} pdfPath={pdfPath} />
+      {pdfName ? (
+        <PdfMarker setPdfColMarkerData={handleSave} initialConfig={initialConfig} pdfName={pdfName} />
       ) : (
         <div className="text-center text-red-500">Error: PDF path not available</div>
       )}

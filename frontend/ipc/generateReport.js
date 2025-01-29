@@ -62,7 +62,8 @@ const validateAndTransformTransaction = (transaction, statementId) => {
     category: transaction.Category || "uncategorized",
     type: type,
     balance: balance,
-    entity: transaction.Bank || "unknown",
+    bank: transaction.Bank || "unknown",
+    entity: transaction.Entity || "unknown",
   };
 };
 
@@ -97,6 +98,7 @@ const storeTransactionsBatch = async (transformedTransactions) => {
           category: t.category,
           type: t.type,
           balance: t.balance,
+          bank: t.bank,
           entity: t.entity,
         });
       } else {
@@ -165,7 +167,7 @@ const getOrCreateCase = async (caseName, userId = 1) => {
       .values({
         name: caseName,
         userId: userId,
-        status: "active",
+        status: "Pending",
         createdAt: new Date(),
       })
       .returning();
@@ -433,6 +435,23 @@ const processSummaryData = async (parsedData, caseName) => {
     throw error;
   }
 };
+const updateCaseStatus = async (caseId, status) => {
+  try {
+    await db
+      .update(cases)
+      .set({
+        status: status,
+        updatedAt: new Date()
+      })
+      .where(eq(cases.id, caseId));
+    
+    log.info(`Updated case ${caseId} status to ${status}`);
+  } catch (error) {
+    log.error(`Failed to update case ${caseId} status to ${status}:`, error);
+    throw error;
+  }
+};
+
 
 async function processOpportunityToEarnData(opportunityToEarnData, CaseId) {
   try {
@@ -534,13 +553,16 @@ function generateReportIpc(tmpdir_path) {
     log.info("IPC handler invoked for generate-report", caseName);
     const tempDir = tmpdir_path;
     log.info("Temp Directory : ", tempDir);
+    let caseId = null;
 
     // Track successfully processed files to avoid deleting them
     const successfulFiles = [];
     const failedFiles = [];
 
     try {
+      caseId = await getOrCreateCase(caseName);
       if (!result?.files?.length) {
+        await updateCaseStatus(caseId, 'Failed');
         throw new Error("Invalid or empty files array received");
       }
 
@@ -589,6 +611,7 @@ function generateReportIpc(tmpdir_path) {
 
       // Check if there are any PDF paths not extracted
       if (response.data?.["pdf_paths_not_extracted"]) {
+        await updateCaseStatus(caseId, 'Failed');
         // Get the case ID
         const validCaseId = await getOrCreateCase(caseName);
 
@@ -709,6 +732,7 @@ function generateReportIpc(tmpdir_path) {
           log.warn(`Failed to cleanup temp file: ${detail.pdf_paths}`, error);
         }
       });
+      await updateCaseStatus(caseId, 'Success');
 
       return {
         success: true,
@@ -726,6 +750,9 @@ function generateReportIpc(tmpdir_path) {
         },
       };
     } catch (error) {
+      if (caseId) {
+        await updateCaseStatus(caseId, 'Failed');
+      }
       log.error("Error in report generation:", {
         message: error.message,
         stack: error.stack,

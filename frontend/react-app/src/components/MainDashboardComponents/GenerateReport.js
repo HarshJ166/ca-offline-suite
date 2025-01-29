@@ -56,7 +56,9 @@ export default function GenerateReport() {
       description: (
         <div className="mt-2 w-full flex flex-col gap-2">
           <div className="flex items-center gap-4">
-            <CircularProgress value={0} className="w-full" />
+            <CircularProgress className="w-full" />
+            {/* <span className="text-sm font-medium">0%</span> */}
+//             <CircularProgress value={0} className="w-full" />
           </div>
           <p className="text-sm text-gray-500">Preparing to process files...</p>
         </div>
