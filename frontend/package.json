@@ -99,6 +99,7 @@
     "fs": "^0.0.1-security",
     "keytar": "^7.9.0",
     "pg": "^8.13.1",
+    "portscanner": "^2.2.0",
     "python-shell": "^5.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

@@ -6,8 +6,8 @@ from pydantic import BaseModel
 from typing import List, Optional
 from fastapi.responses import HTMLResponse
 from fastapi import Body
-import matplotlib
-matplotlib.use('Agg')
+# import matplotlib
+# matplotlib.use('Agg')
 # from findaddy.exceptions import ExtractionError
 from backend.utils import get_saved_pdf_dir
 TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
@@ -129,4 +129,6 @@ if __name__ == "__main__":
 
 
     # IMPORTANT: reload=False for production usage
+    import time
+    time.sleep(8)
     uvicorn.run(app, host=host, port=port, reload=False)

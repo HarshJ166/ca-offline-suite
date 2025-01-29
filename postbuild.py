@@ -3,7 +3,7 @@ import shutil
 
 # Define source paths
 models = os.path.join("backend", "models")
-category_sheet = os.path.join("backend", "CA_Category_sheet.xlsx")
+category_sheet = os.path.join("backend", "Final_Category.xlsx")
 # assets = os.path.join("src", "utils", "assets")
 # root_db = "db.sqlite3"
 # root_license = "LICENSE.txt"

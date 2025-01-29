@@ -84,9 +84,8 @@ contextBridge.exposeInMainWorld("electron", {
   getRecentReports: () => ipcRenderer.invoke("get-recent-reports"),
   getFailedStatements: (referenceId) => ipcRenderer.invoke("get-failed-statements", referenceId),
 
-  shell: {
-    openExternal: (url) => shell.openExternal(url),
-  },
+  onLicenseExpired: (callback) => ipcRenderer.on('navigateToLogin', callback),
+  removeLicenseExpiredListener: () => ipcRenderer.removeAllListeners('navigateToLogin'),
 
   shell: {
     openExternal: (url) => shell.openExternal(url),
