@@ -101,27 +101,27 @@ contextBridge.exposeInMainWorld("electron", {
   onLicenseExpired: (callback) => ipcRenderer.on('navigateToLogin', callback),
   removeLicenseExpiredListener: () => ipcRenderer.removeAllListeners('navigateToLogin'),
 
-  // Add auto-update related methods
-  updates: {
-    checkForUpdates: () => ipcRenderer.invoke('check-for-updates', () => {}),
-    downloadUpdate: () => ipcRenderer.invoke('download-update'),
-    installUpdate: () => ipcRenderer.invoke('install-update'),
-    onUpdateStatus: (callback) => 
-      ipcRenderer.on('update-status', (_, status) => callback(status)),
-    onUpdateProgress: (callback) => 
-      ipcRenderer.on('update-progress', (_, progress) => callback(progress)),
-    onUpdateDownloaded: (callback) => 
-      ipcRenderer.on('update-downloaded', () => callback()),
-    onUpdateError: (callback) => 
-      ipcRenderer.on('update-error', (_, error) => callback(error)),
-    // Remove event listeners when component unmounts
-    removeUpdateListeners: () => {
-      ipcRenderer.removeAllListeners('update-status');
-      ipcRenderer.removeAllListeners('update-progress');
-      ipcRenderer.removeAllListeners('update-downloaded');
-      ipcRenderer.removeAllListeners('update-error');
-    }
-  },
+  // // Add auto-update related methods
+  // updates: {
+  //   checkForUpdates: () => ipcRenderer.invoke('check-for-updates', () => {}),
+  //   downloadUpdate: () => ipcRenderer.invoke('download-update'),
+  //   installUpdate: () => ipcRenderer.invoke('install-update'),
+  //   onUpdateStatus: (callback) => 
+  //     ipcRenderer.on('update-status', (_, status) => callback(status)),
+  //   onUpdateProgress: (callback) => 
+  //     ipcRenderer.on('update-progress', (_, progress) => callback(progress)),
+  //   onUpdateDownloaded: (callback) => 
+  //     ipcRenderer.on('update-downloaded', () => callback()),
+  //   onUpdateError: (callback) => 
+  //     ipcRenderer.on('update-error', (_, error) => callback(error)),
+  //   // Remove event listeners when component unmounts
+  //   removeUpdateListeners: () => {
+  //     ipcRenderer.removeAllListeners('update-status');
+  //     ipcRenderer.removeAllListeners('update-progress');
+  //     ipcRenderer.removeAllListeners('update-downloaded');
+  //     ipcRenderer.removeAllListeners('update-error');
+  //   }
+  // },
 
   // Add auto-update related methods
   updates: {
