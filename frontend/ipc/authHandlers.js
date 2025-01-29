@@ -48,7 +48,7 @@ function registerAuthHandlers() {
             }
 
             const remainingSeconds = licenseManager.calculateRemainingSeconds(result.data.expiry_timestamp);
-            sessionManager.startLicenseCountdown(5);
+            sessionManager.startLicenseCountdown(remainingSeconds);
 
             sessionManager.setUser(user);
 
