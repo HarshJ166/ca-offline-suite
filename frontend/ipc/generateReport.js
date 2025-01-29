@@ -62,7 +62,8 @@ const validateAndTransformTransaction = (transaction, statementId) => {
     category: transaction.Category || "uncategorized",
     type: type,
     balance: balance,
-    entity: transaction.Bank || "unknown",
+    bank: transaction.Bank || "unknown",
+    entity: transaction.Entity || "unknown",
   };
 };
 
@@ -97,6 +98,7 @@ const storeTransactionsBatch = async (transformedTransactions) => {
           category: t.category,
           type: t.type,
           balance: t.balance,
+          bank: t.bank,
           entity: t.entity,
         });
       } else {

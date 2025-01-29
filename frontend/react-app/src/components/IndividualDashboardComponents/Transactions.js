@@ -100,7 +100,8 @@ const Transactions = () => {
         amount: transaction.amount,
         balance: transaction.balance,
         category: transaction.category,
-        entity: transaction.entity,
+        bank: transaction.bank,
+        // entity: transaction.entity,
         type: transaction.type,
       };
 
@@ -129,7 +130,9 @@ const Transactions = () => {
         transaction.type.toLowerCase() === "debit" ? transaction.amount : 0,
       balance: transaction.balance,
       category: transaction.category,
-      entity: transaction.entity,
+      bank: transaction.bank,
+      // entity: transaction.entity,
+
     }));
   };
 

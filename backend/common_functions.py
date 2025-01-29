@@ -46,7 +46,7 @@ BASE_DIR = get_base_dir()
 logger.info("Base Dir : ", BASE_DIR)
 #from old_bank_extractions import CustomStatement
 import json
-from .code_for_extraction import extract_with_test_cases, model_for_pdf, extract_dataframe_from_pdf
+from .code_for_extraction import extract_text_from_pdf, extract_with_test_cases, model_for_pdf, extract_dataframe_from_pdf
 
 ##EXTRACTION PROCESS
 def extract_text_from_file(file_path):
@@ -327,7 +327,6 @@ def extraction_process_explicit_lines(bank, pdf_path, pdf_password, start_date, 
             "vertical_strategy": "explicit",
             "explicit_vertical_lines": explicit_lines,
             "horizontal_strategy": "text",
-            "edge_min_length": 40,
             "intersection_x_tolerance": 120,
         })
 
