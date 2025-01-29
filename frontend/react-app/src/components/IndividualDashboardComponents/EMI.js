@@ -1,18 +1,23 @@
 import React, { useEffect, useState } from "react";
 import BarLineChart from "../charts/BarLineChart";
 import DataTable from "./TableData";
+import { useParams } from "react-router-dom";
 // import EmiData from "../../data/emi.json";.
 
-const EMI = ({ caseId }) => {
+const EMI = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { caseId, individualId } = useParams();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         // Fetch transactions filtered by "debtor"
-        const result = await window.electron.getTransactionsByEmi(caseId);
+        const result = await window.electron.getTransactionsByEmi(
+          caseId,
+          parseInt(individualId)
+        );
         console.log("Emi transactions:", result);
         // Transform data to include only required fields
         const transformedData = result.map((item) => ({
