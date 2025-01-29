@@ -49,97 +49,97 @@ const GenerateReportForm = ({
   const [financialYear, setFinancialYear] = useState("");
   const [availableYears, setAvailableYears] = useState([]);
   const [isSearchInputFocused, setIsSearchInputFocused] = useState(false);
-const [bankSearchTerm, setBankSearchTerm] = useState("");
-const [filteredBanks, setFilteredBanks] = useState([]);
-//Bank Names
-const bankNames = [
-  "Axis Bank",
-  "Bank of Baroda",
-  "HDFC Bank",
-  "ICICI Bank",
-  "IDBI Bank",
-  "IDFC First Bank",
-  "Indian Overseas Bank",
-  "IndusInd Bank",
-  "Kotak Mahindra Bank",
-  "Punjab National Bank",
-  "State Bank of India",
-  "NKGSB",
-  "TJSB BANK",
-  "Union Bank of India",
-  "Standard Chartered Bank",
-  "Yes Bank",
-  "Bank of India",
-  "Bank of Maharashtra",
-  "Canara Bank",
-  "COSMOS CO-OP BANK",
-  "DCB Bank",
-  "Federal Bank",
-  "Indian Bank",
-  "SHAMRAO VITTAL CO-OP BANK",
-  "The Thane District Central Cooperative Bank",
-  "Central Bank of India",
-  "Karnataka Bank",
-  "RBL Bank",
-  "SCB",
-  "Saraswat bank",
-  "UCO Bank",
-  "BASSEIN CATHOLIC BANK",
-  "HSBC",
-  "MUNICIPAL CO-OP BANK",
-  "VASAI VIKAS SHAKARI BANK LTD",
-  "NAGPUR NAGARIK SAHAKARI BANK LTD NNSB",
-  "THE JALGAON PEOPLES CO-OP BANK LTD",
-  "THE CHEMBUR NAGARIK SAHAKARI BANK LTD",
-  "BANDHAN BANK",
-  "THE PANDHARPUR URBAN CO-OP BANK LTD",
-  "AU SMALL FINANCE BANK (AU)",
-  "ABHYUDAYA CO-OP BANK LTD",
-  "GP PARSIK SAHAKARI BANK LTD",
-  "SOUTH INDIAN BANK",
-  "DHANLAXMI BANK LTD",
-  "THANE BHARAT SAHAKARI BANK LTD",
-  "KARUR BANK",
-  "BHARAT",
-  "CBI",
-  "SURAT",
-  "JANKALYAN",
-];
+  const [bankSearchTerm, setBankSearchTerm] = useState("");
+  const [filteredBanks, setFilteredBanks] = useState([]);
+  //Bank Names
+  const bankNames = [
+    "Axis Bank",
+    "Bank of Baroda",
+    "HDFC Bank",
+    "ICICI Bank",
+    "IDBI Bank",
+    "IDFC First Bank",
+    "Indian Overseas Bank",
+    "IndusInd Bank",
+    "Kotak Mahindra Bank",
+    "Punjab National Bank",
+    "State Bank of India",
+    "NKGSB",
+    "TJSB BANK",
+    "Union Bank of India",
+    "Standard Chartered Bank",
+    "Yes Bank",
+    "Bank of India",
+    "Bank of Maharashtra",
+    "Canara Bank",
+    "COSMOS CO-OP BANK",
+    "DCB Bank",
+    "Federal Bank",
+    "Indian Bank",
+    "SHAMRAO VITTAL CO-OP BANK",
+    "The Thane District Central Cooperative Bank",
+    "Central Bank of India",
+    "Karnataka Bank",
+    "RBL Bank",
+    "SCB",
+    "Saraswat bank",
+    "UCO Bank",
+    "BASSEIN CATHOLIC BANK",
+    "HSBC",
+    "MUNICIPAL CO-OP BANK",
+    "VASAI VIKAS SHAKARI BANK LTD",
+    "NAGPUR NAGARIK SAHAKARI BANK LTD NNSB",
+    "THE JALGAON PEOPLES CO-OP BANK LTD",
+    "THE CHEMBUR NAGARIK SAHAKARI BANK LTD",
+    "BANDHAN BANK",
+    "THE PANDHARPUR URBAN CO-OP BANK LTD",
+    "AU SMALL FINANCE BANK (AU)",
+    "ABHYUDAYA CO-OP BANK LTD",
+    "GP PARSIK SAHAKARI BANK LTD",
+    "SOUTH INDIAN BANK",
+    "DHANLAXMI BANK LTD",
+    "THANE BHARAT SAHAKARI BANK LTD",
+    "KARUR BANK",
+    "BHARAT",
+    "CBI",
+    "SURAT",
+    "JANKALYAN",
+  ];
 
-// Add this useEffect after your other useEffect declarations
-useEffect(() => {
-  setFilteredBanks(
-    bankNames.filter((bank) =>
-      bank.toLowerCase().includes(bankSearchTerm.toLowerCase())
-    )
-  );
-}, [bankSearchTerm]);
+  // Add this useEffect after your other useEffect declarations
+  useEffect(() => {
+    setFilteredBanks(
+      bankNames.filter((bank) =>
+        bank.toLowerCase().includes(bankSearchTerm.toLowerCase())
+      )
+    );
+  }, [bankSearchTerm]);
 
-// Modify the handleFileDetailChange function to convert bank names to lowercase when sending to backend
-const handleFileDetailChange = (index, field, value) => {
-  setFileDetails((prev) => {
-    const updated = prev.map((detail, i) => {
-      if (i === index) {
-        let processedValue = value;
-        if (field === "bankName") {
-          // Store the value in lowercase when it's a bank name
-          processedValue = value.toLowerCase();
+  // Modify the handleFileDetailChange function to convert bank names to lowercase when sending to backend
+  const handleFileDetailChange = (index, field, value) => {
+    setFileDetails((prev) => {
+      const updated = prev.map((detail, i) => {
+        if (i === index) {
+          let processedValue = value;
+          if (field === "bankName") {
+            // Store the value in lowercase when it's a bank name
+            processedValue = value.toLowerCase();
+          }
+          const updatedDetail = { ...detail, [field]: processedValue };
+          console.log(`Updated ${field} for file ${index}:`, {
+            previous: detail[field],
+            new: processedValue,
+            fullDetail: updatedDetail,
+          });
+          return updatedDetail;
         }
-        const updatedDetail = { ...detail, [field]: processedValue };
-        console.log(`Updated ${field} for file ${index}:`, {
-          previous: detail[field],
-          new: processedValue,
-          fullDetail: updatedDetail,
-        });
-        return updatedDetail;
-      }
-      return detail;
-    });
+        return detail;
+      });
 
-    console.log("Updated fileDetails:", updated);
-    return updated;
-  });
-};
+      console.log("Updated fileDetails:", updated);
+      return updated;
+    });
+  };
 
   const getFinancialYearDates = (fyString) => {
     if (!fyString) return { startDate: "", endDate: "" };
@@ -276,15 +276,14 @@ const handleFileDetailChange = (index, field, value) => {
         description: (
           <div className="mt-2 w-full flex flex-col gap-2">
             <div className="flex items-center gap-4">
-
               <CircularProgress value={progress} className="w-full" />
               {/* <span className="text-sm font-medium">{progress}%</span> */}
             </div>
-                      <p className="text-sm text-gray-500">
-            {progress < 100
-              ? "Processing your bank statements..."
-              : "Report generated successfully!"}
-          </p>
+            <p className="text-sm text-gray-500">
+              {progress < 100
+                ? "Processing your bank statements..."
+                : "Report generated successfully!"}
+            </p>
           </div>
         ),
         duration: progress >= 100 ? 3000 : Infinity,
@@ -638,7 +637,7 @@ const handleFileDetailChange = (index, field, value) => {
               <h1 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 AddBank Statements
               </h1>
-              
+
               <div className="flex items-center justify-center space-x-4 w-full mb-6">
                 <label className="text-md font-medium text-gray-700 dark:text-gray-300">
                   Report Name
@@ -658,8 +657,6 @@ const handleFileDetailChange = (index, field, value) => {
                 />
               </div>
 
-
-              
               <div
                 className={`relative ${
                   isDragging ? "ring-2 ring-[#3498db] dark:ring-blue-500" : ""
@@ -673,7 +670,6 @@ const handleFileDetailChange = (index, field, value) => {
                   onClick={() => fileInputRef.current?.click()}
                   className="flex cursor-pointer flex-col items-center justify-center p-5 border-2 border-dashed border-gray-200 dark:border-white rounded-lg hover:border-gray-300 dark:hover:border-gray-500 transition-all bg-gray-50 dark:bg-black"
                 >
-
                   <div className="flex flex-col items-center justify-center w-full">
                     {selectedFiles.length > 0 ? (
                       <div className="w-full space-y-4">
@@ -722,47 +718,64 @@ const handleFileDetailChange = (index, field, value) => {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                            <div>
-  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-    Bank Name
-  </label>
-  <Select
-    value={detail.bankName || ""}
-    onValueChange={(value) => handleFileDetailChange(index, "bankName", value)}
-    className="w-full"
-  >
-    <SelectTrigger className="w-full">
-      <SelectValue>
-        {detail.bankName || "Select a bank"}
-      </SelectValue>
-    </SelectTrigger>
-    <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-      <div className="p-2 border-b flex gap-2">
-        <div className="relative flex-1">
-          <Input
-            placeholder="Search banks..."
-            value={bankSearchTerm}
-            onChange={(e) => setBankSearchTerm(e.target.value)}
-            onFocus={() => setIsSearchInputFocused(true)}
-            onBlur={() => setIsSearchInputFocused(false)}
-            onKeyDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-          />
-        </div>
-      </div>
-      <div className="max-h-[200px] overflow-y-auto">
-        {filteredBanks.map((bank) => (
-          <SelectItem key={bank} value={bank.toLowerCase()}>
-            {bank}
-          </SelectItem>
-        ))}
-      </div>
-    </SelectContent>
-  </Select>
-</div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Bank Name
+                                </label>
+                                <Select
+                                  value={detail.bankName || ""}
+                                  onValueChange={(value) =>
+                                    handleFileDetailChange(
+                                      index,
+                                      "bankName",
+                                      value
+                                    )
+                                  }
+                                  className="w-full"
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue>
+                                      {detail.bankName || "Select a bank"}
+                                    </SelectValue>
+                                  </SelectTrigger>
+                                  <SelectContent
+                                    onCloseAutoFocus={(e) => e.preventDefault()}
+                                  >
+                                    <div className="p-2 border-b flex gap-2">
+                                      <div className="relative flex-1">
+                                        <Input
+                                          placeholder="Search banks..."
+                                          value={bankSearchTerm}
+                                          onChange={(e) =>
+                                            setBankSearchTerm(e.target.value)
+                                          }
+                                          onFocus={() =>
+                                            setIsSearchInputFocused(true)
+                                          }
+                                          onBlur={() =>
+                                            setIsSearchInputFocused(false)
+                                          }
+                                          onKeyDown={(e) => e.stopPropagation()}
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
+                                    <div className="max-h-[200px] overflow-y-auto">
+                                      {filteredBanks.map((bank) => (
+                                        <SelectItem
+                                          key={bank}
+                                          value={bank.toLowerCase()}
+                                        >
+                                          {bank}
+                                        </SelectItem>
+                                      ))}
+                                    </div>
+                                  </SelectContent>
+                                </Select>
+                              </div>
                               <div>
                                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                   Financial Year

@@ -344,7 +344,7 @@ const RecentReports = ({ key }) => {
         <div className="mt-2 w-full flex flex-col gap-2">
           <div className="flex items-center gap-4">
             <CircularProgress className="w-full" />
-//             <CircularProgress value={0} className="w-full" />
+            // <CircularProgress value={0} className="w-full" />
             {/* <span className="text-sm font-medium">0%</span> */}
           </div>
           <p className="text-sm text-gray-500">Preparing to process files...</p>
@@ -439,13 +439,16 @@ const RecentReports = ({ key }) => {
   };
 
   const handleOpenMarker = () => {
-
-    if (selectedReportFailedData && selectedReportFailedData[0] && selectedReportFailedData[0].parsedContent) {
-      const pdfPath = selectedReportFailedData[0].parsedContent.paths[0]
-      const pdfName = pdfPath.split('\\').pop()
-      setPdfNameForMarker(pdfName)
-      console.log("Opening marker with pdfPath:", pdfPath, "pdfName:", pdfName)
-      setIsMarkerModalOpen(true)
+    if (
+      selectedReportFailedData &&
+      selectedReportFailedData[0] &&
+      selectedReportFailedData[0].parsedContent
+    ) {
+      const pdfPath = selectedReportFailedData[0].parsedContent.paths[0];
+      const pdfName = pdfPath.split("\\").pop();
+      setPdfNameForMarker(pdfName);
+      console.log("Opening marker with pdfPath:", pdfPath, "pdfName:", pdfName);
+      setIsMarkerModalOpen(true);
     } else {
       console.error("No PDF path available");
       toast({
@@ -468,9 +471,7 @@ const RecentReports = ({ key }) => {
         isOpen={isMarkerModalOpen}
         onClose={() => setIsMarkerModalOpen(false)}
         onSave={handleSaveMarkerData}
-        pdfName={
-          pdfNameForMarker
-        }
+        pdfName={pdfNameForMarker}
         initialConfig={
           selectedReportFailedData && selectedReportFailedData[0]
             ? selectedReportFailedData[0].parsedContent?.columns
@@ -642,7 +643,6 @@ const RecentReports = ({ key }) => {
                     </AlertDialogContent>
                   </AlertDialog>
                 </TableCell>
-
               </TableRow>
             ))}
           </TableBody>
