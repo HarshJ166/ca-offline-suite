@@ -24,7 +24,7 @@ import ExcelERP from "../components/ImortTally/TallyERP";
 import { BreadcrumbDynamic } from "../components/BreadCrumb";
 import { useBreadcrumb } from "../contexts/BreadcrumbContext";
 import { useParams } from "react-router-dom";
-import PdfColumnMarker from "../components/MainDashboardComponents/PdfCanvas";
+import PdfColumnMarker from "../components/MainDashboardComponents/PdfMarker";
 
 const Dashboard = () => {
   const { breadcrumbs, setMainDashboard } = useBreadcrumb();
@@ -78,10 +78,10 @@ const Dashboard = () => {
       icon: ReceiptText,
     },
     {
-      title:"Marker",
-      url:"#",
-      icon:Files
-    }
+      title: "Marker",
+      url: "#",
+      icon: Files,
+    },
   ];
 
   useEffect(() => {
@@ -144,7 +144,9 @@ const Dashboard = () => {
             <main className="flex-1">
               {activeTab === "Dashboard" && <MainDashboard />}
               {activeTab === "Generate Report" && <ReportGenerator />}
-              {activeTab === "Opportunity to Earn" && <Eligibility />}
+              {activeTab === "Opportunity to Earn" && (
+                <Eligibility caseId={28} />
+              )}
               {activeTab === "Billing" && <Billing />}
 
               {activeTab === "Analytics" && <Analytics />}

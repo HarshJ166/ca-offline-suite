@@ -8,7 +8,7 @@ import CombinedTable from "../components/CaseDashboardComponents/CombinedTable";
 import { useNavigate, useParams } from "react-router-dom";
 import { useBreadcrumb } from "../contexts/BreadcrumbContext";
 import { BreadcrumbDynamic } from "../components/BreadCrumb";
-import { ClipboardPlus, UserPen } from "lucide-react";
+import { User, UserPen } from "lucide-react";
 
 const CaseDashboard = () => {
   const { breadcrumbs, setCaseDashboard } = useBreadcrumb();
@@ -21,6 +21,12 @@ const CaseDashboard = () => {
   }, [activeTab]);
 
   const navItems = [
+  
+    {
+      title: "Reports",
+      url: "#",
+      icon:User,
+    },
     {
       title: "Acc No and Acc Name",
       url: "#",
@@ -28,22 +34,9 @@ const CaseDashboard = () => {
       isActive: true,
     },
     {
-      title: "Reports",
+      title: "Individual Table",
       url: "#",
-      icon: ClipboardPlus,
-      items: [
-        {
-          title: "Individual Table",
-          url: "#",
-          icon: null,
-        },
-        {
-          title: "Combined Table",
-          url: "#",
-          icon: null,
-        },
-      ],
-      alwaysOpen: true,
+      icon: null,
     },
   ];
 
@@ -83,7 +76,7 @@ const CaseDashboard = () => {
               {activeTab === "Acc No and Acc Name" && (
                 <AccountNumNameManager caseId={caseId} />
               )}
-              {activeTab === "Individual Table" && (
+              {activeTab === "Reports" && (
                 <IndividualTable caseId={caseId} />
               )}
               {activeTab === "Combined Table" && <CombinedTable />}

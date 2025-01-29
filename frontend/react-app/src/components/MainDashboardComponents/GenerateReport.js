@@ -50,7 +50,7 @@ export default function GenerateReport() {
         <div className="mt-2 w-full flex flex-col gap-2">
           <div className="flex items-center gap-4">
             <CircularProgress value={0} className="w-full" />
-            <span className="text-sm font-medium">0%</span>
+            {/* <span className="text-sm font-medium">0%</span> */}
           </div>
           <p className="text-sm text-gray-500">Preparing to process files...</p>
         </div>
@@ -85,9 +85,12 @@ export default function GenerateReport() {
         })
       );
 
-      const result = await window.electron.generateReportIpc({
-        files: filesWithContent, 
-      }, caseName);
+      const result = await window.electron.generateReportIpc(
+        {
+          files: filesWithContent,
+        },
+        caseName
+      );
 
       if (result.success) {
         clearInterval(progressIntervalRef.current);
@@ -108,21 +111,52 @@ export default function GenerateReport() {
         // Trigger a page refresh
         refreshPage();
       } else {
-        throw new Error(result.error);
+        // throw new Error(result.error);
+        console.log("Info : ", result.error);
+        const errorMessage = result.error
+          ? typeof result.error === "object"
+            ? JSON.stringify(result.error, null, 2) // For better formatting, can be removed if you want simple string
+            : result.error
+          : "Unknown error occurred";
+
+        throw new Error(errorMessage);
       }
     } catch (error) {
-      console.error("Report generation failed:", error);
+      console.log("keys : ", Object.keys(error));
+      // const errorMessage = error
+      //     ? typeof error === "object"
+      //       ? JSON.stringify(error)  // For better formatting, can be removed if you want simple string
+      //       : error
+      //     : "Unknown error occurred";
+
+      console.error("Report generation failed:", error.message);
+
+      // Check if the error is an object and display its properties
+      if (typeof error === "object" && error !== null) {
+        console.error("Detailed error:", JSON.stringify(error, null, 2));
+      }
+
+      if (error && error.message) {
+        console.error("Error message:", error.message);
+      }
+
+      if (error && error.stack) {
+        console.error("Error stack trace:", error.stack);
+      }
+
       clearInterval(progressIntervalRef.current);
       toast.dismiss(newToastId);
       setProgress(0);
       toast({
         title: "Error",
-        description: error.message || "Failed to generate report",
+        description: "Failed to generate report",
         variant: "destructive",
         duration: 5000,
       });
+      refreshPage();
     } finally {
       setLoading(false);
+      refreshPage();
       progressIntervalRef.current = null;
     }
   };
@@ -179,6 +213,7 @@ export default function GenerateReport() {
 
       <div>
         <GenerateReportForm
+          key={refreshTrigger}
           handleReportSubmit={handleSubmit}
           onReportGenerated={refreshPage}
         />

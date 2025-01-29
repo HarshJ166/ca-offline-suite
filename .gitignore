@@ -27,6 +27,8 @@ develop-eggs/
 /backend/.env
 /backend/.venv
 /backend/.env.*
+/backend/models
+.venv/
 
 # FastAPI specific
 /backend/instance/
@@ -158,4 +160,6 @@ local_settings.py
 *.out
 
 /frontend/dist/
-
+/.venv/
+/venv/
+/backend/local_model/

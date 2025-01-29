@@ -7,6 +7,7 @@ import { Maximize2, Minimize2 } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "../ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import ToggleStrip from "./ToggleStrip";
+import { useParams } from "react-router-dom";
 
 const MaximizableChart = ({ children, title, isMaximized, setIsMaximized }) => {
   const toggleMaximize = () => setIsMaximized(!isMaximized);
@@ -46,19 +47,27 @@ const MaximizableChart = ({ children, title, isMaximized, setIsMaximized }) => {
   );
 };
 
-const Transactions = ({ caseId }) => {
+const Transactions = () => {
   const [isDailyBalanceMaximized, setIsDailyBalanceMaximized] = useState(false);
   const [isCreditDebitMaximized, setIsCreditDebitMaximized] = useState(false);
   const [isCategoryMaximized, setIsCategoryMaximized] = useState(false);
   const [transactionData, setTransactionData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [availableMonths, setAvailableMonths] = useState([]);
+  const { caseId, individualId } = useParams();
+
+  useEffect(() => {
+    console.log({fromTransactionsTab:individualId})
+
+  }, [individualId]);
 
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
         console.log("Fetching transactions for statementId:", caseId);
-        const data = await window.electron.getTransactions(caseId);
+
+        const data = await window.electron.getTransactions(caseId,parseInt(individualId));
         setTransactionData(data);
         console.log("Fetched transactions:", data.length);
       } catch (err) {
@@ -70,7 +79,7 @@ const Transactions = ({ caseId }) => {
     };
 
     fetchTransactions();
-  }, [caseId]);
+  }, []);
 
   const monthsData = React.useMemo(() => {
     return transactionData.reduce((acc, transaction) => {
@@ -104,13 +113,6 @@ const Transactions = ({ caseId }) => {
     return new Date(parseInt(year), monthIndex);
   };
 
-  // print the getMonthDate
-
-  const availableMonths = Object.keys(monthsData).sort((a, b) => {
-    const dateA = getMonthDate(a);
-    const dateB = getMonthDate(b);
-    return dateA - dateB;
-  });
 
   const processDailyData = (transactions) => {
     return transactions.map((transaction) => ({
@@ -131,7 +133,6 @@ const Transactions = ({ caseId }) => {
   };
 
   // print the processed data
-  console.log("processedData", processDailyData(transactionData));
 
   const processCreditDebitData = (transactions) => {
     return transactions.map((transaction) => ({
@@ -161,15 +162,20 @@ const Transactions = ({ caseId }) => {
     return Object.values(categoryTotals);
   };
 
-  const [selectedMonths, setSelectedMonths] = useState([]);
-  const [initialLoad, setInitialLoad] = useState(true);
-
+  const [selectedMonths, setSelectedMonths] = useState(availableMonths);
   useEffect(() => {
-    if (initialLoad && availableMonths.length > 0) {
+    
+  const availableMonthstemp = Object.keys(monthsData).sort((a, b) => {
+    const dateA = getMonthDate(a);
+    const dateB = getMonthDate(b);
+    return dateA - dateB;
+  });
+  setAvailableMonths(availableMonthstemp);
+  
+    if (availableMonths.length > 0) {
       setSelectedMonths(availableMonths);
-      setInitialLoad(false);
     }
-  }, [availableMonths, initialLoad]);
+  }, [availableMonths,monthsData]);
 
   const filteredData = selectedMonths
     .flatMap((month) => {
@@ -189,7 +195,6 @@ const Transactions = ({ caseId }) => {
     selectedMonths.flatMap((month) => monthsData[month])
   );
 
-  console.log("filteredData", filteredData);
   return (
     <div className="rounded-lg space-y-6 m-8 mt-2">
       {isLoading ? (

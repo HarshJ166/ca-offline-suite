@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import io
-from django.utils import timezone
 from PyPDF2 import PdfReader, PdfWriter
 from PyPDF2 import PdfReader, PdfWriter, Transformation
 from PyPDF2.generic import NameObject, NumberObject, RectangleObject
@@ -14,18 +13,30 @@ from PIL import Image
 import pdfplumber
 from torchvision import transforms
 from huggingface_hub import hf_hub_download
-from matplotlib.patches import Patch
+# import matplotlib
+# matplotlib.use("Agg")
+# from matplotlib.patches import Patch
 from PIL import ImageDraw
 from transformers import TableTransformerForObjectDetection
 from tqdm.auto import tqdm
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+# import matplotlib.pyplot as plt
+# import matplotlib.patches as patches
 import os
 import fitz  # PyMuPDF
 from io import BytesIO
-from old_bank_extractions import CustomStatement
+from .old_bank_extractions import CustomStatement
 import re
 import uuid
+# from findaddy.exceptions import ExtractionError
+import logging
+from .utils import get_base_dir
+
+logger = logging.getLogger(__name__)
+BASE_DIR = get_base_dir()
+logger.info("Base Dir : ", BASE_DIR)
+
+from .utils import get_saved_pdf_dir
+TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
 
 def __init__(bank_name, pdf_path, pdf_password, CA_ID):
     writer = None
@@ -246,7 +257,7 @@ def flatten_pdf_rotation(input_pdf_path, output_pdf_path):
 
 def unlock_and_add_margins_to_pdf(pdf_path, pdf_password, timestamp, CA_ID):
     margin = 0.3
-    os.makedirs(f"saved_pdf", exist_ok=True)
+    os.makedirs(TEMP_SAVED_PDF_DIR, exist_ok=True)
 
     try:
         # Open the PDF using fitz (PyMuPDF)
@@ -259,7 +270,7 @@ def unlock_and_add_margins_to_pdf(pdf_path, pdf_password, timestamp, CA_ID):
 
         # Define the output path for the unlocked PDF
         unlocked_pdf_filename = f"{timestamp}-{CA_ID}_{uuid.uuid4().hex}.pdf"
-        unlocked_pdf_path = os.path.join("saved_pdf", unlocked_pdf_filename)
+        unlocked_pdf_path = os.path.join(TEMP_SAVED_PDF_DIR, unlocked_pdf_filename)
 
         # MARGIN CODE STARTS NOW: Convert margin from inches to points (1 inch = 72 points)
         margin_pts = margin * 72
@@ -568,7 +579,6 @@ def cleaning(new_df):
 
     return idf
 
-
 def credit_debit(df, description_column, date_column, bal_column, same_column):
     def classify_column(column):
         case1_count = 0
@@ -583,7 +593,9 @@ def credit_debit(df, description_column, date_column, bal_column, same_column):
              "debit"]).sum()
 
         # Case 2: Count occurrences where the value contains both a number and "CR" or "DR"
-        case2_count = values.str.contains(r'\d+.*(CR|DR|Credit|Debit|C|D)', regex=True).sum()
+
+        case2_count = values.str.contains(r'^[+-]?\d+.*(CR|DR|Credit|Debit|C|D)?', regex=True).sum()
+        print(case2_count)
 
         # Return the case based on counts
         if case1_count >= 5:
@@ -624,7 +636,7 @@ def credit_debit(df, description_column, date_column, bal_column, same_column):
         if amount_column:
             print(f"Found 'amount' column: {amount_column}")
             # Call the crdr_to_credit_debit_columns function with the found amount column
-            new_df = self.crdr_to_credit_debit_columns(df, description_column, date_column, bal_column, amount_column,
+            new_df = crdr_to_credit_debit_columns(df, description_column, date_column, bal_column, amount_column,
                                                        same_column)
             return new_df
         else:
@@ -636,20 +648,19 @@ def credit_debit(df, description_column, date_column, bal_column, same_column):
 
         # Vectorized split of numeric part and "CR/DR" part using regex
         df['A'] = df[same_column].str.extract(r'([\d,]+\.?\d*)')[0].str.replace(',', '').astype(float)
-        df['B'] = df[same_column].str.extract(r'(CR|DR|Credit|Debit|C|D)', flags=re.IGNORECASE)[0].str.upper()
+        df['B'] = df[same_column].str.extract(r'(CR|DR|Credit|Debit|C|D|\+|\-)', flags=re.IGNORECASE)[0].str.upper()
         # Now call the crdr_to_credit_debit_columns function with new columns 'A' and 'B'
-        new_df = self.crdr_to_credit_debit_columns(df, description_column, date_column, bal_column, 'A', 'B')
+        new_df = crdr_to_credit_debit_columns(df, description_column, date_column, bal_column, 'A', 'B')
         return new_df
 
     else:
         print("Fewer than 5 occurrences of either case")
         return None
 
-
 def crdr_to_credit_debit_columns(df, description_column, date_column, bal_column, amount_column, keyword_column):
-    # Vectorized assignment of Debit and Credit columns
-    debit_keywords = r'(?i)^(DR|Debit|dr|debit|D|D\.)$'
-    credit_keywords = r'(?i)^(CR|Credit|cr|credit|C|C\.)$'
+    # Vectorized assignment of Debit and Credit columns|\+|\-
+    debit_keywords = r'(?i)^(DR|Debit|dr|debit|D|\-|D\.)$'
+    credit_keywords = r'(?i)^(CR|Credit|cr|credit|C|\+|C\.)$'
 
     # Update the Debit and Credit columns
     df['Debit'] = np.where(df[keyword_column].str.contains(debit_keywords, regex=True, na=False), df[amount_column], 0)
@@ -662,7 +673,6 @@ def crdr_to_credit_debit_columns(df, description_column, date_column, bal_column
     final_df.columns = ["Value Date", "Description", "Debit", "Credit", "Balance"]
 
     return final_df
-
 
 def extract_text_from_pdf(unlocked_file_path):
     with fitz.open(unlocked_file_path) as pdf_doc:
@@ -717,8 +727,8 @@ def outputs_to_objects(outputs, img_size, id2label):
     return objects
 
 def detect_table_columns(image):
-    # structure_model = TableTransformerForObjectDetection.from_pretrained(os.path.join(BASE_DIR, "models", "local_model"))
-    structure_model = TableTransformerForObjectDetection.from_pretrained("./local_model")
+    structure_model = TableTransformerForObjectDetection.from_pretrained(os.path.join(BASE_DIR, "models", "local_model"))
+    # structure_model = TableTransformerForObjectDetection.from_pretrained("./local_model")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     structure_model.to(device)
@@ -902,6 +912,31 @@ def cut_the_datframe_from_headers(df):
 
     return df
 
+def check_balance_consistency(df):
+    """
+    Check for inconsistencies in the balance column of a transaction DataFrame with a tolerance range.
+    :param df: Pandas DataFrame with columns 'Debit', 'Credit', and 'Balance'
+    :param tolerance: Allowed error range for balance comparison (default is 1.0)
+    :return: List of rows with balance inconsistencies
+    """
+    df.reset_index(inplace=True)
+    tolerance = 1.0
+    df['Debit'] = df['Debit'].fillna(0)
+    df['Credit'] = df['Credit'].fillna(0)
+    balance_issues = []
+    for i in range(1, len(df)):
+        # Calculate the expected balance
+        expected_balance = df.loc[i - 1, 'Balance'] - (df.loc[i, 'Debit']) + (df.loc[i, 'Credit'])
+        actual_balance = df.loc[i, 'Balance']
+
+        # Compare with tolerance
+        if not pd.isna(expected_balance) and abs(expected_balance - actual_balance) > tolerance:
+            raise ValueError(
+                f"Transaction between {df.loc[i - 1, 'Value Date']} and {df.loc[i, 'Value Date']} are missing"
+            )
+
+    return balance_issues
+
 def model_for_pdf(df):
     # Simulate cleaning or processing the dataframe
     # print(f"Modeling dataframe: {df}")
@@ -958,6 +993,7 @@ def model_for_pdf(df):
         final_df = cleaning(new_df)
 
     print(final_df.head(10))
+    bal = check_balance_consistency(final_df)
     return final_df, lists
 
 def new_mode_for_pdf(df, lists):
@@ -1000,7 +1036,7 @@ def old_bank_extraction(page_path):
 def add_column_separators_in_memory(page):
     CA_ID = "1234_temp"
     # Simulate adding column separators to the in-memory page
-    output_pdf, coordinates, llama = process_pdf_and_annotate(page, os.path.join("saved_pdf",
+    output_pdf, coordinates, llama = process_pdf_and_annotate(page, os.path.join(TEMP_SAVED_PDF_DIR,
                                                                                       f"{CA_ID}_only_columns_add_{uuid.uuid4().hex}.pdf"))
     return output_pdf, coordinates, llama  # Return the modified page and coordinates
 
@@ -1008,7 +1044,7 @@ def add_column_separators_with_coordinates(pdf_path, coordinates):
     CA_ID = "1234_temp"
     pdf_document = fitz.open(pdf_path)
     llama_2 = annotate_pdf(pdf_document, coordinates)
-    processed_pdf_path = os.path.join("saved_pdf",
+    processed_pdf_path = os.path.join(TEMP_SAVED_PDF_DIR,
                                       f"{CA_ID}_columns_adding_with_coordinates_{uuid.uuid4().hex}.pdf")
     pdf_document.save(processed_pdf_path)
     return processed_pdf_path, llama_2
@@ -1190,10 +1226,27 @@ def run_test_output_on_whole_pdf(list_a, pdf_in_saved_pdf, bank_name, timestamp,
         return df, explicit_lines
 
 
+def is_pdf_encoded(pdf_path):
+    try:
+        reader = PdfReader(pdf_path)
+        if not reader.pages:
+            raise Exception("PDF has no pages.")
+
+        for page_number, page in enumerate(reader.pages):
+            text = page.extract_text()
+            if not text or sum(char.isprintable() for char in text) / len(text) < 0.5:
+                raise Exception(f"PDF appears encoded or obfuscated.")
+
+        return "PDF text is readable and not encoded."
+    except Exception as e:
+        raise Exception(f"Error: {e}")
+
+
 # Main function to run test cases with optimizations
 def extract_with_test_cases(bank_name, pdf_path, pdf_password, CA_ID):
     timestamp = "1234_temp"
     pdf_in_saved_pdf = unlock_and_add_margins_to_pdf(pdf_path, pdf_password, timestamp, CA_ID)
+    is_pdf_encoded(pdf_in_saved_pdf)
     list_test = process_pdf_with_test_cases(pdf_in_saved_pdf)
     text = extract_text_from_pdf(pdf_in_saved_pdf)
     idf, explicit_lines = run_test_output_on_whole_pdf(list_test, pdf_in_saved_pdf, bank_name, timestamp, CA_ID)

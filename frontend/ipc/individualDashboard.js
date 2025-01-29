@@ -5,7 +5,7 @@ const { statements } = require("../db/schema/Statement");
 const { transactions } = require("../db/schema/Transactions");
 const { eod } = require("../db/schema/Eod");
 const { summary } = require("../db/schema/Summary");
-const { eq, and, inArray } = require("drizzle-orm"); // Add this import
+const { eq, gt,and, inArray } = require("drizzle-orm"); // Add this import
 
 function registerIndividualDashboardIpc() {
   // Handler for getting EOD balance
@@ -46,37 +46,89 @@ function registerIndividualDashboardIpc() {
   });
 
   // Handler for getting all transactions
-  ipcMain.handle("get-transactions", async (event, caseId) => {
+  ipcMain.handle("get-transactions", async (event, caseId,individualId) => {
     try {
       // Get all statements for the case
+      if(individualId){
+        console.log("individualId",individualId)
+        const allTransactions = await db
+          .select()
+          .from(transactions)
+          .where(
+            and(eq(transactions.statementId, individualId.toString())),
+          );
+        log.info("Transactions fetched successfully:", allTransactions.length);
+        return allTransactions;
+      }else{
+
+        const allStatements = await db
+        .select()
+        .from(statements)
+        .where(eq(statements.caseId, caseId));
+        if (allStatements.length === 0) {
+          log.info("No statements found for case:", caseId);
+          return [];
+        }
+        // Log statements for debugging
+        // log.info("Found statements:", allStatements);
+        // Get all transactions for these statements
+        const allTransactions = await db
+          .select()
+          .from(transactions)
+          .where(
+            inArray(
+              transactions.statementId,
+              allStatements.map((stmt) => stmt.id.toString()) // Convert integer ID to string
+            )
+          );
+        log.info("Transactions fetched successfully:", allTransactions.length);
+        return allTransactions;
+      }
+    } catch (error) {
+      log.error("Error fetching transactions:", error);
+      throw error;
+    }
+  });
+
+  // create a ipc to get transactions count for both credits and debits transactions
+  ipcMain.handle("get-transactions-count", async (event, caseId) => {
+    try {
       const allStatements = await db
         .select()
         .from(statements)
         .where(eq(statements.caseId, caseId));
 
-      if (allStatements.length === 0) {
-        log.info("No statements found for case:", caseId);
-        return [];
-      }
+      const statementIds = allStatements.map((stmt) => stmt.id.toString());
 
-      // Log statements for debugging
-      // log.info("Found statements:", allStatements);
+      const creditTransactions = await db
+        .select()
 
-      // Get all transactions for these statements
-      const allTransactions = await db
+        .from(transactions)
+        .where(
+          and(
+            inArray(transactions.statementId, statementIds), // Check if statementId is in the list
+            eq(transactions.type, "credit"), // Filter by type,
+            gt(transactions.amount, 0) // Filter for amount greater than 0
+          )
+        ); // Apply both filters
+
+      const debitTransactions = await db
         .select()
         .from(transactions)
         .where(
-          inArray(
-            transactions.statementId,
-            allStatements.map((stmt) => stmt.id.toString()) // Convert integer ID to string
+          and(
+            inArray(transactions.statementId, statementIds), // Check if statementId is in the list
+            eq(transactions.type, "debit"), // Filter by type
+            gt(transactions.amount, 0) // Filter for amount greater than 0
           )
-        );
+        ); // Apply both filters
 
-      log.info("Transactions fetched successfully:", allTransactions.length);
-      return allTransactions;
+      return {
+        credit: creditTransactions.length,
+        debit: debitTransactions.length,
+      };
     } catch (error) {
-      log.error("Error fetching transactions:", error);
+      log.error("Error fetching transactions count:", error);
       throw error;
     }
   });
@@ -268,7 +320,9 @@ function registerIndividualDashboardIpc() {
         .where(
           and(
             inArray(transactions.statementId, statementIds), // Check if statementId is in the list
-            eq(transactions.category, "Probable EMI") // Filter by category
+            eq(transactions.category, "Probable EMI"), // Filter by category
+            gt(transactions.amount, 0), // Filter for amount greater than 0,
+            eq(transactions.type, "debit") // Filter by type
           )
         ); // Apply both filters
 

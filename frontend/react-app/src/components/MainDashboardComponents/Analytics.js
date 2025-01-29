@@ -75,6 +75,54 @@ const Analytics = () => {
     fetchReports();
   }, []);
 
+  // In your Analytics.jsx component
+
+  const handleDownload = () => {
+    try {
+      setIsLoading(true);
+
+      // Assuming you have an Excel file named 'example.xlsx' in your public folder
+      const filePath = "public/Sale Voucher final.xlsm";
+
+      // Create a blob URL
+      const url = window.URL.createObjectURL(new Blob([filePath]));
+
+      // Create a link element
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Sale Voucher final.xlsx`;
+      link.click();
+
+      // Clean up
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "Excel file downloaded successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to download Excel file: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update the Download button in your JSX:
+  <Button
+    variant="outline"
+    size="sm"
+    className="hover:bg-primary hover:text-primary-foreground transition-colors"
+    onClick={() => handleDownload}
+    disabled={isLoading}
+  >
+    <Download className="h-4 w-4 mr-2" />
+    {isLoading ? "Generating..." : "Download"}
+  </Button>;
+
   return (
     <div className="w-full px-4 py-6 -space-y-2 mx-auto ">
       <Card className="border dark:border-gray-700 rounded-lg shadow-sm">
@@ -127,6 +175,7 @@ const Analytics = () => {
                         variant="outline"
                         size="sm"
                         className="hover:bg-primary hover:text-primary-foreground transition-colors"
+                        onClick={handleDownload}
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Download
