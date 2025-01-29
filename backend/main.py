@@ -13,7 +13,7 @@ from backend.utils import get_saved_pdf_dir
 TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
 
 # If you have other custom imports:
-from backend.tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf
+from backend.tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf,start_extraction_edit_pdf
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -90,6 +90,52 @@ async def analyze_bank_statements(request: BankStatementRequest):
             "data": result["sheets_in_json"],
             "pdf_paths_not_extracted": result["pdf_paths_not_extracted"],
         }
+
+    except Exception as e:
+        logger.error(f"Error processing bank statements: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error processing bank statements: {str(e)}"
+        )
+    
+
+
+@app.post("/column-rectify-add-pdf/")
+async def column_rectify_add_pdf(request: BankStatementRequest):
+    try:
+
+        logger.info(f"Received request with banks: {request.bank_names}")
+        
+        # Create a progress tracking function
+        def progress_tracker(current: int, total: int, info: str) -> None:
+            logger.info(f"{info} ({current}/{total})")
+
+        progress_data = {
+        "progress_func": progress_tracker,
+        "current_progress": 10,
+        "total_progress": 100,
+        }
+
+        # Validate passwords length if provided
+        if request.passwords and len(request.passwords) != len(request.pdf_paths):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Number of passwords ({len(request.passwords)}) "
+                    f"must match number of PDFs ({len(request.pdf_paths)})"
+                ),
+            )
+        
+        bank_names = request.bank_names 
+        pdf_paths = request.pdf_paths
+        passwords =  request.passwords if request.passwords else []
+        start_date = request.start_date if request.start_date else []
+        end_date = request.end_date if request.end_date else []
+        CA_ID = request.ca_id
+        progress_data = progress_data
+
+        column_coordinates = request.columns
+        whole_transaction_sheet = request.whole_transaction_sheet
+        result = start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_date, end_date, CA_ID, progress_data,aiyaz_array_of_array=column_coordinates,whole_transaction_sheet=whole_transaction_sheet)
 
     except Exception as e:
         logger.error(f"Error processing bank statements: {str(e)}")

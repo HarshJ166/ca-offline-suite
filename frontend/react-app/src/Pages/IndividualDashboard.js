@@ -39,7 +39,13 @@ const IndividualDashboard = () => {
       activeTab,
       `/individual-dashboard/${caseId}/${individualId}/${activeTab}`
     );
+
+    console.log("CaseId : ", caseId, "Default Tab : ", defaultTab," activetab",activeTab);
   }, [activeTab]);
+
+  useEffect(() => {
+    console.log({ caseId, individualId, defaultTab });
+  }, []);
 
   const navItems = [
     {
@@ -116,16 +122,16 @@ const IndividualDashboard = () => {
           <BreadcrumbDynamic items={breadcrumbs} />
           <div className="flex-1 flex flex-col overflow-hidden">
             <main className="flex-1">
-              {activeTab === "Summary" && <Summary caseId={caseId} />}
-              {activeTab === "Transactions" && <Transactions caseId={caseId} />}
-              {activeTab === "Debtors" && <Debtors caseId={caseId} />}
-              {activeTab === "Creditors" && <Creditors caseId={caseId} />}
-              {activeTab === "EMI" && <EMI caseId={caseId} />}
-              {activeTab === "Investment" && <Investment caseId={caseId} />}
-              {activeTab === "EOD" && <EodBalance caseId={caseId} />}
-              {activeTab === "Cash" && <Cash caseId={caseId} />}
-              {activeTab === "Suspense" && <Suspense caseId={caseId} />}
-              {activeTab === "Reversal" && <Reversal caseId={caseId} />}
+              {activeTab === "Summary" && <Summary caseId={caseId} individualId={individualId}/>}
+              {activeTab === "Transactions" && <Transactions />}
+              {activeTab === "Debtors" && <Debtors caseId={caseId} individualId={individualId}/>}
+              {activeTab === "Creditors" && <Creditors caseId={caseId} individualId={individualId}/>}
+              {activeTab === "EMI" && <EMI caseId={caseId} individualId={individualId}/>}
+              {activeTab === "Investment" && <Investment caseId={caseId} individualId={individualId}/>}
+              {activeTab === "EOD" && <EodBalance caseId={caseId} individualId={individualId}/>}
+              {activeTab === "Cash" && <Cash caseId={caseId} individualId={individualId}/>}
+              {activeTab === "Suspense" && <Suspense caseId={caseId} individualId={individualId}/>}
+              {activeTab === "Reversal" && <Reversal caseId={caseId} individualId={individualId}/>}
               {/* {activeTab === "Reversal" && <ForeignTransactions />} */}
             </main>
           </div>

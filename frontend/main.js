@@ -106,8 +106,8 @@ async function startPythonExecutable() {
     if (isDev) {
       const venvPythonPath =
         process.platform === "win32"
-          ? path.join(__dirname, "../.venv/Scripts/python.exe")
-          : path.join(__dirname, "../.venv/bin/python");
+          ? path.join(__dirname, "../.venv/Scripts/python.exe") // Path to .venv Python on Windows
+          : path.join(__dirname, "../.venv/bin/python"); // Path to .venv Python on macOS/Linux
 
       const pythonScriptPath = path.join(__dirname, "../backend/main.py");
       const workingDir = path.join(__dirname, "../");

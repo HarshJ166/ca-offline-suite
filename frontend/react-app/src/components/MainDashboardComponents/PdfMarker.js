@@ -15,6 +15,7 @@ import {
 import { pdfjs, Document, Page } from "react-pdf"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs"
+import { useSearchParams } from "react-router-dom"
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString()
 
@@ -50,7 +51,7 @@ const initialConfigTest = {
   ],
   
 }
-const PDFColumnMarker = ({ setPdfColMarkerData, initialConfig = initialConfigTest }) => {
+const PDFColumnMarker = ({ setPdfColMarkerData, pdfPath,initialConfig = initialConfigTest }) => {
   const [columnLines, setColumnLines] = useState([])
   const [columnLabels, setColumnLabels] = useState([])
   const [pdfFile, setPdfFile] = useState(null)
@@ -97,6 +98,22 @@ const PDFColumnMarker = ({ setPdfColMarkerData, initialConfig = initialConfigTes
     }
   }, [initialConfig, pdfFile])
 
+  useEffect(() => {
+    if (pdfPath) {
+      // Convert local file path to File object or Blob
+      fetch(pdfPath)
+        .then(response => response.blob())
+        .then(blob => {
+          console.log('Blob:', blob);
+          const file = new File([blob], 'document.pdf', { type: 'application/pdf' });
+          setPdfFile(file);
+        })
+        .catch(error => {
+          console.error('Error loading PDF:', error);
+          // Handle error appropriately
+        });
+    }
+  }, [pdfPath])
 
 
 
@@ -164,6 +181,7 @@ const PDFColumnMarker = ({ setPdfColMarkerData, initialConfig = initialConfigTes
       ]
       setColumnLabels(newColumnLabels)
       setEditingLabelIndex(newColumnLabels.length - 1)
+      setLabelSelectorOpen(true)
     }
     updateHistory(columnLines, columnLabels)
   }
@@ -398,7 +416,7 @@ const PDFColumnMarker = ({ setPdfColMarkerData, initialConfig = initialConfigTes
           </div>
         </div>
 
-        {!pdfFile ? (
+        {/* {!pdfFile ? (
           <div className="flex justify-center">
             <label className="relative cursor-pointer bg-gray-50 rounded-lg p-6 border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors w-full">
               <div className="text-center">
@@ -410,7 +428,7 @@ const PDFColumnMarker = ({ setPdfColMarkerData, initialConfig = initialConfigTes
               <input type="file" accept=".pdf" onChange={handleFileChange} className="hidden" />
             </label>
           </div>
-        ) : (
+        ) : ( */}
           <>
             <div className="flex items-center justify-between bg-gray-50 p-2 rounded-lg">
               <div className="flex items-center gap-2">
@@ -463,7 +481,7 @@ const PDFColumnMarker = ({ setPdfColMarkerData, initialConfig = initialConfigTes
               onMouseUp={handleDragEnd}
               onMouseLeave={handleDragEnd}
             >
-              <Document file={pdfFile} onLoadSuccess={onDocumentLoadSuccess}>
+              <Document  file={pdfFile} onLoadSuccess={onDocumentLoadSuccess}>
                 <Page pageNumber={currentPage} scale={scale} renderTextLayer={false} renderAnnotationLayer={false} />
                 {/* 
                 {tableBounds.start !== null && (
@@ -638,7 +656,7 @@ const PDFColumnMarker = ({ setPdfColMarkerData, initialConfig = initialConfigTes
               </Tabs>
             </div>
           </>
-        )}
+        {/* )} */}
       </CardContent>
     </Card>
   )

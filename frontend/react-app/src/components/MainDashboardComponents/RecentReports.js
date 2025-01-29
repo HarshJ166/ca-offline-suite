@@ -44,6 +44,10 @@ import CategoryEditModal from "./CategoryEditModal";
 import GenerateReportForm from "../Elements/ReportForm";
 import { CircularProgress } from "../ui/circularprogress";
 
+
+import PDFMarkerModal from "./PdfMarkerModal"
+
+
 const RecentReports = ({ key }) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -60,6 +64,8 @@ const RecentReports = ({ key }) => {
 
   const [isFirstInfo, setIsFirstInfo] = useState(true);
   const [isLastInfo, setIsLastInfo] = useState(false);
+
+  const [isMarkerModalOpen, setIsMarkerModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -133,6 +139,7 @@ const RecentReports = ({ key }) => {
         }
       }).filter(item => item !== null); // Remove null entries
 
+      console.log("Processed failed data:", processedFailedData);
       setSelectedReportFailedData(processedFailedData);
     } catch (error) {
       toast({
@@ -243,6 +250,8 @@ const RecentReports = ({ key }) => {
       Failed: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
     };
 
+
+
     return (
       <Badge
         variant="outline"
@@ -289,9 +298,9 @@ const RecentReports = ({ key }) => {
 
   const handleView = (caseId) => {
     console.log("case", caseId);
-    console.log({ isLoading });
     setIsLoading(true);
     navigate(`/case-dashboard/${caseId}/defaultTab`);
+    console.log("in handle view");
     setIsLoading(false);
   };
 
@@ -421,8 +430,46 @@ const RecentReports = ({ key }) => {
     setIsAddPdfModalOpen(false);
   };
 
+  const handleOpenMarker = () => {
+    if (selectedReportFailedData && selectedReportFailedData[0] && selectedReportFailedData[0].parsedContent) {
+      const pdfPath = selectedReportFailedData[0].parsedContent.paths[0]
+      console.log("Opening marker with pdfPath:", pdfPath)
+      setIsMarkerModalOpen(true)
+    } else {
+      console.error("No PDF path available")
+      toast({
+        title: "Error",
+        description: "No PDF path available for this report",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleSaveMarkerData = (data) => {
+    // Handle saving marker data here
+    console.log("Saved marker data:", data)
+    setIsMarkerModalOpen(false)
+  }
+
+
+
   return (
     <Card>
+      <PDFMarkerModal
+        isOpen={isMarkerModalOpen}
+        onClose={() => setIsMarkerModalOpen(false)}
+        onSave={handleSaveMarkerData}
+        pdfPath={
+          selectedReportFailedData && selectedReportFailedData[0]
+            ? selectedReportFailedData[0].parsedContent?.paths[0]
+            : null
+        }
+        initialConfig={
+          selectedReportFailedData && selectedReportFailedData[0]
+            ? selectedReportFailedData[0].parsedContent?.columns
+            : []
+        }
+      />
       <CategoryEditModal open={isCategoryEditOpen} onOpenChange={toggleEdit} />
 
       <CardHeader>
@@ -532,15 +579,22 @@ const RecentReports = ({ key }) => {
                     <div key={index} className="mb-4 border-b pb-4">
                       <h3 className="font-semibold mb-2">Failed Statement {index + 1}</h3>
                       {failedItem.parsedContent ? (
-                        <div>
-                          <p><strong>Paths:</strong> {failedItem.parsedContent.paths.length > 0 ? failedItem.parsedContent.paths.join(', ') : 'N/A'}</p>
-                          <p><strong>Passwords:</strong> {failedItem.parsedContent.passwords.length > 0 ? failedItem.parsedContent.passwords.join(', ') : 'N/A'}</p>
+                        <div className="flex gap-2">
+                          <p className="flex-[4.5]"><strong>Path:</strong> {failedItem.parsedContent.paths.length > 0 ? failedItem.parsedContent.paths.join(', ') : 'N/A'}</p>
+                          {/* <p><strong>Passwords:</strong> {failedItem.parsedContent.passwords.length > 0 ? failedItem.parsedContent.passwords.join(', ') : 'N/A'}</p>
                           <p><strong>Start Dates:</strong> {failedItem.parsedContent.startDates.length > 0 ? failedItem.parsedContent.startDates.join(', ') : 'N/A'}</p>
                           <p><strong>End Dates:</strong> {failedItem.parsedContent.endDates.length > 0 ? failedItem.parsedContent.endDates.join(', ') : 'N/A'}</p>
                           {failedItem.parsedContent.columns && failedItem.parsedContent.columns.length > 0 && (
                             <p><strong>Columns:</strong> {failedItem.parsedContent.columns[0].join(', ')}</p>
-                          )}
+                          )} */}
+                        {/* Show a rectify button here shadcn */}
+                         <Button variant="secondary" size="sm" className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors" onClick={handleOpenMarker}>
+                          Rectify
+                         </Button>
+
+                      
                         </div>
+
                       ) : (
                         <pre className="whitespace-pre-wrap break-all">
                           {JSON.stringify(failedItem, null, 2)}
@@ -638,6 +692,7 @@ const RecentReports = ({ key }) => {
           </div>
         </div>
       )}
+   
     </Card>
   );
 };
