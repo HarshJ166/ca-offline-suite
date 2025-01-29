@@ -68,7 +68,7 @@ class SessionManager extends EventEmitter {
     setRemainingSeconds(seconds) {
         this.remainingSeconds = seconds;
         this.emit('remainingSecondsUpdated', seconds);
-        log.info(`License countdown: ${seconds} seconds remaining`);
+        // log.info(`License countdown: ${seconds} seconds remaining`);
     }
 
     stopLicenseCountdown() {
