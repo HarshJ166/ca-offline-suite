@@ -12,12 +12,19 @@ const sessionManager = require("./SessionManager");
 const licenseManager = require('./LicenseManager');
 const { generateReportIpc } = require("./ipc/generateReport");
 const db = require("./db/db");
+const { autoUpdater } = require('electron-updater');
+const fs = require('fs').promises;
+const { v4: uuidv4 } = require('uuid');
 
 const log = require("electron-log");
 
 // Configure electron-log
 log.transports.console.level = "debug"; // Set the log level
 log.transports.file.level = "info"; // Only log info level and above in the log file
+
+// Configure autoUpdater logging
+autoUpdater.logger = log;
+autoUpdater.logger.transports.file.level = 'info';
 
 log.info("Working Directory:", process.cwd());
 
@@ -28,6 +35,8 @@ log.info("process.env.NODE_ENV", process.env.NODE_ENV);
 const BASE_DIR = isDev ? __dirname : process.resourcesPath;
 log.info("BASE_DIR", BASE_DIR);
 log.info("__dirname", __dirname);
+
+let mainWindow;
 
 // Add this function to handle file protocol
 function createProtocol() {
@@ -41,8 +50,88 @@ function createProtocol() {
   });
 }
 
+// Auto-update event handlers
+function setupAutoUpdater() {
+  if (isDev) {
+    log.info('Skipping auto-update setup in development mode');
+    return;
+  }
+
+  autoUpdater.on('checking-for-update', () => {
+    log.info('Checking for updates...');
+    mainWindow.webContents.send('update-status', 'checking');
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    log.info('Update available:', info);
+    mainWindow.webContents.send('update-status', 'available');
+  });
+
+  autoUpdater.on('update-not-available', (info) => {
+    log.info('Update not available:', info);
+    mainWindow.webContents.send('update-status', 'not-available');
+  });
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    log.info('Download progress:', progressObj);
+    mainWindow.webContents.send('update-progress', progressObj);
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    log.info('Update downloaded:', info);
+    mainWindow.webContents.send('update-downloaded');
+  });
+
+  autoUpdater.on('error', (err) => {
+    log.error('AutoUpdater error:', err);
+    mainWindow.webContents.send('update-error', err.message);
+  });
+
+  // Check for updates every 30 minutes
+  setInterval(() => {
+    autoUpdater.checkForUpdates().catch(err => {
+      log.error('Error checking for updates:', err);
+    });
+  }, 30 * 60 * 1000);
+}
+
+// IPC handlers for updates
+function setupUpdateIPC() {
+  ipcMain.handle('check-for-updates', async () => {
+    if (!isDev) {
+      try {
+        await autoUpdater.checkForUpdates();
+        return { success: true };
+      } catch (error) {
+        log.error('Error checking for updates:', error);
+        return { success: false, error: error.message };
+      }
+    }
+    return { success: false, error: 'Dev mode' };
+  });
+
+  ipcMain.handle('download-update', async () => {
+    if (!isDev) {
+      try {
+        await autoUpdater.downloadUpdate();
+        return { success: true };
+      } catch (error) {
+        log.error('Error downloading update:', error);
+        return { success: false, error: error.message };
+      }
+    }
+    return { success: false, error: 'Dev mode' };
+  });
+
+  ipcMain.handle('install-update', () => {
+    if (!isDev) {
+      autoUpdater.quitAndInstall();
+    }
+  });
+}
+
 async function createWindow() {
-  const win = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1800,
     height: 1000,
     simpleFullscreen: true,
@@ -57,7 +146,7 @@ async function createWindow() {
   });
 
   if (isDev) {
-    win.loadURL("http://localhost:3000");
+    mainWindow.loadURL("http://localhost:3000");
   } else {
     // Use absolute path resolution for production
     const prodPath = path.resolve(
@@ -69,13 +158,13 @@ async function createWindow() {
     log.info("Directory name:", __dirname);
     console.log("Production path:", prodPath);
     log.info("Production path:", prodPath);
-    win.loadFile(prodPath).catch((err) => {
+    mainWindow.loadFile(prodPath).catch((err) => {
       console.error("Failed to load production build:", err);
     });
   }
 
   if (isDev) {
-    // win.webContents.openDevTools();
+    // mainWindow.webContents.openDevTools();
   }
 
   registerIndividualDashboardIpc();
@@ -84,44 +173,47 @@ async function createWindow() {
   registerOpenFileIpc(BASE_DIR);
   registerReportHandlers();
   registerAuthHandlers();
-  const createTempDirectory = () => {
-    const tempDir = path.join(app.getPath('temp'), 'report-generator');
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-    return tempDir;
-  };
 
-  // Handle file saving to temp directory
-  ipcMain.handle('save-file-to-temp', async (event, fileBuffer) => {
-    try {
-      const tempDir = createTempDirectory();
-      const fileName = `${uuidv4()}.pdf`; // Generate unique filename
-      const filePath = path.join(tempDir, fileName);
-
-      await fs.promises.writeFile(filePath, Buffer.from(fileBuffer));
-      return filePath;
-    } catch (error) {
-      console.error('Error saving file to temp directory:', error.message);
-      throw error;
-    }
-  });
-
-  // Clean up temp files
-  ipcMain.handle('cleanup-temp-files', async () => {
-    const tempDir = path.join(app.getPath('temp'), 'report-generator');
-    try {
-      if (fs.existsSync(tempDir)) {
-        await fs.promises.rm(tempDir, { recursive: true, force: true });
-      }
-      return true;
-    } catch (error) {
-      console.error('Error cleaning up temp files:', error);
-      throw error;
-    }
-  });
-
+  setupAutoUpdater();
+  setupUpdateIPC();
 }
+
+function createTempDirectory() {
+  const tempDir = path.join(app.getPath('temp'), 'report-generator');
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+  }
+  return tempDir;
+}
+
+// Handle file saving to temp directory
+ipcMain.handle('save-file-to-temp', async (event, fileBuffer) => {
+  try {
+    const tempDir = createTempDirectory();
+    const fileName = `${uuidv4()}.pdf`; // Generate unique filename
+    const filePath = path.join(tempDir, fileName);
+
+    await fs.writeFile(filePath, Buffer.from(fileBuffer));
+    return filePath;
+  } catch (error) {
+    console.error('Error saving file to temp directory:', error.message);
+    throw error;
+  }
+});
+
+// Clean up temp files
+ipcMain.handle('cleanup-temp-files', async () => {
+  const tempDir = path.join(app.getPath('temp'), 'report-generator');
+  try {
+    if (fs.existsSync(tempDir)) {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    }
+    return true;
+  } catch (error) {
+    console.error('Error cleaning up temp files:', error);
+    throw error;
+  }
+});
 
 app.setName("CypherSol Dev");
 
@@ -142,32 +234,19 @@ app.whenReady().then(async () => {
       console.log("LicenseManager initialization failed:", error);
     }
 
-    try {
-      await sessionManager.init();
-    }
-    catch (error) {
-      console.log("SessionManager initialization failed:", error);
-    }
-
-    try {
-      await licenseManager.init();
-    }
-    catch (error) {
-      console.log("LicenseManager initialization failed:", error);
-    }
-
-
     // Proceed with the window creation and other tasks after initialization
     createProtocol();
     createWindow();
 
-    // try {
-    //   createUser();  // Handle user creation after SessionManager is ready
-    // } catch (dbError) {
-    //   console.error("User creation error:", dbError);
-    // }
+    // Initial update check after 1 minute
+    if (!isDev) {
+      setTimeout(() => {
+        autoUpdater.checkForUpdates().catch(err => {
+          log.error('Error in initial update check:', err);
+        });
+      }, 60 * 1000);
+    }
   } catch (error) {
-    console.error("Failed to initialize App:", error);
     console.error("Failed to initialize App:", error);
     // Optionally handle the error, e.g., show an error dialog or quit the app
     app.quit();
