@@ -46,9 +46,9 @@ let pythonProcess = null;
 const BACKEND_PORT = 5000;  // Replace with the port your backend is listening to
 
 // Listen for remaining seconds updates
-sessionManager.on('remainingSecondsUpdated', (seconds) => {
-  console.log(`Remaining seconds: ${seconds}`);
-});
+// sessionManager.on('remainingSecondsUpdated', (seconds) => {
+//   console.log(`Remaining seconds: ${seconds}`);
+// });
 
 // Listen for license expiration
 sessionManager.on('licenseExpired', () => {
@@ -236,24 +236,24 @@ async function createWindow() {
   win.on('close', (event) => {
     // event.preventDefault();
     log.info('Close event triggered');
-    win.hide();
+    // win.hide();
     // if (process.platform === 'darwin') {
-    //   // Show the confirmation dialog when the close button is clicked
-    //   const choice = dialog.showMessageBoxSync(win, {
-    //     type: 'warning',
-    //     buttons: ['Yes', 'Cancel'],
-    //     defaultId: 1,
-    //     title: 'Confirm Exit',
-    //     message: 'Closing the app will log out your session. Do you want to proceed?',
-    //   });
+      // Show the confirmation dialog when the close button is clicked
+      const choice = dialog.showMessageBoxSync(win, {
+        type: 'warning',
+        buttons: ['Yes', 'Cancel'],
+        defaultId: 1,
+        title: 'Confirm Exit',
+        message: 'Closing the app will log out your session. Do you want to proceed?',
+      });
 
-    //   if (choice === 0) {
-    //     log.info('User confirmed app close. Logging out...');
-    //     // Add your session logout logic here
-    //   } else {
-    //     log.info('User canceled app close.');
-    //     event.preventDefault(); // Prevent app from closing, keeping it in the background
-    //   }
+      if (choice === 0) {
+        log.info('User confirmed app close. Logging out...');
+        // Add your session logout logic here
+      } else {
+        log.info('User canceled app close.');
+        event.preventDefault(); // Prevent app from closing, keeping it in the background
+      }
     // }
   });
   // setTimeout(() => {
