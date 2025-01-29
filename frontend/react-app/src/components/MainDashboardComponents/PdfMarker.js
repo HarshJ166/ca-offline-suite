@@ -101,17 +101,25 @@ const PDFColumnMarker = ({ setPdfColMarkerData, pdfPath,initialConfig = initialC
   useEffect(() => {
     if (pdfPath) {
       // Convert local file path to File object or Blob
-      fetch(pdfPath)
-        .then(response => response.blob())
-        .then(blob => {
-          console.log('Blob:', blob);
-          const file = new File([blob], 'document.pdf', { type: 'application/pdf' });
-          setPdfFile(file);
-        })
-        .catch(error => {
-          console.error('Error loading PDF:', error);
-          // Handle error appropriately
-        });
+      console.log({marker: pdfPath})
+      fetch("E:/Workplace/Bizpedia/ca-offline-suite/narpat.pdf")
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    if (response.headers.get("content-type") !== 'application/pdf') {
+      throw new Error('Received content is not a PDF');
+    }
+    return response.blob();
+  })
+  .then(blob => {
+    console.log('Blob:', blob);
+    const file = new File([blob], 'document.pdf', { type: 'application/pdf' });
+    setPdfFile(file);
+  })
+  .catch(error => {
+    console.error('Error loading PDF:', error);
+  });
     }
   }, [pdfPath])
 

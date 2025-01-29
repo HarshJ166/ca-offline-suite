@@ -33,11 +33,7 @@ const CaseDashboard = () => {
       icon: UserPen,
       isActive: true,
     },
-    {
-      title: "Individual Table",
-      url: "#",
-      icon: null,
-    },
+    
   ];
 
   useEffect(() => {
