@@ -82,13 +82,11 @@ const IndividualTable = ({ caseId }) => {
   console.log("currentData", currentData);
 
   const handleRowClick = async (name, accountNumber, individualId) => {
-    console.log("name", name);
+    // console.log("name", name);
     console.log("indivivdual table", individualId);
     setIsLoading(true);
     try {
-      navigate(`/individual-dashboard/${caseId}/${individualId}/defaultTab`, {
-        state: { name, accountNumber },
-      });
+      navigate(`/individual-dashboard/${caseId}/${individualId}/defaultTab`);
     } finally {
       setIsLoading(false);
     }
