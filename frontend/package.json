@@ -1,6 +1,6 @@
 {
   "name": "cyphersol-ats-electron-app",
-  "version": "1.0.4",
+  "version": "1.0.8",
   "description": "",
   "main": "main.js",
   "scripts": {
@@ -75,8 +75,18 @@
     },
     "mac": {
       "category": "public.app-category.utilities",
-      "target": "dmg",
-      "identity": null
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "identity": null,
+      "strictVerify": false,
+      "electronUpdaterCompatibility": ">=2.15",
+      "darkModeSupport": true
     },
     "win": {
       "target": "nsis"
