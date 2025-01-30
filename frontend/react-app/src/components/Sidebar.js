@@ -1,12 +1,5 @@
 import React, { useEffect } from "react";
-import {
-  BadgeCheck,
-  Bell,
-  CreditCard,
-  LogOut,
-  Sparkles,
-  // ChevronRight,
-} from "lucide-react";
+import { BadgeCheck, Bell, CreditCard, LogOut, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -15,8 +8,6 @@ import {
   SidebarHeader,
   SidebarRail,
   useSidebar,
-  // SidebarMenuSubItem,
-  // SidebarMenuSubButton,
 } from "./ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import {
@@ -30,9 +21,15 @@ import {
 } from "./ui/dropdown-menu";
 import logo from "../data/assets/logo.png";
 import { useAuth } from "../contexts/AuthContext";
-// import logoDark from "../data/assets/cyphersol-logo-dark.png";
 
-const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
+const SidebarDynamic = ({
+  navItems,
+  activeTab,
+  setActiveTab,
+  name,
+  caseId,
+  reportName,
+}) => {
   const { logout, setError } = useAuth();
   const navigate = useNavigate();
   const { isCollapsed } = useSidebar();
@@ -42,16 +39,12 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
     avatar: "#",
   });
 
+  const isIndividualDashboard = Boolean(name);
+  const isCaseDashboard = Boolean(caseId);
+
   useEffect(() => {
     console.log({ isCollapsed });
   }, [isCollapsed]);
-
-  // const toggleItem = (title) => {
-  //   setOpenItems((prevState) => ({
-  //     ...prevState,
-  //     [title]: !prevState[title], // Toggle the current state
-  //   }));
-  // };
 
   const handleLogout = async () => {
     try {
@@ -63,7 +56,7 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
       }
     } catch (error) {
       console.error("Logout error:", error);
-      setError(error.message); // Display the error to the user via context
+      setError(error.message);
     }
   };
 
@@ -73,12 +66,14 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
     return (
       <div className="w-full">
         <button
-          className={`w-full flex items-center justify-start p-2 rounded-md transition-all duration-200 ease-in-out ${level > 0 ? "ml-4" : ""
-            } ${activeTab === item.title && !hasSubmenu
+          className={`w-full flex items-center justify-start p-2 rounded-md transition-all duration-200 ease-in-out ${
+            level > 0 ? "ml-4" : ""
+          } ${
+            activeTab === item.title && !hasSubmenu
               ? "bg-gray-300 text-black font-semibold dark:bg-slate-300"
               : "text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
-            } ${isCollapsed ? "justify-center" : ""}`}
-          onClick={() => !hasSubmenu && setActiveTab(item.title)} // Only set active tab if no submenu
+          } ${isCollapsed ? "justify-center" : ""}`}
+          onClick={() => !hasSubmenu && setActiveTab(item.title)}
         >
           <div className="flex items-center gap-3">
             {item.icon && <item.icon className="h-5 w-5 flex-shrink-0" />}
@@ -86,12 +81,45 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
           </div>
         </button>
 
-        {/* Submenu is always visible */}
         {hasSubmenu && (
           <div className={`ml-4 mt-1 space-y-1 ${isCollapsed ? "hidden" : ""}`}>
             {item.items.map((subItem) => (
               <MenuItem key={subItem.title} item={subItem} level={level + 1} />
             ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const DashboardInfo = () => {
+    if (isCollapsed || (!isIndividualDashboard && !isCaseDashboard))
+      return null;
+
+    return (
+      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-lg shadow-sm">
+        {isIndividualDashboard && (
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              Account Name :{" "}
+              <span className="text-sm text-gray-800 dark:text-gray-200 font-semibold hover:text-gray-600 dark:hover:text-gray-400 transition-colors duration-300">
+                {name}
+              </span>
+            </p>
+          </div>
+        )}
+        {isCaseDashboard && (
+          <div className="space-y-2">
+            {reportName && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  Report Name :{" "}
+                  <span className="text-sm text-gray-800 dark:text-gray-200 font-semibold hover:text-gray-600 dark:hover:text-gray-400 transition-colors duration-300">
+                    {reportName}
+                  </span>
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -115,14 +143,12 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
             <AvatarFallback className="rounded-lg">HJ</AvatarFallback>
           </Avatar>
           {!isCollapsed && (
-            <>
-              <div className="ml-3 flex-1 text-left">
-                <p className="text-sm font-medium hover:text-black">
-                  {user.name}
-                </p>
-                <p className="text-xs text-gray-500">{user.email}</p>
-              </div>
-            </>
+            <div className="ml-3 flex-1 text-left">
+              <p className="text-sm font-medium hover:text-black">
+                {user.name}
+              </p>
+              <p className="text-xs text-gray-500">{user.email}</p>
+            </div>
           )}
         </button>
       </DropdownMenuTrigger>
@@ -172,14 +198,15 @@ const SidebarDynamic = ({ navItems, activeTab, setActiveTab }) => {
       <SidebarHeader>
         <div className="h-16 flex items-center px-4 border-b">
           <img
-            // handle dark logo too
             src={logo}
             alt="Logo"
-            className={`h-12 cursor-pointer transition-all duration-300 ${isCollapsed ? "w-8" : "w-auto"
-              }`}
+            className={`h-12 cursor-pointer transition-all duration-300 ${
+              isCollapsed ? "w-8" : "w-auto"
+            }`}
             onClick={() => navigate("/")}
           />
         </div>
+        <DashboardInfo />
       </SidebarHeader>
       <SidebarContent className="p-3 overflow-x-hidden">
         <NavMain />

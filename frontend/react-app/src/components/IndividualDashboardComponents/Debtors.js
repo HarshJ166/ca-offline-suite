@@ -71,7 +71,7 @@ const Debtors = () => {
             />
           </div>
           <div className="w-full">
-            <DataTable data={data} />
+            <DataTable data={data} title="Debtors Table" />
           </div>
         </>
       )}

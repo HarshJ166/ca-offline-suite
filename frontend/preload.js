@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer, shell } = require("electron");
 const { generateReportIpc } = require("./ipc/generateReport");
+const log = require("electron-log");
 
 // Expose a secure API for opening files to the renderer process
 contextBridge.exposeInMainWorld("electron", {
@@ -73,6 +74,13 @@ contextBridge.exposeInMainWorld("electron", {
 
   deleteReport: (caseId) => ipcRenderer.invoke("delete-report", caseId),
 
+  getReportName: (caseId) => ipcRenderer.invoke("get-Report-Name", caseId),
+
+  getCustomerName: (caseId) => ipcRenderer.invoke("get-Customer-Name", caseId),
+
+  getReportNameExists: (reportName) =>
+    ipcRenderer.invoke("check-Report-Name-Exists", reportName),
+
   downloadExcelReport: (data) =>
     ipcRenderer.invoke("download-excel-report", data),
 
@@ -111,13 +119,13 @@ contextBridge.exposeInMainWorld("electron", {
   //   checkForUpdates: () => ipcRenderer.invoke('check-for-updates', () => {}),
   //   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   //   installUpdate: () => ipcRenderer.invoke('install-update'),
-  //   onUpdateStatus: (callback) => 
+  //   onUpdateStatus: (callback) =>
   //     ipcRenderer.on('update-status', (_, status) => callback(status)),
-  //   onUpdateProgress: (callback) => 
+  //   onUpdateProgress: (callback) =>
   //     ipcRenderer.on('update-progress', (_, progress) => callback(progress)),
-  //   onUpdateDownloaded: (callback) => 
+  //   onUpdateDownloaded: (callback) =>
   //     ipcRenderer.on('update-downloaded', () => callback()),
-  //   onUpdateError: (callback) => 
+  //   onUpdateError: (callback) =>
   //     ipcRenderer.on('update-error', (_, error) => callback(error)),
   //   // Remove event listeners when component unmounts
   //   removeUpdateListeners: () => {
@@ -130,24 +138,25 @@ contextBridge.exposeInMainWorld("electron", {
 
   // Add auto-update related methods
   updates: {
-    checkForUpdates: () => ipcRenderer.invoke('check-for-updates', () => {}),
+    checkForUpdates: () => ipcRenderer.invoke("check-for-updates", () => {}),
     // downloadUpdate: () => ipcRenderer.invoke('download-update'),
     // installUpdate: () => ipcRenderer.invoke('install-update'),
-    onUpdateStatus: (callback) => 
-      ipcRenderer.on('update-status', (_, status) => callback(status)),
-    onUpdateProgress: (callback) => 
-      ipcRenderer.on('update-progress', (_, progress) => callback(progress)),
-    onUpdateDownloaded: (callback) => 
-      ipcRenderer.on('update-downloaded', () => callback()),
-    onUpdateError: (callback) => 
-      ipcRenderer.on('update-error', (_, error) => callback(error)),
+    onUpdateStatus: (callback) =>
+      ipcRenderer.on("update-status", (_, status) => callback(status)),
+    onUpdateProgress: (callback) =>
+      ipcRenderer.on("update-progress", (_, progress) => callback(progress)),
+    onUpdateDownloaded: (callback) =>
+      ipcRenderer.on("update-downloaded", () => callback()),
+    onUpdateError: (callback) =>
+      ipcRenderer.on("update-error", (_, error) => callback(error)),
     // Remove event listeners when component unmounts
+
     removeUpdateListeners: () => {
-      ipcRenderer.removeAllListeners('update-status');
-      ipcRenderer.removeAllListeners('update-progress');
-      ipcRenderer.removeAllListeners('update-downloaded');
-      ipcRenderer.removeAllListeners('update-error');
-    }
+      ipcRenderer.removeAllListeners("update-status");
+      ipcRenderer.removeAllListeners("update-progress");
+      ipcRenderer.removeAllListeners("update-downloaded");
+      ipcRenderer.removeAllListeners("update-error");
+    },
   },
 
   shell: {

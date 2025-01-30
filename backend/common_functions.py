@@ -46,7 +46,7 @@ BASE_DIR = get_base_dir()
 logger.info("Base Dir : ", BASE_DIR)
 #from old_bank_extractions import CustomStatement
 import json
-from .code_for_extraction import extract_with_test_cases, model_for_pdf, extract_dataframe_from_pdf
+from .code_for_extraction import extract_text_from_pdf, extract_with_test_cases, model_for_pdf, extract_dataframe_from_pdf
 
 ##EXTRACTION PROCESS
 def extract_text_from_file(file_path):
@@ -86,7 +86,7 @@ def add_start_n_end_date( df, start_date, end_date, bank):
         print("The period falls within the start and end dates.")
     else:
         raise Exception(
-            f"The period for Bank: {bank} does not fall within the start and end dates."
+            f"Error: The period for Bank: {bank} does not fall within the start and end dates."
         )
 
     # add opening and closing balance
@@ -270,92 +270,97 @@ def extraction_process(bank, pdf_path, pdf_password, start_date, end_date):
     CA_ID = "1234_temp"
     empty_idf = pd.DataFrame()
     default_name_n_num = ["_", "XXXXXXXXXX"]
-
+    a = ""
     bank = re.sub(r"\d+", "", bank)
     ext = extract_extension(pdf_path)
 
-    if ext == ".pdf":
-        idf, text, explicit_lines = extract_with_test_cases(bank, pdf_path, pdf_password, CA_ID)
-        if idf.empty:
-            name_n_num = explicit_lines
+    try:
+        if ext == ".pdf":
+            idf, text, explicit_lines = extract_with_test_cases(bank, pdf_path, pdf_password, CA_ID)
+            name_n_num = explicit_lines if idf.empty else extract_account_details(text)
+
+        elif ext == ".csv":
+            pdf_path = convert_csv_to_excel(pdf_path, CA_ID)
+            df = pd.read_excel(pdf_path)
+            df.loc[0] = df.columns
+            df.columns = range(df.shape[1])
+
+            start_index = df.apply(
+                lambda row: (
+                    row.astype(str).str.contains("date", case=False).any() and
+                    row.astype(str).str.contains("balance|total amount", case=False).any()) or
+                    row.astype(str).str.contains("balance|total amount", case=False).any(),
+                axis=1
+            ).idxmax()
+            df = df.loc[start_index:] if start_index is not None else pd.DataFrame()
+            idf, _ = model_for_pdf(df)
+            name_n_num = extract_account_details(extract_text_from_file(pdf_path))
+
         else:
-            name_n_num = extract_account_details(text)
+            df = pd.read_excel(pdf_path)
+            df.loc[0] = df.columns
+            df.columns = range(df.shape[1])
 
-    elif ext == ".csv":
-        pdf_path = convert_csv_to_excel(pdf_path, CA_ID)
-        df = pd.read_excel(pdf_path)
-        df.loc[0] = df.columns
-        df.columns = range(df.shape[1])
-        start_index = df.apply(lambda row: (
-            row.astype(str).str.contains("date", case=False).any() and
-            row.astype(str).str.contains("balance|total amount", case=False).any()) or
-            row.astype(str).str.contains("balance|total amount", case=False).any(),
-            axis=1
-        ).idxmax()
-        df = df.loc[start_index:] if start_index is not None else pd.DataFrame()
-        idf, _ = model_for_pdf(df)
-        name_n_num = extract_account_details(extract_text_from_file(pdf_path))
+            start_index = df.apply(
+                lambda row: (
+                    row.astype(str).str.contains("date", case=False).any() and
+                    row.astype(str).str.contains("balance|total amount", case=False).any()) or
+                    row.astype(str).str.contains("balance|total amount", case=False).any(),
+                axis=1
+            ).idxmax()
+            df = df.loc[start_index:] if start_index is not None else pd.DataFrame()
+            idf, _ = model_for_pdf(df)
+            name_n_num = extract_account_details(extract_text_from_file(pdf_path))
 
-    else:
-        df = pd.read_excel(pdf_path)
-        df.loc[0] = df.columns
-        df.columns = range(df.shape[1])
-        start_index = df.apply(lambda row: (
-            row.astype(str).str.contains("date", case=False).any() and
-            row.astype(str).str.contains("balance|total amount", case=False).any()) or
-            row.astype(str).str.contains("balance|total amount", case=False).any(),
-            axis=1
-        ).idxmax()
-        df = df.loc[start_index:] if start_index is not None else pd.DataFrame()
-        idf, _ = model_for_pdf(df)
-        name_n_num = extract_account_details(extract_text_from_file(pdf_path))
+        if not idf.empty:
+            idf = add_start_n_end_date(idf, start_date, end_date, bank)
 
-    # Add start and end date
-    if not idf.empty:
-        idf = add_start_n_end_date(idf, start_date, end_date, bank)
+        return idf, name_n_num, a
 
-    return idf, name_n_num
+    except Exception as e:
+        return empty_idf, default_name_n_num, str(e)
+
+
 
 def extraction_process_explicit_lines(bank, pdf_path, pdf_password, start_date, end_date, explicit_lines, labels):
     CA_ID = "1234_temp"
     empty_idf = pd.DataFrame()
     default_name_n_num = ["_", "XXXXXXXXXX"]
-
     bank = re.sub(r"\d+", "", bank)
+    a = ""
 
-    df = extract_dataframe_from_pdf(pdf_path, table_settings={
+    try:
+        df = extract_dataframe_from_pdf(pdf_path, table_settings={
             "vertical_strategy": "explicit",
             "explicit_vertical_lines": explicit_lines,
             "horizontal_strategy": "text",
-            "edge_min_length": 40,
             "intersection_x_tolerance": 120,
         })
 
-    all_null = all(label[1] == "null" for label in labels)
-    if not all_null:
-        new_row = [None] * len(df.columns)  # Create a blank row with the same number of columns
-        for label in labels:
-            index, label_type = label
-            if index < len(new_row):
-                new_row[index] = label_type
+        all_null = all(label[1] == "null" for label in labels)
 
-        # Insert the new row at the top of the DataFrame
-        df.loc[-1] = new_row  # Add the new row with a negative index to place it at the top
-        df.index = df.index + 1  # Shift all indices by 1
-        df.sort_index(inplace=True)  # Reorder the DataFrame to update the row positions
-        idf, abc = model_for_pdf(df)
+        if not all_null:
+            new_row = [None] * len(df.columns)  # Create a blank row with the same number of columns
+            for index, label_type in labels:
+                if index < len(new_row):
+                    new_row[index] = label_type
 
-    else:
-        idf, abc = model_for_pdf(df)
+            # Insert the new row at the top of the DataFrame
+            df.loc[-1] = new_row  # Add the new row with a negative index to place it at the top
+            df.index = df.index + 1  # Shift all indices by 1
+            df.sort_index(inplace=True)  # Reorder the DataFrame to update the row positions
 
+        idf, _ = model_for_pdf(df)
+        name_n_num = extract_account_details(extract_text_from_pdf(pdf_path))
 
-    name_n_num = extract_account_details(extract_text_from_pdf(pdf_path))
+        # Add start and end date
+        if not idf.empty:
+            idf = add_start_n_end_date(idf, start_date, end_date, bank)
 
-    # Add start and end date
-    if not idf.empty:
-        idf = add_start_n_end_date(idf, start_date, end_date, bank)
+        return idf, name_n_num, a
 
-    return idf, name_n_num
+    except Exception as e:
+        return empty_idf, default_name_n_num, str(e)
 
 ##EOD
 def monthly( df):

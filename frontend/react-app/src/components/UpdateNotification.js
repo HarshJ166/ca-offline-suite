@@ -7,13 +7,14 @@ const UpdateNotification = () => {
   const { updates } = window.electron;
 
   useEffect(() => {
-    // Set up update event listeners
-    updates.onUpdateStatus((status) => {
+    // Set up update event listeners with detailed logging
+    updates.onUpdateStatus((status, info) => {
+      console.log('Update status:', status, info);
       setUpdateStatus(status);
       if (status === 'available') {
         toast({
           title: "Update Available",
-          description: "A new version is available. Would you like to download it?",
+          description: `A new version (${info?.version || 'unknown'}) is available. Would you like to download it?`,
           action: (
             <button
               onClick={() => updates.downloadUpdate()}
@@ -26,7 +27,6 @@ const UpdateNotification = () => {
         });
       }
     });
-
     updates.onUpdateProgress((progressObj) => {
       setProgress(progressObj.percent || 0);
       if (progressObj.percent === 100) {
@@ -37,12 +37,12 @@ const UpdateNotification = () => {
         });
       }
     });
-
-    updates.onUpdateDownloaded(() => {
+    updates.onUpdateDownloaded((info) => {
+      console.log('Update downloaded:', info);
       setUpdateStatus('ready');
       toast({
         title: "Update Ready",
-        description: "Update will be installed on restart",
+        description: `Version ${info?.version || 'unknown'} has been downloaded and will be installed on restart`,
         action: (
           <button
             onClick={() => updates.installUpdate()}
