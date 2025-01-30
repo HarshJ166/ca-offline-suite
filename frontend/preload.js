@@ -5,6 +5,7 @@ const log = require("electron-log");
 // Expose a secure API for opening files to the renderer process
 contextBridge.exposeInMainWorld("electron", {
   openFile: (filePath) => ipcRenderer.invoke("open-file", filePath),
+  fetchPdfContent: (filePath) => ipcRenderer.invoke("fetch-pdf-content", filePath),
 
   getReportsProcessed: () => ipcRenderer.invoke("get-reports-processed"),
   getStatementsProcessed: () => ipcRenderer.invoke("get-statements-processed"),
@@ -109,10 +110,10 @@ contextBridge.exposeInMainWorld("electron", {
   getFailedStatements: (referenceId) =>
     ipcRenderer.invoke("get-failed-statements", referenceId),
 
-  onLicenseExpired: (callback) => ipcRenderer.on("navigateToLogin", callback),
-  removeLicenseExpiredListener: () =>
-    ipcRenderer.removeAllListeners("navigateToLogin"),
-
+  onLicenseExpired: (callback) => ipcRenderer.on('navigateToLogin', callback),
+  removeLicenseExpiredListener: () => ipcRenderer.removeAllListeners('navigateToLogin'),
+  editPdf: (result, reportName) =>
+    ipcRenderer.invoke("edit-pdf", result, reportName),
   // // Add auto-update related methods
   // updates: {
   //   checkForUpdates: () => ipcRenderer.invoke('check-for-updates', () => {}),

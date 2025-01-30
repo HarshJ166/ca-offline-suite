@@ -670,7 +670,7 @@ const GenerateReportForm = ({
 
             <div>
               <h1 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                AddBank Statements
+                Add Bank Statements
               </h1>
 
               <div className="flex items-center justify-center space-x-4 w-full mb-6">
@@ -767,8 +767,10 @@ const GenerateReportForm = ({
                                     )
                                   }
                                   className="w-full"
+                                  onOpenChange={() => setBankSearchTerm("")}
                                 >
                                   <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select Bank Name" />
                                     <SelectValue>
                                       {detail.bankName || "Select a bank"}
                                     </SelectValue>

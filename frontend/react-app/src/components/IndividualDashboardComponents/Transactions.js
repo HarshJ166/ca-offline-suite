@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle } from "../ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import ToggleStrip from "./ToggleStrip";
 import { useParams } from "react-router-dom";
+import CategoryEditTable from "../MainDashboardComponents/CategoryEditTable";
 
 const MaximizableChart = ({ children, title, isMaximized, setIsMaximized }) => {
   const toggleMaximize = () => setIsMaximized(!isMaximized);
@@ -56,6 +57,63 @@ const Transactions = () => {
   const [error, setError] = useState(null);
   const [availableMonths, setAvailableMonths] = useState([]);
   const { caseId, individualId } = useParams();
+  const [categoryOptions, setCategoryOptions] = useState(null);
+
+  // Sample entity options
+  const categoryOptionsfixed = [
+    "Bank Charges",
+    "Bank Interest Received",
+    "Bonus Paid",
+    "Bonus Received",
+    "Bounce",
+    "Cash Deposits",
+    "Cash Reversal",
+    "Cash Withdrawal",
+    "Closing Balance",
+    "Credit Card Payment",
+    "Debtor List",
+    "Departmental Stores",
+    "Donation",
+    "Food Expense/Hotel",
+    "General Insurance",
+    "Gold Loan",
+    "GST Paid",
+    "Income Tax Paid",
+    "Income Tax Refund",
+    "Indirect tax",
+    "Interest Debit",
+    "Interest Received",
+    "Investment",
+    "Life insurance",
+    "Loan",
+    "Loan given",
+    "Local Cheque Collection",
+    "Online Shopping",
+    "Opening Balance",
+    "Other Expenses",
+    "POS-Cr",
+    "POS-Dr",
+    "Probable Claim Settlement",
+    "Property Tax",
+    "Provident Fund",
+    "Redemption, Dividend & Interest",
+    "Refund/Reversal",
+    "Rent Paid",
+    "Rent Received",
+    "Salary Paid",
+    "Salary Received",
+    "Subscription / Entertainment",
+    "TDS Deducted",
+    "Total Income Tax Paid",
+    "Travelling Expense",
+    "UPI-Cr",
+    "UPI-Dr",
+    "Utility Bills",
+  ];
+
+  useEffect(() => {
+    setCategoryOptions(categoryOptionsfixed);
+  }, []);
 
   useEffect(() => {
     console.log({ fromTransactionsTab: individualId });
@@ -132,7 +190,6 @@ const Transactions = () => {
       category: transaction.category,
       bank: transaction.bank,
       // entity: transaction.entity,
-
     }));
   };
 
@@ -292,7 +349,11 @@ const Transactions = () => {
                 </MaximizableChart>
               </div>
 
-              <DataTable data={filteredData} title="Transactions Table" />
+              <CategoryEditTable
+                data={filteredData}
+                categoryOptions={categoryOptions}
+                setCategoryOptions={setCategoryOptions}
+              />
             </>
           )}
         </>

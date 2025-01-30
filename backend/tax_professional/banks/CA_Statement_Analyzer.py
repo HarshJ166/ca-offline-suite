@@ -280,6 +280,7 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
     name_dfs = {}
     errorz = {}
     pdf_paths_not_extracted = {
+        "bank_names": [],
         "paths": [],
         "passwords": [],
         "start_dates": [],
@@ -314,6 +315,7 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
         # account_number += f"{name_dfs[bank][1][:4]}x{name_dfs[bank][1][-4:]}_"
         # Check if the extracted dataframe is empty
         if dfs[bank].empty:
+            pdf_paths_not_extracted["bank_names"].append(bank)
             pdf_paths_not_extracted["paths"].append(pdf_path)
             pdf_paths_not_extracted["passwords"].append(pdf_password)
             pdf_paths_not_extracted["start_dates"].append(start_date)
@@ -393,6 +395,7 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
     errorz = {}
 
     pdf_paths_not_extracted = {
+        "bank_names": [],
         "paths": [],
         "passwords": [],
         "start_dates": [],
@@ -415,6 +418,7 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
         # account_number += f"{name_dfs[bank][1][:4]}x{name_dfs[bank][1][-4:]}_"
         # Check if the extracted dataframe is empty
         if dfs[bank].empty:
+            pdf_paths_not_extracted["bank_names"].append(bank)
             pdf_paths_not_extracted["paths"].append(pdf_path)
             pdf_paths_not_extracted["passwords"].append(pdf_password)
             pdf_paths_not_extracted["start_dates"].append(start_date)

@@ -98,10 +98,32 @@ const CategoryEditTable = ({
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [showAllRows, setShowAllRows] = useState(false);
 
+  // Add this helper function to format dates
+  const formatValue = (value) => {
+    if (value instanceof Date) {
+      return value.toLocaleDateString();
+    }
+    return value;
+  };
+
   useEffect(() => {
-    setTransactions(data);
-    setFilteredData(data);
+    // Format any Date objects in the data when it's first received
+    const formattedData = data.map((row) => {
+      const newRow = {};
+      Object.keys(row).forEach((key) => {
+        newRow[key] = formatValue(row[key]);
+      });
+      return newRow;
+    });
+
+    setTransactions(formattedData);
+    setFilteredData(formattedData);
   }, [data]);
+
+  // useEffect(() => {
+  //   setTransactions(data);
+  //   setFilteredData(data);
+  // }, [data]);
 
   // Get dynamic columns from first data item
   let columns = data.length > 0 ? Object.keys(data[0]) : [];
@@ -664,11 +686,13 @@ const CategoryEditTable = ({
                               </SelectContent>
                             </Select>
                           ) : (
-                            <div className="truncate">{row[column]}</div>
+                            <div className="truncate">
+                              {formatValue(row[column])}
+                            </div>
                           )}
                           {column.toLowerCase() === "description" && (
                             <div className="absolute left-0 top-10 hidden group-hover:block bg-black text-white text-sm rounded p-2 z-50 whitespace-normal min-w-[200px] max-w-[400px]">
-                              {row[column]}
+                              {formatValue(row[column])}
                             </div>
                           )}
                         </TableCell>
