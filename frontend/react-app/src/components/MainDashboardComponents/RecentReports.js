@@ -20,7 +20,7 @@ import { useToast } from "../../hooks/use-toast";
 import { Badge } from "../ui/badge";
 import { cn } from "../../lib/utils";
 import { useNavigate } from "react-router-dom";
-import { Eye, Plus, Trash2, Info, Search, Edit2, X } from "lucide-react";
+import { Eye, Plus, Trash2, Info, Search, Edit2, X,CheckCircle  } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -58,14 +58,34 @@ const RecentReports = ({ key }) => {
   const [currentCaseName, setCurrentCaseName] = useState("");
   const [currentCaseId, setCurrentCaseId] = useState("");
   const [recentReports, setRecentReports] = useState([]);
-  const [selectedReportFailedData, setSelectedReportFailedData] =
+  const [failedDatasOfCurrentReport, setFailedDatasOfCurrentReport] =
     useState(null);
-
-  const [isFirstInfo, setIsFirstInfo] = useState(true);
-  const [isLastInfo, setIsLastInfo] = useState(false);
-  const [pdfNameForMarker, setPdfNameForMarker] = useState(null);
-
+  const [selectedFailedFile, setSelectedFailedFile] = useState(null);
   const [isMarkerModalOpen, setIsMarkerModalOpen] = useState(false);
+
+  const handleSubmitEditPdf = async () => {
+    const allRectified = failedDatasOfCurrentReport.every(
+      (statement) => statement.resolved
+    );
+    if (allRectified) {
+
+      // Call the API to update the statements
+      const result = await window.electron.editPdf(failedDatasOfCurrentReport, currentCaseName);
+      console.log("aiyaz react result", result);
+
+      toast({
+        title: "Success",
+        description: "All statements have been rectified.",
+        variant: "success",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Please rectify all statements before submitting.",
+        variant: "destructive",
+      });
+    };
+  }
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -107,13 +127,16 @@ const RecentReports = ({ key }) => {
 
     fetchReports();
   }, []);
-  const handleDetails = async (reportId) => {
+  const handleDetails = async (reportId,reportName) => {
     setIsLoading(true);
+    setCurrentCaseName(reportName);
 
     try {
       const failedStatements = await window.electron.getFailedStatements(
         reportId
       );
+
+      console.log("failedStatements", failedStatements);
 
       // Process failed statements with extensive error checking
       const processedFailedData = failedStatements
@@ -124,6 +147,7 @@ const RecentReports = ({ key }) => {
 
           try {
             const parsedData = JSON.parse(item.data);
+            console.log("parsedData", parsedData);
             return {
               ...item,
               parsedContent: {
@@ -149,53 +173,44 @@ const RecentReports = ({ key }) => {
         })
         .filter((item) => item !== null); // Remove null entries
 
-      console.log("Processed failed data:", processedFailedData);
-      setSelectedReportFailedData(processedFailedData);
+      const tempFailedDataOfReport =[]
+      for(let i=0; i<processedFailedData[0].parsedContent.paths.length; i++) {
+        tempFailedDataOfReport.push({
+          caseId: processedFailedData[0].caseId,
+          id: processedFailedData[0].id,
+          columns:processedFailedData[0].parsedContent.columns[i],
+          endDate:processedFailedData[0].parsedContent.endDates[i],
+          bankName:processedFailedData[0].bankName,
+          startDate:processedFailedData[0].parsedContent.startDates[i],
+          path:processedFailedData[0].parsedContent.paths[i],
+          password:processedFailedData[0].parsedContent.passwords[i],
+          resolved: false,
+          pdfName: processedFailedData[0].parsedContent.paths[i].split('\\').pop(),
+        })
+      }
+
+      // remove duplicate entries using pdfName
+      const uniqueFailedDataOfReport = tempFailedDataOfReport.filter(
+        (thing, index, self) =>
+          index ===
+          self.findIndex(
+            (t) => t.pdfName === thing.pdfName
+          )
+      );
+
+      setFailedDatasOfCurrentReport(uniqueFailedDataOfReport);
     } catch (error) {
       toast({
         title: "Error",
         description: `Failed to load details: ${error.message}`,
         variant: "destructive",
+
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handlePrevInfo = (statements_length, currentInfoIndex) => {
-    console.log(
-      "Clicked on prev",
-      "statements_length",
-      statements_length,
-      "currentInfoIndex",
-      currentInfoIndex
-    );
-
-    if (currentInfoIndex === 0) {
-      setIsFirstInfo(true);
-    }
-
-    if (currentInfoIndex < statements_length - 1) {
-      setIsLastInfo(false);
-    }
-  };
-
-  const handleNextInfo = (statements_length, currentInfoIndex) => {
-    console.log(
-      "Clicked on next",
-      "statements_length",
-      statements_length,
-      "currentInfoIndex",
-      currentInfoIndex
-    );
-
-    if (currentInfoIndex === statements_length - 1) {
-      setIsLastInfo(true);
-    }
-    if (currentInfoIndex > 0) {
-      setIsFirstInfo(false);
-    }
-  };
 
   // Filter reports based on search query
   const filteredReports = recentReports.filter(
@@ -304,10 +319,8 @@ const RecentReports = ({ key }) => {
   };
 
   const handleView = (caseId) => {
-    console.log("case", caseId);
     setIsLoading(true);
     navigate(`/case-dashboard/${caseId}/defaultTab`);
-    console.log("in handle view");
     setIsLoading(false);
   };
 
@@ -336,7 +349,6 @@ const RecentReports = ({ key }) => {
       });
       return;
     }
-    console.log("CASEEEE IDDDDD : ", caseId);
     setLoading(true);
     const newToastId = toast({
       title: "Initializing Report Generation",
@@ -344,13 +356,14 @@ const RecentReports = ({ key }) => {
         <div className="mt-2 w-full flex flex-col gap-2">
           <div className="flex items-center gap-4">
             <CircularProgress className="w-full" />
-//             <CircularProgress value={0} className="w-full" />
+             <CircularProgress value={0} className="w-full" />
             {/* <span className="text-sm font-medium">0%</span> */}
           </div>
           <p className="text-sm text-gray-500">Preparing to process files...</p>
         </div>
       ),
       duration: Infinity,
+      
     });
     setToastId(newToastId);
 
@@ -424,11 +437,9 @@ const RecentReports = ({ key }) => {
   };
 
   const toggleEdit = (id) => {
-    console.log("Clicked on edit");
     setIsCategoryEditOpen(!isCategoryEditOpen);
   };
   const handleAddReport = (caseName, caseID) => {
-    console.log("Case name clicked on add report:", caseName);
     setCurrentCaseName(caseName);
     setCurrentCaseId(caseID);
     setIsAddPdfModalOpen(true);
@@ -438,27 +449,9 @@ const RecentReports = ({ key }) => {
     setIsAddPdfModalOpen(false);
   };
 
-  const handleOpenMarker = () => {
-
-    if (selectedReportFailedData && selectedReportFailedData[0] && selectedReportFailedData[0].parsedContent) {
-      const pdfPath = selectedReportFailedData[0].parsedContent.paths[0]
-      const pdfName = pdfPath.split('\\').pop()
-      setPdfNameForMarker(pdfName)
-      console.log("Opening marker with pdfPath:", pdfPath, "pdfName:", pdfName)
-      setIsMarkerModalOpen(true)
-    } else {
-      console.error("No PDF path available");
-      toast({
-        title: "Error",
-        description: "No PDF path available for this report",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleSaveMarkerData = (data) => {
     // Handle saving marker data here
-    console.log("Saved marker data:", data);
+    console.log("recent reports failed pdf handleSave data:", data);
     setIsMarkerModalOpen(false);
   };
 
@@ -468,14 +461,8 @@ const RecentReports = ({ key }) => {
         isOpen={isMarkerModalOpen}
         onClose={() => setIsMarkerModalOpen(false)}
         onSave={handleSaveMarkerData}
-        pdfName={
-          pdfNameForMarker
-        }
-        initialConfig={
-          selectedReportFailedData && selectedReportFailedData[0]
-            ? selectedReportFailedData[0].parsedContent?.columns
-            : []
-        }
+        selectedFailedFile={selectedFailedFile}
+        setFailedDatasOfCurrentReport={setFailedDatasOfCurrentReport}
       />
       <CategoryEditModal open={isCategoryEditOpen} onOpenChange={toggleEdit} />
 
@@ -562,7 +549,7 @@ const RecentReports = ({ key }) => {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 hover:bg-black/5"
-                        onClick={() => handleDetails(report.id)}
+                        onClick={() => handleDetails(report.id,report.name)}
                       >
                         <Info className="h-4 w-4" />
                       </Button>
@@ -574,67 +561,65 @@ const RecentReports = ({ key }) => {
                         </AlertDialogTitle>
                       </AlertDialogHeader>
                       <div className="p-6 overflow-auto max-h-[400px]">
-                        {selectedReportFailedData &&
-                        selectedReportFailedData.some(
-                          (item) =>
-                            item.parsedContent &&
-                            (item.parsedContent.paths.length > 0 ||
-                              item.parsedContent.passwords.length > 0 ||
-                              item.parsedContent.startDates.length > 0 ||
-                              item.parsedContent.endDates.length > 0 ||
-                              (item.parsedContent.columns &&
-                                item.parsedContent.columns.length > 0))
-                        ) ? (
-                          <div>
-                            {selectedReportFailedData.map(
-                              (failedItem, index) => (
-                                <div key={index} className="mb-4 border-b pb-4">
-                                  <h3 className="font-semibold mb-2">
-                                    Failed Statement {index + 1}
-                                  </h3>
-                                  {failedItem.parsedContent ? (
-                                    <div className="flex gap-2">
-                                      <p className="flex-[4.5]">
-                                        <strong>Path:</strong>{" "}
-                                        {failedItem.parsedContent.paths.length >
-                                        0
-                                          ? failedItem.parsedContent.paths.join(
-                                              ", "
-                                            )
-                                          : "N/A"}
-                                      </p>
-                                      {/* <p><strong>Passwords:</strong> {failedItem.parsedContent.passwords.length > 0 ? failedItem.parsedContent.passwords.join(', ') : 'N/A'}</p>
-                          <p><strong>Start Dates:</strong> {failedItem.parsedContent.startDates.length > 0 ? failedItem.parsedContent.startDates.join(', ') : 'N/A'}</p>
-                          <p><strong>End Dates:</strong> {failedItem.parsedContent.endDates.length > 0 ? failedItem.parsedContent.endDates.join(', ') : 'N/A'}</p>
-                          {failedItem.parsedContent.columns && failedItem.parsedContent.columns.length > 0 && (
-                            <p><strong>Columns:</strong> {failedItem.parsedContent.columns[0].join(', ')}</p>
-                          )} */}
-                                      {/* Show a rectify button here shadcn */}
-                                      <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors"
-                                        onClick={handleOpenMarker}
-                                      >
-                                        Rectify
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <pre className="whitespace-pre-wrap break-all">
-                                      {JSON.stringify(failedItem, null, 2)}
-                                    </pre>
-                                  )}
-                                </div>
-                              )
-                            )}
-                          </div>
-                        ) : (
+                        {failedDatasOfCurrentReport && failedDatasOfCurrentReport.length>0 ?(
+ <div>
+ {failedDatasOfCurrentReport.map((statement, index) => {
+   const isDone = statement.resolved;
+
+   return (
+     <div key={index} className="mb-4 border-b pb-4">
+       <h3 className="font-semibold mb-2">
+         Failed Statement {index + 1}
+       </h3>
+       <div className="flex gap-2 items-center">
+         <p className="flex-[4.5]">
+           <strong>File Name:</strong> {statement.pdfName}
+         </p>
+
+         {/* Conditionally render the Rectify or Done button */}
+         {isDone ? (
+           <Button
+             size="sm"
+             disabled
+             className="flex-1 bg-green-600 hover:bg-green-700 text-white transition-colors"
+           >
+             <CheckCircle className="w-4 h-4 mr-2" />
+             Done
+           </Button>
+         ) : (
+           <Button
+             variant="secondary"
+             size="sm"
+             className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors"
+             onClick={() => {
+               setIsMarkerModalOpen(true);
+               setSelectedFailedFile(statement);
+             }}
+           >
+             Rectify
+           </Button>
+         )}
+       </div>
+     </div>
+   );
+ })}
+</div>
+): (
                           <div className="text-center text-green-600 font-semibold">
                             Report Processed Successfully
                           </div>
                         )}
                       </div>
                       <AlertDialogFooter className="border-t border-black/10 pt-6">
+                      {/* create a submit button */}
+                        <Button
+                          variant="primary"
+                          onClick={() => handleSubmitEditPdf()}
+                          className="px-8 bg-black text-white hover:bg-black/90 hover:text-white dark:bg-white dark:text-black"
+                        >
+                          Submit
+                        </Button>
+
                         <AlertDialogCancel className="px-8 bg-black text-white hover:bg-black/90 hover:text-white dark:bg-white dark:text-black">
                           Close
                         </AlertDialogCancel>

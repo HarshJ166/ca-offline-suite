@@ -204,7 +204,7 @@ const IndividualTable = ({ caseId }) => {
                     <TableCell>{startIndex + index + 1}</TableCell>
                     <TableCell>
                       <div
-                        className="truncate max-w-full"
+                        className="truncate max-w-[450px]"
                         title={item.filePath}
                       >
                         {item.filePath}

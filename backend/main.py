@@ -80,8 +80,11 @@ async def analyze_bank_statements(request: BankStatementRequest):
         CA_ID = request.ca_id
         progress_data = progress_data
 
+
+
         logger.info("Starting extraction")
         result = start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_date, end_date, CA_ID, progress_data)
+        
         print("RESULT GENERATED")
         logger.info("Extraction completed successfully")
         return {
@@ -132,11 +135,11 @@ async def column_rectify_add_pdf(request: BankStatementRequest):
         end_date = request.end_date if request.end_date else []
         CA_ID = request.ca_id
         progress_data = progress_data
-
         column_coordinates = request.columns
         whole_transaction_sheet = request.whole_transaction_sheet
         result = start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_date, end_date, CA_ID, progress_data,aiyaz_array_of_array=column_coordinates,whole_transaction_sheet=whole_transaction_sheet)
 
+        return result
     except Exception as e:
         logger.error(f"Error processing bank statements: {str(e)}")
         raise HTTPException(

@@ -636,7 +636,7 @@ const handleFileDetailChange = (index, field, value) => {
 
             <div>
               <h1 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                AddBank Statements
+                Add Bank Statements
               </h1>
               
               <div className="flex items-center justify-center space-x-4 w-full mb-6">
