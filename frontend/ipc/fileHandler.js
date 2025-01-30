@@ -36,6 +36,8 @@ async function registerOpenFileIpc(BASE_DIR) {
             return { error: error.message };
         }
     });
+
+    
 }
 
 module.exports = { registerOpenFileIpc };

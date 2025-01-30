@@ -15,7 +15,6 @@ import {
 import { pdfjs, Document, Page } from "react-pdf"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs"
-import { useSearchParams } from "react-router-dom"
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString()
 
@@ -51,13 +50,13 @@ const initialConfigTest = {
   ],
   
 }
-const PDFColumnMarker = ({ setPdfColMarkerData, pdfName,initialConfig = initialConfigTest }) => {
+const PDFColumnMarker = ({ addColsToStatementData, pdfName,initialConfig = initialConfigTest }) => {
   const [columnLines, setColumnLines] = useState([])
   const [columnLabels, setColumnLabels] = useState([])
   const [pdfFile, setPdfFile] = useState(null)
   const [numPages, setNumPages] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const [scale, setScale] = useState(1.3)
+  const [scale, setScale] = useState(1.4)
   const [editingLabelIndex, setEditingLabelIndex] = useState(null)
   const [draggingLineIndex, setDraggingLineIndex] = useState(null)
   const [draggingLabelIndex, setDraggingLabelIndex] = useState(null)
@@ -67,15 +66,17 @@ const PDFColumnMarker = ({ setPdfColMarkerData, pdfName,initialConfig = initialC
   const [history, setHistory] = useState([])
   const [historyIndex, setHistoryIndex] = useState(-1)
   const [labelSelectorOpen, setLabelSelectorOpen] = useState(true)
+  const [pdfBlob, setPdfBlob] = useState(null)
 
   const pdfContainerRef = useRef(null)
 
 
   useEffect(() => {
-    if (initialConfig && pdfFile) {
+
+    if (initialConfig && pdfBlob) {
       if (initialConfig.lines) {
         // sort the lines
-        const sortedInitialLines =           initialConfig.lines.map((line) => ({
+        const sortedInitialLines =initialConfig.lines.map((line) => ({
           id: Date.now() + Math.random(),
           x: line.x,
         })).sort((a, b) => a.x - b.x)
@@ -96,46 +97,31 @@ const PDFColumnMarker = ({ setPdfColMarkerData, pdfName,initialConfig = initialC
         // setCurrentStep("labels")
       }
     }
-  }, [initialConfig, pdfFile])
+  }, [initialConfig, pdfBlob])
 
   useEffect(() => {
-    console.log('pdfName from og code:', pdfName);
-    if (pdfName) {
-      // Convert local file path to File object or Blob
-      // get current working directory
-      window.electron.readPdfFile(pdfName).then(data => {
-        console.log('File data electron:', data);
+    window.electron.fetchPdfContent(pdfName)
+      .then(base64 => {
+        const blob = base64StringToBlob(base64, 'application/pdf');
+        setPdfBlob(URL.createObjectURL(blob));
       })
-      .catch(err => {
-        console.error('Failed to read file electron:', err);
-      });
-  
-      
-      fetch("../../../tmp/"+pdfName)
-  .then(response => {
-    if (!response.ok) {
-      throw new Error('Network response was not ok');
-    }
-    if (response.headers.get("content-type") !== 'application/pdf') {
-      throw new Error('Received content is not a PDF');
-    }
-    return response.blob();
-  })
-  .then(blob => {
-    console.log('Blob:', blob);
-    const file = new File([blob], 'document.pdf', { type: 'application/pdf' });
-    setPdfFile(file);
-  })
-  .catch(error => {
-    console.error('Error loading PDF:', error);
-  });
-    }
-  }, [pdfName])
+      .catch(err => console.error('Failed to fetch PDF:', err));
+  }, []);
 
+  const base64StringToBlob = (base64, type) => {
+    const binaryString = window.atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return new Blob([bytes], {type: type});
+  };
 
 
   const handleClick = (e) => {
-    if (!pdfFile || isDragging) return
+    // if (!pdfFile || isDragging) return
+    if (!pdfBlob || isDragging) return
 
     if (draggingLineIndex !== null || draggingLabelIndex !== null) {
       return
@@ -174,7 +160,6 @@ const PDFColumnMarker = ({ setPdfColMarkerData, pdfName,initialConfig = initialC
     } else if (currentStep === "labels") {
       // find col start and col end of this col
       const colEnd = columnLines.findIndex((line) => {
-          console.log('Checking line:', line.x);
           return line.x > x;
       });
       const colStart = colEnd-1;
@@ -326,10 +311,10 @@ const PDFColumnMarker = ({ setPdfColMarkerData, pdfName,initialConfig = initialC
     const requiredTypes = ["balance", "date", "description"]
     const selectedTypes = columnLabels.map((label) => label.type)
 
-    if (!requiredTypes.every((type) => selectedTypes.includes(type))) {
-      alert("Please select Balance, Date, and Description columns before submitting.")
-      return
-    }
+    // if (!requiredTypes.every((type) => selectedTypes.includes(type))) {
+    //   alert("Please select Balance, Date, and Description columns before submitting.")
+    //   return
+    // }
 
     const sortedLines = [...columnLines].sort((a, b) => a.x - b.x)
 
@@ -354,7 +339,8 @@ const PDFColumnMarker = ({ setPdfColMarkerData, pdfName,initialConfig = initialC
       columns,
     }
 
-    setPdfColMarkerData((prevData) => [...prevData, config.columns])
+    console.log({pdfName,config})
+    addColsToStatementData(pdfName,config.columns)
   }
 
   const updateHistory = (lines, labels) => {
@@ -387,7 +373,6 @@ const PDFColumnMarker = ({ setPdfColMarkerData, pdfName,initialConfig = initialC
       if (!label.type || label.type === "Skip") return null
       const x = label.x
       const endIndex = columnLines.findIndex((line) => {
-          console.log('Checking line:', line.x);
           return line.x > x;
       });
       const startIndex = endIndex-1;
@@ -398,7 +383,7 @@ const PDFColumnMarker = ({ setPdfColMarkerData, pdfName,initialConfig = initialC
       // const endX = columnLines[index + 1]?.x || 0
       const width = endX - startX
 
-      console.log({startIndex,endIndex,startX, endX, width, label})
+      // console.log({startIndex,endIndex,startX, endX, width, label})
       const colorIndex = COLUMN_TYPES.findIndex((type) => type.id === label.type) % COLUMN_COLORS.length
       return (
         <div
@@ -416,11 +401,11 @@ const PDFColumnMarker = ({ setPdfColMarkerData, pdfName,initialConfig = initialC
   
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
+    <Card className="w-full max-w-4xl mx-auto ">
       <CardHeader className="space-y-6">
         <CardTitle>PDF Column Marker</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 overflow-hidden">
         <div className="bg-gray-50 p-4 rounded-lg">
           <p className="text-sm text-gray-600">{getInstructionText()}</p>
           <div className="text-xs text-gray-500 flex gap-x-4 mt-2">
@@ -446,8 +431,25 @@ const PDFColumnMarker = ({ setPdfColMarkerData, pdfName,initialConfig = initialC
             </label>
           </div>
         ) : ( */}
+
           <>
-            <div className="flex items-center justify-between bg-gray-50 p-2 rounded-lg">
+          <div className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // setTableBounds({ start: null, end: null })
+                  setColumnLines([])
+                  setColumnLabels([])
+                  setUsedColumnTypes([])
+                }}
+              >
+                Start Over
+              </Button>
+              <Button className="ml-auto" onClick={handleSubmit}>
+                Save Column Mapping
+              </Button>
+            </div>
+            <div className="flex items-center justify-between bg-gray-50 p-2 rounded-lg  ">
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon" onClick={undo} disabled={historyIndex <= 0}>
                   <Undo2 className="h-4 w-4" />
@@ -491,14 +493,14 @@ const PDFColumnMarker = ({ setPdfColMarkerData, pdfName,initialConfig = initialC
 
             <div
               ref={pdfContainerRef}
-              className="relative bg-gray-50 rounded-lg overflow-hidden"
+              className="relative bg-gray-50 rounded-lg overflow-hidden "
               style={{ cursor: "crosshair" }}
               onClick={handleClick}
               onMouseMove={handleDrag}
               onMouseUp={handleDragEnd}
               onMouseLeave={handleDragEnd}
             >
-              <Document  file={pdfFile} onLoadSuccess={onDocumentLoadSuccess}>
+              <Document className={"overflow-auto"} style={{overflow:"auto"}} file={pdfBlob} onLoadSuccess={onDocumentLoadSuccess}>
                 <Page pageNumber={currentPage} scale={scale} renderTextLayer={false} renderAnnotationLayer={false} />
                 {/* 
                 {tableBounds.start !== null && (
@@ -526,7 +528,7 @@ const PDFColumnMarker = ({ setPdfColMarkerData, pdfName,initialConfig = initialC
                   <div key={line.id} className="absolute top-0 h-full" style={{ left: `${line.x * scale}px` ,zIndex: 99}}>
                     <div className="h-full bg-gray-400 border-l-2 border-gray-500" />
 
-                    <div className="absolute top-2 flex items-center gap-1">
+                    <div className="absolute top-2  items-center">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -586,7 +588,7 @@ const PDFColumnMarker = ({ setPdfColMarkerData, pdfName,initialConfig = initialC
                       </div>
 
                       {editingLabelIndex === index ? (
-                        <Select style={{ zIndex: 999 }} open={labelSelectorOpen} onOpenChange={setLabelSelectorOpen} value={label.type} onValueChange={(value) => handleColumnTypeSelect(index, value)}>
+                        <Select style={{ zIndex: 999 }} open={labelSelectorOpen}  value={label.type} onValueChange={(value) => handleColumnTypeSelect(index, value)}>
                           
                           <SelectTrigger className="w-48">
                             <SelectValue placeholder="Select column type" />
@@ -621,22 +623,7 @@ const PDFColumnMarker = ({ setPdfColMarkerData, pdfName,initialConfig = initialC
               </Document>
             </div>
 
-            <div className="flex justify-between">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  // setTableBounds({ start: null, end: null })
-                  setColumnLines([])
-                  setColumnLabels([])
-                  setUsedColumnTypes([])
-                }}
-              >
-                Start Over
-              </Button>
-              <Button className="ml-auto" onClick={handleSubmit}>
-                Save Column Mapping
-              </Button>
-            </div>
+         
 
             {/* right - side tabs */}
             <div

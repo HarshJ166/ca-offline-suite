@@ -71,7 +71,7 @@ const EMI = () => {
             />
           </div>
           <div>
-            <DataTable data={data} />
+            <DataTable data={data} title="Emi Transactions" />
           </div>
         </>
       )}

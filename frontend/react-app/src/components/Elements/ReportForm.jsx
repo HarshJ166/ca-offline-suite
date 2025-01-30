@@ -356,28 +356,63 @@ const GenerateReportForm = ({
   // In GenerateReportForm.js, modify the handleSubmit function:
 
   const handleSubmit = async (e) => {
-    console.log("Inside handleSubmit..", caseName);
     e.preventDefault();
+    console.log("Inside handleSubmit..", caseName);
 
-    const validationErrors = [];
+    if (!caseName) {
+      toast({
+        title: "Error",
+        description: "Please enter a report name",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
 
-    handleReportSubmit(
-      setProgress,
-      setLoading,
-      setToastId,
-      selectedFiles,
-      fileDetails,
-      setSelectedFiles,
-      setFileDetails,
-      setCaseName,
-      toast,
-      progressIntervalRef,
-      simulateProgress,
-      convertDateFormat,
-      "CASE_1",
-      caseName,
-      financialYear
-    );
+    try {
+      // Check if report name exists
+      const response = await window.electron.getReportNameExists({
+        reportName: caseName,
+      });
+
+      if (response.exists) {
+        toast({
+          title: "Error",
+          description:
+            "Report name already exists. Please choose a different name.",
+          variant: "destructive",
+          duration: 3000,
+        });
+        return;
+      }
+
+      // If report name is unique, proceed with report generation
+      handleReportSubmit(
+        setProgress,
+        setLoading,
+        setToastId,
+        selectedFiles,
+        fileDetails,
+        setSelectedFiles,
+        setFileDetails,
+        setCaseName,
+        toast,
+        progressIntervalRef,
+        simulateProgress,
+        convertDateFormat,
+        "CASE_1",
+        caseName,
+        financialYear
+      );
+    } catch (error) {
+      console.error("Error checking report name:", error);
+      toast({
+        title: "Error",
+        description: "Failed to validate report name",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
 
     // if (selectedFiles.length === 0) {
     //   toast({
@@ -635,7 +670,7 @@ const GenerateReportForm = ({
 
             <div>
               <h1 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                AddBank Statements
+                Add Bank Statements
               </h1>
 
               <div className="flex items-center justify-center space-x-4 w-full mb-6">
@@ -732,8 +767,10 @@ const GenerateReportForm = ({
                                     )
                                   }
                                   className="w-full"
+                                  onOpenChange={() => setBankSearchTerm("")}
                                 >
-                                  <SelectTrigger className="w-full">
+                                  <SelectTrigger className="w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-500 transition-all">
+                                    <SelectValue placeholder="Select Bank Name" />
                                     <SelectValue>
                                       {detail.bankName || "Select a bank"}
                                     </SelectValue>

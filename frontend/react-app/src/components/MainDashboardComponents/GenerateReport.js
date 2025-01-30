@@ -3,7 +3,13 @@ import { Bell, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import GenerateReportForm from "../Elements/ReportForm";
 import RecentReports from "./RecentReports";
 import { CircularProgress } from "../ui/circularprogress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog"; // Import shadcn/ui Dialog components
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "../ui/dialog"; // Import shadcn/ui Dialog components
 import { Button } from "../ui/button"; // Import shadcn/ui Button component
 import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
 
@@ -58,7 +64,7 @@ export default function GenerateReport() {
           <div className="flex items-center gap-4">
             <CircularProgress className="w-full" />
             {/* <span className="text-sm font-medium">0%</span> */}
-             <CircularProgress value={0} className="w-full" />
+            // <CircularProgress value={0} className="w-full" />
           </div>
           <p className="text-sm text-gray-500">Preparing to process files...</p>
         </div>
@@ -111,7 +117,7 @@ export default function GenerateReport() {
           duration: 3000,
         });
 
-        setFailedStatements(result.pdf_paths_not_extracted || []); // Store failed 
+        setFailedStatements(result.pdf_paths_not_extracted || []); // Store failed
         setCaseId(result.caseId); // Store caseId
         setDialogOpen(true); // Open the Dialog
 
@@ -165,7 +171,7 @@ export default function GenerateReport() {
     navigate(`/case-dashboard/${caseId}/:defaultTab`);
   };
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  
+
   const notifications = [
     { id: 1, message: "You have a new message." },
     { id: 2, message: "Your report is ready to download." },
@@ -255,10 +261,7 @@ export default function GenerateReport() {
               </ul>
             </div>
           )}
-          <Button
-            onClick={() => viewAnalysis(caseId)}
-            className="w-full"
-          >
+          <Button onClick={() => viewAnalysis(caseId)} className="w-full">
             View Analysis
           </Button>
         </DialogContent>

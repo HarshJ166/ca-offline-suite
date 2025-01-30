@@ -313,14 +313,14 @@ def unlock_and_add_margins_to_pdf(pdf_path, pdf_password, timestamp, CA_ID):
         pdf_document = fitz.open(unlocked_pdf_path)
         first_page = pdf_document[0]
         text = first_page.get_text("text").strip()
-        if not text:
-            raise ValueError("The PDF is of image-only (non-text) format. Please upload a text PDF.")
 
+        if not text or text == "CamScanner":
+            raise Exception("The PDF is of image-only (non-text) format. Please upload a text PDF.")
         pdf_document.close()
         return unlocked_pdf_path
 
     except Exception as e:
-        raise ValueError(f"An error occurred while processing the PDF: {e}")
+        raise ValueError(f"Error: {e}")
 
     finally:
         # Ensure all temporary documents are closed and cleaned up
@@ -675,10 +675,10 @@ def crdr_to_credit_debit_columns(df, description_column, date_column, bal_column
     return final_df
 
 def extract_text_from_pdf(unlocked_file_path):
-    with fitz.open(unlocked_file_path) as pdf_doc:
-        # Use a list comprehension for faster text concatenation
-        text = ''.join([pdf_doc.load_page(i).get_text("text") for i in range(pdf_doc.page_count)])
-    return text
+    with pdfplumber.open(unlocked_file_path) as pdf:
+        first_page = pdf.pages[0]
+        text = first_page.extract_text()
+        return text.strip() if text else None
 
 ##____________AFTER EXTRACTION (cleaning)_________________
 
