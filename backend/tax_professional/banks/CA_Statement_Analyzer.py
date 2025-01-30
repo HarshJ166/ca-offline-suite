@@ -308,8 +308,7 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
         labels = [[entry["index"], entry["type"]] for entry in aiyaz_array_of_array]
 
 
-        dfs[bank], name_dfs[bank] = extraction_process_explicit_lines(bank, pdf_path, pdf_password, start_date, end_date, explicit_lines, labels)
-        errorz[bank] = ""
+        dfs[bank], name_dfs[bank], errorz[bank] = extraction_process_explicit_lines(bank, pdf_path, pdf_password, start_date, end_date, explicit_lines, labels)
 
         print(f"Extracted {bank} bank statement successfully")
         # account_number += f"{name_dfs[bank][1][:4]}x{name_dfs[bank][1][-4:]}_"
@@ -410,8 +409,7 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
         start_date = start_dates[i]
         end_date = end_dates[i]
 
-        dfs[bank], name_dfs[bank] = extraction_process(bank, pdf_path, pdf_password, start_date, end_date)
-        errorz[bank] = ""
+        dfs[bank], name_dfs[bank], errorz[bank] = extraction_process(bank, pdf_path, pdf_password, start_date, end_date)
 
         print(f"Extracted {bank} bank statement successfully")
         # account_number += f"{name_dfs[bank][1][:4]}x{name_dfs[bank][1][-4:]}_"
@@ -493,16 +491,7 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
 
 
 
-##################################33
-
-# bank_names = ["IDFC", "BOB"]
-# pdf_paths = ["Copy of Copy of IDFC FIRST Bank (1).pdf", "Oct'23 to Mar'24  FG5V03395.pdf"]
-# passwords = ["", "FG5V03395"]
-# start_dates = ["01-09-2021", "01-10-2023"]
-# end_dates = ["03-03-2022", "31-03-2024"]
-# CA_ID = "CA_ID_4321"
-# progress_data = {}
-# null = "null"
+##################################
 # aiyaz_array_of_array = [
 #         [
 #             {
@@ -622,6 +611,18 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
 #         ]
 # ]
 #
-# # x = start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end_dates, CA_ID, progress_data, aiyaz_array_of_array, whole_transaction_sheet=None)
-# start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_dates, CA_ID, progress_data)
+
+#
+# bank_names = ["IDFC", "BOB", "HDFC", "IDBI"]
+# pdf_paths = ["V V Mehtai.pdf", "V V Mehta.pdf", "Copy of BOB AUG - NOV 22 PASSWORD - 9920192292 .pdf", "Leena BOB-2019 1-04-2023 To 30-09-2023 - Pass- 078344809_unlocked.pdf"]
+# passwords = ["", "", "", ""]
+# start_dates = ["01-09-2020", "01-10-2020", "01-09-2020", "01-01-2023"]
+# end_dates = ["03-03-2025", "31-03-2025", "03-03-2025", "31-03-2023"]
+# CA_ID = "CA_ID_4321"
+# progress_data = {}
+# null = "null"
+#
+# # # x = start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end_dates, CA_ID, progress_data, aiyaz_array_of_array, whole_transaction_sheet=None)
+# result = start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_dates, CA_ID, progress_data)
 # print("exit")
+# print(result["pdf_paths_not_extracted"])
