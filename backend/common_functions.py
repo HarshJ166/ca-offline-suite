@@ -124,7 +124,76 @@ def add_start_n_end_date( df, start_date, end_date, bank):
     idf["Bank"] = f"{bank}"
     return idf
 
-def extract_account_details( text):
+
+# Function to extract account number and IFSC code from text
+def extract_info(raw_text):
+    acc = "XXXXXXXXXXXXXX"
+    # Regular expressions to capture Customer ID and ECS No
+    customer_id_pattern = r"(?i)\bCust(?:omer)?\s*ID[:\s]*\d{10}\b"
+    ecs_no_pattern = r"(?i)ECS\s*No[:\s]*\d{10,18}\b"  # Match ECS No followed by digits
+    cif_no_pattern = r"CIF\sNo\.?\s*[:\-]?\s*(\d+)"
+
+    # Remove Customer ID and ECS No from the raw text
+    if re.search(customer_id_pattern, raw_text):
+        raw_text = re.sub(customer_id_pattern, "", raw_text)
+    if re.search(ecs_no_pattern, raw_text):
+        raw_text = re.sub(ecs_no_pattern, "", raw_text)
+    if re.search(cif_no_pattern, raw_text):
+        raw_text = re.sub(cif_no_pattern, "", raw_text)
+
+    # Patterns specifically targeting the numeric part for account numbers
+    account_number_patterns = [
+        r"\b(?!18002026161\b)(?!9\d{9}\b)(?!91\d{10}\b)\d{10,18}\b",
+        r"(?!CIF No\.?:?\s*\d+\s*)Account No\.?\s*[:#]?\s*(\d+\/?[A-Z]*\/?\d+)",
+        r"(?i)CUSTOMER\s*ID[:\s]*\d{10}\b",
+        r"(?!Phone No. :?\s?)\d(10)",
+        r"Account No\s*[:#]?\s*(\d+)",
+        r"Account\s*No\s*[:#]?\s*(\d+)",
+        r"Account\sNo.\s:\s(\d+\/[A-Z]+\/\d+)",
+        r"Account\sNo\.?\s*[:#]?\s*(\d+\/[A-Z]+\/\d+)",
+        r"Account\s*number\s*[:#]?\s*(\d+)",
+        r"account\s*number\s*[:#]?\s*(\d+)",
+        r"Account\s*Number\s*[:#]?\s*(\d+)",
+        r"Account Number\s*:\s*(\d+)",
+        r"Account Number\s*(\d+)",
+        r"A/C NO[:#]?\s*(\d+)",
+        r"STATEMENT PERIOD\s*(\d+)",
+        r"Account number[:#]?\s*(\d+)",
+        r"Account\s*[:#]?\s*(\d+)",
+        r"\b\d{15}\b",
+        r"Account #\s*(\d+)",
+        r"\b\d{3}-\d{6}-\d{3}\b",
+        r"A/c X{10}\d{4}",
+        r"\b\d{8}\b",
+    ]
+
+    ifsc_pattern = r"\b[A-Z]{4}0[A-Z0-9]{6}\b"  # IFSC code pattern
+
+    if not raw_text:  # If raw_text is None or empty, return None values
+        return acc
+
+    # Search for account number using specific patterns
+    for pattern in account_number_patterns:
+        match = re.search(pattern, raw_text, re.IGNORECASE)
+
+        if match:
+            try:
+                # Try accessing group 1 if it exists
+                acc = match.group(1).strip()  # Extracted number only
+            except IndexError:
+                # If group 1 does not exist, return the whole match
+                acc = match.group(0).strip()  # Whole match
+        else:
+            acc = None  # No match found
+
+        if match:
+            return acc
+
+
+    # Return None if no pattern matches
+    return acc
+
+def extract_account_details(text):
 
     try:
         # Combined pattern to match account holder names for different banks
@@ -172,47 +241,13 @@ def extract_account_details( text):
         names = [
             name.strip() for name in names if name.strip()
         ]  # Clean up names list
+
         # Combined pattern to match account numbers for different banks
-        account_number_patterns = [
-            re.compile(p, re.IGNORECASE)
-            for p in [
-                r"Account No\s*:\s*(\d+)",
-                r"Account Number\s*:\s*(\d+)",
-                r"Account Number\s*(\d+)",
-                r"A/C NO: (\d+)",
-                r"\b\d{13,16}\b",
-                r"STATEMENT PERIOD\s*(\d+)",
-                r"Account number:\s*(\d+)",
-                r"Account\s*:\s*(\d+)",
-                r"\b\d{15}\b",
-                r"Account #\s*(\d+)",
-                r"Number:\s*(\d+)",
-                r"\b\d{3}-\d{6}-\d{3}\b",
-                r"A/c X{10}\d{4}",
-                r"Account # (.*)",
-                r"Account No (.*)",
-                r"\b\d{10}\b",
-                r"STATEMENT PERIOD(.*)",
-                r"^\d{8}$",
-                r"\d{12,15}",
-            ]
-        ]
-
-        account_numbers = []
-        for pattern in account_number_patterns:
-            matches = pattern.findall(text)
-            if matches:
-                account_numbers.extend(matches)
-
-        account_numbers = [
-            number.strip()
-            for number in account_numbers
-            if number.replace("-", "").isdigit()
-        ]  # Clean up account numbers list
+        account_numbers = extract_info(text)
 
         details = [
-            names[0] if names else "_",
-            account_numbers[0] if account_numbers else "XXXXXXXXXX",
+            names[0] if names else "_____",
+            account_numbers,
         ]
 
         return details
@@ -2587,6 +2622,28 @@ def process_name_n_num_df(data):
     df = pd.DataFrame(df_transposed)
     return df
 
+def append_to_excel(file_path, new_data):
+    sheet_name = "Sheet1"
+    # Convert new data to a DataFrame
+    new_df = pd.DataFrame(new_data)
+
+    # Check if the file exists
+    if os.path.exists(file_path):
+        # Load existing Excel file
+        with pd.ExcelWriter(file_path, mode='a', if_sheet_exists='overlay', engine='openpyxl') as writer:
+            # Read existing sheet
+            existing_df = pd.read_excel(file_path, sheet_name=sheet_name)
+
+            # Append new data
+            updated_df = pd.concat([existing_df, new_df], ignore_index=True)
+
+            # Write back to the same sheet
+            updated_df.to_excel(writer, sheet_name=sheet_name, index=False)
+    else:
+        # Create a new Excel file with the given data
+        new_df.to_excel(file_path, sheet_name=sheet_name, index=False)
+
+    return file_path
 
 def make_summary_great_again(df1, opening_closing_balance, df2):
     def generate_summary(table, value_column, summary_name):
@@ -2741,18 +2798,18 @@ def make_summary_great_again(df1, opening_closing_balance, df2):
 
     return particulars_table, income_summary, important_summary, other_summary
 
-def summary_sheet(idf, open_bal, close_bal, new_tran_df):
+def summary_sheet(idf, open_bal, close_bal, new_tran_df, new_categories = None):
 
     opening_closing_balance = {month: [open_bal[month], close_bal[month]] for month in open_bal}
 
     excel_file_path = os.path.join(BASE_DIR, "Final_Category.xlsx")
-    df2 = pd.read_excel(excel_file_path)
+    new_excel_file_path = append_to_excel(excel_file_path, new_categories)
+
+    df2 = pd.read_excel(new_excel_file_path)
     sheet_1, sheet_2, sheet_3, sheet_4 = make_summary_great_again(new_tran_df, opening_closing_balance, df2)
     df_list = [sheet_1, sheet_2, sheet_3, sheet_4]
 
     return df_list
-
-
 
 def transaction_sheet( df):
     if len(df["Bank"].unique()) > 1:

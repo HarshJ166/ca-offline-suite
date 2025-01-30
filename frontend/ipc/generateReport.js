@@ -13,7 +13,6 @@ const { failedStatements } = require("../db/schema/FailedStatements");
 const { eq, and } = require("drizzle-orm");
 const { opportunityToEarn } = require("../db/schema/OpportunityToEarn");
 
-
 const sanitizeJSONString = (jsonString) => {
   return jsonString
     .replace(/: *NaN/g, ": null")
@@ -235,19 +234,25 @@ const processStatementAndEOD = async (
   fileDetail,
   transactions,
   eodData,
-  caseName
+  caseName,
+  nerResults,
+  fileIndex
 ) => {
   try {
     const validCaseId = await getOrCreateCase(caseName);
     let statementId = null;
     let processedTransactions = 0;
 
+    // Get NER results for this file using passed fileIndex
+    const customerName = nerResults?.Name?.[fileIndex] || "UNKNOWN";
+    const accountNumber = nerResults?.["Acc Number"]?.[fileIndex] || "UNKNOWN";
+
     // Process Statement and Transactions
     try {
       const statementData = {
         caseId: validCaseId,
-        accountNumber: fileDetail.accountNumber || "UNKNOWN",
-        customerName: fileDetail.customerName || "UNKNOWN",
+        accountNumber: accountNumber,
+        customerName: customerName,
         ifscCode: fileDetail.ifscCode || null,
         bankName: fileDetail.bankName,
         filePath: fileDetail.pdf_paths,
@@ -298,7 +303,6 @@ const processStatementAndEOD = async (
           .where(eq(eod.caseId, validCaseId));
 
         const validatedEODData = eodData
-
           .filter((entry) => {
             return (
               entry &&
@@ -314,10 +318,8 @@ const processStatementAndEOD = async (
                   ? entry.Day
                   : parseFloat(entry.Day);
 
-              // Validate the day value
               if (isNaN(dayValue)) return null;
 
-              // Process all month keys in the entry
               const processedEntry = { Day: dayValue };
 
               Object.keys(entry).forEach((key) => {
@@ -327,14 +329,12 @@ const processStatementAndEOD = async (
                       ? entry[key]
                       : parseFloat(entry[key]);
 
-                  // Only include valid numeric month values
                   if (!isNaN(monthValue)) {
                     processedEntry[key] = monthValue;
                   }
                 }
               });
 
-              // If no valid month values are found, return null
               if (Object.keys(processedEntry).length === 1) return null;
 
               return processedEntry;
@@ -344,8 +344,6 @@ const processStatementAndEOD = async (
             }
           })
           .filter(Boolean);
-
-        // log.info(`Validated EOD data for case ${validCaseId}:`, validatedEODData);
 
         if (validatedEODData.length > 0) {
           if (existingEOD.length > 0) {
@@ -374,6 +372,8 @@ const processStatementAndEOD = async (
       statementId,
       transactionCount: processedTransactions,
       bankName: fileDetail.bankName,
+      customerName,
+      accountNumber,
     };
   } catch (error) {
     log.error("Error in processStatementAndEOD:", error);
@@ -552,30 +552,26 @@ function generateReportIpc(tmpdir_path) {
   //   console.error(err.response.data.detail[0].loc);
   // });
 
-  ipcMain.handle("generate-report", async (event, result, caseName) => {
+  ipcMain.handle("generate-report", async (event, receivedResult, caseName) => {
     log.info("IPC handler invoked for generate-report", caseName);
     const tempDir = tmpdir_path;
     log.info("Temp Directory : ", tempDir);
     let caseId = null;
 
-
-    // Track successfully processed files to avoid deleting them
     const successfulFiles = [];
     const failedFiles = [];
 
     try {
       caseId = await getOrCreateCase(caseName);
-      if (!result?.files?.length) {
+      if (!receivedResult?.files?.length) {
         await updateCaseStatus(caseId, "Failed");
         throw new Error("Invalid or empty files array received");
       }
 
-      const fileDetails = result.files.map((fileDetail, index) => {
+      const fileDetails = receivedResult.files.map((fileDetail, index) => {
         if (!fileDetail.pdf_paths || !fileDetail.bankName) {
           throw new Error(`Missing required fields for file at index ${index}`);
         }
-
-        // log.info("file details", fileDetail);
 
         const filePath = path.join(tempDir, fileDetail.pdf_paths);
 
@@ -610,27 +606,27 @@ function generateReportIpc(tmpdir_path) {
         validateStatus: (status) => status === 200,
       });
 
-      // Track failed PDF paths
+      // Extract NER results from response
+      const nerResults = response.data?.ner_results || {
+        Name: [],
+        "Acc Number": [],
+      };
+
       let failedPdfPaths = [];
 
-      // Check if there are any PDF paths not extracted
       if (response.data?.["pdf_paths_not_extracted"]) {
         await updateCaseStatus(caseId, "Failed");
-        // Get the case ID
         const validCaseId = await getOrCreateCase(caseName);
 
-        // Store failed statements in the database
         await db.insert(failedStatements).values({
           caseId: validCaseId,
           data: JSON.stringify(response.data["pdf_paths_not_extracted"]),
         });
 
-        // Track failed PDF paths
         failedPdfPaths = response.data["pdf_paths_not_extracted"].paths || [];
         log.warn("Some PDF paths were not extracted", failedPdfPaths);
       }
 
-      // Continue processing if data exists
       if (!response.data || !response.data.data) {
         throw new Error(
           "Empty or invalid response received from analysis server"
@@ -675,22 +671,22 @@ function generateReportIpc(tmpdir_path) {
       );
 
       const processedData = [];
-      for (const fileDetail of fileDetails) {
+      for (let i = 0; i < fileDetails.length; i++) {
         try {
           const result = await processStatementAndEOD(
-            fileDetail,
+            fileDetails[i],
             transactions,
             parsedData.EOD,
-            caseName
+            caseName,
+            nerResults,
+            i // Pass the index to match with NER results
           );
           processedData.push(result);
-          // Track successfully processed files
-          successfulFiles.push(fileDetail.pdf_paths);
+          successfulFiles.push(fileDetails[i].pdf_paths);
         } catch (error) {
-          // Track failed files
-          failedFiles.push(fileDetail.pdf_paths);
+          failedFiles.push(fileDetails[i].pdf_paths);
           log.error(
-            `Error processing file detail for ${fileDetail.bankName}:`,
+            `Error processing file detail for ${fileDetails[i].bankName}:`,
             error
           );
           throw error;
@@ -712,10 +708,7 @@ function generateReportIpc(tmpdir_path) {
         log.error("Error processing summary data:", error);
         throw error;
       }
-      console.log(
-        "Opportunity to Earn data: 1",
-        parsedData["Opportunity to Earn"] || "not data"
-      );
+
       // Process Opportunity to Earn Data
       try {
         await processOpportunityToEarnData(
@@ -737,6 +730,7 @@ function generateReportIpc(tmpdir_path) {
           log.warn(`Failed to cleanup temp file: ${detail.pdf_paths}`, error);
         }
       });
+
       await updateCaseStatus(caseId, "Success");
 
       return {
@@ -752,6 +746,7 @@ function generateReportIpc(tmpdir_path) {
           failedStatements: response.data["pdf_paths_not_extracted"] || null,
           failedFiles: failedFiles,
           successfulFiles: successfulFiles,
+          nerResults: nerResults,
         },
       };
     } catch (error) {
@@ -765,7 +760,6 @@ function generateReportIpc(tmpdir_path) {
         status: error.response?.status,
       });
 
-      // If there's a specific PDF paths not extracted data, store it
       if (error.response?.data?.["pdf_paths_not_extracted"]) {
         try {
           const validCaseId = await getOrCreateCase(caseName);
@@ -777,7 +771,6 @@ function generateReportIpc(tmpdir_path) {
             ),
           });
 
-          // Track failed PDF paths
           const failedPdfPaths =
             error.response.data["pdf_paths_not_extracted"].paths || [];
           failedFiles.push(...failedPdfPaths);
@@ -795,234 +788,6 @@ function generateReportIpc(tmpdir_path) {
       };
     }
   });
-
-  ipcMain.handle("edit-pdf", async (event, result, caseName) => {
-    log.info("IPC handler invoked for edit-pdf", caseName);
-    const tempDir = tmpdir_path;
-    log.info("Temp Directory : ", tempDir);
-    let caseId = null;
-    console.log("CaseName backend edit pdf: ", caseName);
-    console.log("Result backend edit pdf: ", result);
-
-    // Track successfully processed files to avoid deleting them
-    const successfulFiles = [];
-    const failedFiles = [];
-
-    // try {
-      caseId = await getOrCreateCase(caseName);
-
-     
-
-      const payload = {
-        bank_names: result.map((d) => d.bankName),
-        pdf_paths: result.map((d) => d.path),
-        passwords: result.map((d) => d.passwords || ""),
-        start_dates: result.map((d) => d.start_date || ""),
-        end_dates: result.map((d) => d.end_date || ""),
-        ca_id:caseId|| "DEFAULT_CASE",
-        aiyaz_array_of_array:result.map((d) => d.rectifiedColumns || ""),
-        whole_transaction_sheet:true,
-        // whole_transaction_sheet:result.map((d) => d.whole_transaction_sheet || ""),
-      };
-
-      log.info("aiyaz Payload: ", payload);
-
-
-      const response = await axios.post(editPdfEndpoint, payload, {
-        headers: { "Content-Type": "application/json" },
-        timeout: 300000,
-        // validateStatus: (status) => status === 200,
-      });
-
-      log.info("Response from edit-pdf: ", response);
-      log.info("Response data from edit-pdf: ", response.data);
-
-      // // Track failed PDF paths
-      // let failedPdfPaths = [];
-
-      // // Check if there are any PDF paths not extracted
-      // if (response.data?.["pdf_paths_not_extracted"]) {
-      //   await updateCaseStatus(caseId, 'Failed');
-      //   // Get the case ID
-      //   const validCaseId = await getOrCreateCase(caseName);
-
-      //   // Store failed statements in the database
-      //   await db.insert(failedStatements).values({
-      //     caseId: validCaseId,
-      //     data: JSON.stringify(response.data["pdf_paths_not_extracted"]),
-      //   });
-
-      //   // Track failed PDF paths
-      //   failedPdfPaths = response.data["pdf_paths_not_extracted"].paths || [];
-      //   log.warn("Some PDF paths were not extracted", failedPdfPaths);
-      // }
-
-      // // Continue processing if data exists
-      // if (!response.data || !response.data.data) {
-      //   throw new Error(
-      //     "Empty or invalid response received from analysis server"
-      //   );
-      // }
-
-      // let parsedData;
-      // try {
-      //   const sanitizedJsonString = sanitizeJSONString(response.data.data);
-      //   parsedData = JSON.parse(sanitizedJsonString);
-      // } catch (error) {
-      //   log.error("JSON parsing error:", error);
-      //   throw error;
-      // }
-
-      // const transactions = (parsedData.Transactions || []).filter(
-      //   (transaction) => {
-      //     if (
-      //       typeof transaction.Credit === "number" &&
-      //       isNaN(transaction.Credit)
-      //     ) {
-      //       transaction.Credit = null;
-      //     }
-      //     if (
-      //       typeof transaction.Debit === "number" &&
-      //       isNaN(transaction.Debit)
-      //     ) {
-      //       transaction.Debit = null;
-      //     }
-      //     if (
-      //       typeof transaction.Balance === "number" &&
-      //       isNaN(transaction.Balance)
-      //     ) {
-      //       transaction.Balance = 0;
-      //     }
-
-      //     return (
-      //       (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
-      //       (transaction.Debit !== null && !isNaN(transaction.Debit))
-      //     );
-      //   }
-      // );
-
-      // const processedData = [];
-      // for (const fileDetail of fileDetails) {
-      //   try {
-      //     const result = await processStatementAndEOD(
-      //       fileDetail,
-      //       transactions,
-      //       parsedData.EOD,
-      //       caseName
-      //     );
-      //     processedData.push(result);
-      //     // Track successfully processed files
-      //     successfulFiles.push(fileDetail.pdf_paths);
-      //   } catch (error) {
-      //     // Track failed files
-      //     failedFiles.push(fileDetail.pdf_paths);
-      //     log.error(
-      //       `Error processing file detail for ${fileDetail.bankName}:`,
-      //       error
-      //     );
-      //     throw error;
-      //   }
-      // }
-
-      // // Process Summary Data
-      // try {
-      //   await processSummaryData(
-      //     {
-      //       "Income Receipts": parsedData["Income Receipts"] || [],
-      //       "Important Expenses": parsedData["Important Expenses"] || [],
-      //       "Other Expenses": parsedData["Other Expenses"] || [],
-      //     },
-      //     caseName
-      //   );
-      // } catch (error) {
-      //   log.error("Error processing summary data:", error);
-      //   throw error;
-      // }
-      // console.log(
-      //   "Opportunity to Earn data: 1",
-      //   parsedData["Opportunity to Earn"] || "not data"
-      // );
-      // // Process Opportunity to Earn Data
-      // try {
-      //   await processOpportunityToEarnData(
-      //     parsedData["Opportunity to Earn"] || [],
-      //     payload.ca_id
-      //   );
-      // } catch (error) {
-      //   log.error("Error processing opportunity to earn data:", error);
-      //   throw error;
-      // }
-
-      // // Cleanup
-      // fileDetails.forEach((detail) => {
-      //   try {
-      //     if (fs.existsSync(detail.pdf_paths)) {
-      //       fs.unlinkSync(detail.pdf_paths);
-      //     }
-      //   } catch (error) {
-      //     log.warn(`Failed to cleanup temp file: ${detail.pdf_paths}`, error);
-      //   }
-      // });
-      // await updateCaseStatus(caseId, 'Success');
-
-      return {
-        success: true,
-        // data: {
-        //   processed: processedData,
-        //   totalTransactions: processedData.reduce(
-        //     (sum, d) => sum + d.transactionCount,
-        //     0
-        //   ),
-        //   eodProcessed: true,
-        //   summaryProcessed: true,
-        //   failedStatements: response.data["pdf_paths_not_extracted"] || null,
-        //   failedFiles: failedFiles,
-        //   successfulFiles: successfulFiles,
-        // },
-      };
-  //   } catch (error) {
-  //     // if (caseId) {
-  //     //   await updateCaseStatus(caseId, 'Failed');
-  //     // }
-  //     log.error("Error in Edit pdf:", {
-  //       message: error.message,
-  //       stack: error.stack,
-  //       response: error.response?.data,
-  //       status: error.response?.status,
-  //     });
-
-  //     // If there's a specific PDF paths not extracted data, store it
-  //     if (error.response?.data?.["pdf_paths_not_extracted"]) {
-  //       try {
-  //         const validCaseId = await getOrCreateCase(caseName);
-
-  //         await db.insert(failedStatements).values({
-  //           caseId: validCaseId,
-  //           data: JSON.stringify(
-  //             error.response.data["pdf_paths_not_extracted"]
-  //           ),
-  //         });
-
-  //         // Track failed PDF paths
-  //         const failedPdfPaths =
-  //           error.response.data["pdf_paths_not_extracted"].paths || [];
-  //         failedFiles.push(...failedPdfPaths);
-  //       } catch (dbError) {
-  //         log.error("Failed to store failed statements:", dbError);
-  //       }
-  //     }
-
-  //     throw {
-  //       message: error.message || "Failed to generate report",
-  //       code: error.response?.status || 500,
-  //       details: error.response?.data || error.toString(),
-  //       timestamp: new Date().toISOString(),
-  //       failedFiles: failedFiles,
-  //     };
-  //   }
-  });
-
- 
 }
 
 module.exports = { generateReportIpc };
