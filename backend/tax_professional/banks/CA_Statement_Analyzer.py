@@ -209,11 +209,14 @@ def returns_json_output_of_all_sheets(df, name_n_num_df):
     return json_output
 
 
-def refresh_category_all_sheets(df, eod_sheet_df):
+def refresh_category_all_sheets(df, eod_sheet_df, new_categories):
 
     opening_bal, closing_bal = opening_and_closing_bal(eod_sheet_df, df)
 
-    summary_df_list = summary_sheet(df, opening_bal, closing_bal, df)
+    if not new_categories:
+        summary_df_list = summary_sheet(df, opening_bal, closing_bal, df)
+    else:
+        summary_df_list = summary_sheet(df, opening_bal, closing_bal, df, new_categories)
 
     particulars_df = summary_df_list[0]
     income_receipts_df = summary_df_list[1]
@@ -280,6 +283,7 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
     name_dfs = {}
     errorz = {}
     pdf_paths_not_extracted = {
+        "bank_names": [],
         "paths": [],
         "passwords": [],
         "start_dates": [],
@@ -308,13 +312,13 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
         labels = [[entry["index"], entry["type"]] for entry in aiyaz_array_of_array]
 
 
-        dfs[bank], name_dfs[bank] = extraction_process_explicit_lines(bank, pdf_path, pdf_password, start_date, end_date, explicit_lines, labels)
-        errorz[bank] = ""
+        dfs[bank], name_dfs[bank], errorz[bank] = extraction_process_explicit_lines(bank, pdf_path, pdf_password, start_date, end_date, explicit_lines, labels)
 
         print(f"Extracted {bank} bank statement successfully")
         # account_number += f"{name_dfs[bank][1][:4]}x{name_dfs[bank][1][-4:]}_"
         # Check if the extracted dataframe is empty
         if dfs[bank].empty:
+            pdf_paths_not_extracted["bank_names"].append(bank)
             pdf_paths_not_extracted["paths"].append(pdf_path)
             pdf_paths_not_extracted["passwords"].append(pdf_password)
             pdf_paths_not_extracted["start_dates"].append(start_date)
@@ -394,6 +398,7 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
     errorz = {}
 
     pdf_paths_not_extracted = {
+        "bank_names": [],
         "paths": [],
         "passwords": [],
         "start_dates": [],
@@ -410,13 +415,13 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
         start_date = start_dates[i]
         end_date = end_dates[i]
 
-        dfs[bank], name_dfs[bank] = extraction_process(bank, pdf_path, pdf_password, start_date, end_date)
-        errorz[bank] = ""
+        dfs[bank], name_dfs[bank], errorz[bank] = extraction_process(bank, pdf_path, pdf_password, start_date, end_date)
 
         print(f"Extracted {bank} bank statement successfully")
         # account_number += f"{name_dfs[bank][1][:4]}x{name_dfs[bank][1][-4:]}_"
         # Check if the extracted dataframe is empty
         if dfs[bank].empty:
+            pdf_paths_not_extracted["bank_names"].append(bank)
             pdf_paths_not_extracted["paths"].append(pdf_path)
             pdf_paths_not_extracted["passwords"].append(pdf_password)
             pdf_paths_not_extracted["start_dates"].append(start_date)
@@ -485,7 +490,7 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
             print(f"Removed all contents in '{folder_path}'")
         except Exception as e:
             print(f"Failed to remove '{folder_path}': {e}")
-
+        # print(name_n_num_df)
         return {"sheets_in_json": json_lists_of_df, 'pdf_paths_not_extracted': pdf_paths_not_extracted}
 
 
@@ -493,16 +498,7 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
 
 
 
-##################################33
-
-# bank_names = ["IDFC", "BOB"]
-# pdf_paths = ["Copy of Copy of IDFC FIRST Bank (1).pdf", "Oct'23 to Mar'24  FG5V03395.pdf"]
-# passwords = ["", "FG5V03395"]
-# start_dates = ["01-09-2021", "01-10-2023"]
-# end_dates = ["03-03-2022", "31-03-2024"]
-# CA_ID = "CA_ID_4321"
-# progress_data = {}
-# null = "null"
+##################################
 # aiyaz_array_of_array = [
 #         [
 #             {
@@ -622,6 +618,18 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
 #         ]
 # ]
 #
-# # x = start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end_dates, CA_ID, progress_data, aiyaz_array_of_array, whole_transaction_sheet=None)
-# start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_dates, CA_ID, progress_data)
+
+#
+# bank_names = ["BOB"]
+# pdf_paths = ["Leena BOB-2019 1-04-2023 To 30-09-2023 - Pass- 078344809_unlocked.pdf"]
+# passwords = [""]
+# start_dates = ["01-09-2020"]
+# end_dates = ["03-03-2025"]
+# CA_ID = "CA_ID_4321"
+# progress_data = {}
+# null = "null"
+#
+# # # x = start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end_dates, CA_ID, progress_data, aiyaz_array_of_array, whole_transaction_sheet=None)
+# result = start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_dates, CA_ID, progress_data)
 # print("exit")
+# print(result["pdf_paths_not_extracted"])

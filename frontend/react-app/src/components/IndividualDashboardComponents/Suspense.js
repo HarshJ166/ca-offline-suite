@@ -128,7 +128,7 @@ const Suspense = () => {
                 </div>
               </div>
               <div>
-                <DataTable data={creditData} />
+                <DataTable data={creditData} title="Suspense Credit Table" />
               </div>
             </div>
           )}
@@ -164,7 +164,7 @@ const Suspense = () => {
                 </div>
               </div>
               <div>
-                <DataTable data={debitData} />
+                <DataTable data={debitData} title="Suspense Debit Table" />
               </div>
             </div>
           )}

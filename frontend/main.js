@@ -366,7 +366,7 @@ async function createWindow() {
   const TMP_DIR = createTempDirectory();
 
   registerIndividualDashboardIpc();
-  registerMainDashboardIpc();
+  registerMainDashboardIpc(TMP_DIR);
   registerCaseDashboardIpc();
   generateReportIpc(TMP_DIR);
   registerOpenFileIpc(BASE_DIR);

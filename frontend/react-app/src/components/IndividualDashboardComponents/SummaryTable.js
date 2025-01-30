@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { Search, Loader2 } from "lucide-react";
 import {
   Card,
@@ -22,19 +23,21 @@ import { Badge } from "../ui/badge";
 import { cn } from "../../lib/utils";
 import { Checkbox } from "../ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "../ui/pagination";
+// import {
+//   Pagination,
+//   PaginationContent,
+//   PaginationEllipsis,
+//   PaginationItem,
+//   PaginationLink,
+//   PaginationNext,
+//   PaginationPrevious,
+// } from "../ui/pagination";
 import { Label } from "../ui/label";
+import DataTable from "./TableData";
 
-const DataTable = ({ data = [], source,title,subtitle }) => {
-  const [currentPage, setCurrentPage] = useState(1);
+const SummaryTable = ({ data = [], source, title, subtitle }) => {
+  // const [viewMode, setViewMode] = useState("paginated"); // "all" or "paginated"
+  // const [currentPage, setCurrentPage] = useState(1);
   const [filteredData, setFilteredData] = useState(data);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterModalOpen, setFilterModalOpen] = useState(false);
@@ -46,8 +49,13 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  // const [rowsPerPage, setRowsPerPage] = useState(10);
   const [showAllRows, setShowAllRows] = useState(false);
+  const [selectedRow, setSelectedRow] = useState(null);
+  const [transactionData, setTransactionData] = useState([]);
+  const [filteredTransactions, setFilteredTransactions] = useState([]);
+  const [error, setError] = useState(null);
+  const { caseId, individualId } = useParams();
 
   // Get dynamic columns from first data item
   const columns = data.length > 0 ? Object.keys(data[0]) : [];
@@ -60,15 +68,74 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
     })
   );
 
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+
+        // console.log("Fetching transactions for statementId:", caseId);
+        const data = await window.electron.getTransactions(
+          caseId,
+          parseInt(individualId)
+        );
+        setTransactionData(data);
+        // console.log("Fetched summary transactions:", data.length);
+      } catch (err) {
+        setError("Failed to fetch transactions");
+        console.error("Error fetching transactions:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
+
+  const filterTransactionsByCategory = (row) => {
+    if (!row || !transactionData.length) {
+      console.log("No row or transaction data:", { row, transactionLength: transactionData.length });
+      return [];
+    }
+    
+    // Get the category value from the summary row
+    const categoryColumn = Object.keys(row)[0];  // "Income / Receipts"
+    const categoryValue = row[categoryColumn];   // "Cash Deposits"
+    
+    return transactionData.filter(transaction => 
+      transaction.category === categoryValue
+    ).map(transaction => {
+      const { id, statementId, type, ...rest } = transaction;
+      return {
+      ...rest,
+      date: transaction.date instanceof Date 
+        ? transaction.date.toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        })
+        : transaction.date
+      };
+    });
+  };
+
+
+
   useEffect(() => {
     setFilteredData(data);
   }, [data]);
+
+  const handleRowClick = (row) => {
+    setSelectedRow(row);
+    const filtered = filterTransactionsByCategory(row);
+    // console.log("Filtered transactions:", filtered);
+    setFilteredTransactions(filtered);
+  };
 
   const handleSearch = (searchValue) => {
     setSearchTerm(searchValue);
     if (searchValue === "") {
       setFilteredData(data);
-      setCurrentPage(1);
+      // setCurrentPage(1);
       return;
     }
 
@@ -101,7 +168,7 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
     );
 
     setFilteredData(filtered);
-    setCurrentPage(1);
+    // setCurrentPage(1);
   };
 
   const handleCategorySelect = (category) => {
@@ -129,7 +196,7 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
       );
       setFilteredData(filtered);
     }
-    setCurrentPage(1);
+    // setCurrentPage(1);
     setFilterModalOpen(false);
   };
 
@@ -142,13 +209,13 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
       return meetsMin && meetsMax;
     });
     setFilteredData(filtered);
-    setCurrentPage(1);
+    // setCurrentPage(1);
   };
 
   const clearFilters = () => {
     setSearchTerm("");
     setFilteredData(data);
-    setCurrentPage(1);
+    // setCurrentPage(1);
     setMinValue("");
     setMaxValue("");
     setSelectedCategories([]);
@@ -168,36 +235,38 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
   };
 
   // Pagination calculations
-  const totalPages = showAllRows ? 1 : Math.ceil(filteredData.length / rowsPerPage);
-  const startIndex = showAllRows ? 0 : (currentPage - 1) * rowsPerPage;
-  const endIndex = showAllRows ? filteredData.length : (startIndex + rowsPerPage);
-  const currentData = filteredData.slice(startIndex, endIndex);
+  // const showPagination = viewMode === "paginated" && !source?.includes("summary");
+  // const totalPages = showPagination ? Math.ceil(filteredData.length / rowsPerPage) : 1;
+  // const startIndex = showPagination ? (currentPage - 1) * rowsPerPage : 0;
+  // const endIndex = showPagination ? startIndex + rowsPerPage : filteredData.length;
+  // const currentData = filteredData.slice(startIndex, endIndex);
 
   // Generate page numbers for pagination
-  const getPageNumbers = () => {
-    const pageNumbers = [];
-    const maxVisiblePages = 5;
+  // const getPageNumbers = () => {
+  //   const pageNumbers = [];
+  //   const maxVisiblePages = 5;
 
-    if (totalPages <= maxVisiblePages) {
-      for (let i = 1; i <= totalPages; i++) {
-        pageNumbers.push(i);
-      }
-    } else {
-      pageNumbers.push(1);
-      if (currentPage > 2) {
-        pageNumbers.push("ellipsis");
-      }
-      if (currentPage !== 1 && currentPage !== totalPages) {
-        pageNumbers.push(currentPage);
-      }
-      if (currentPage < totalPages - 1) {
-        pageNumbers.push("ellipsis");
-      }
-      pageNumbers.push(totalPages);
-    }
-    return pageNumbers;
-  };
+  //   if (totalPages <= maxVisiblePages) {
+  //     for (let i = 1; i <= totalPages; i++) {
+  //       pageNumbers.push(i);
+  //     }
+  //   } else {
+  //     pageNumbers.push(1);
+  //     if (currentPage > 2) {
+  //       pageNumbers.push("ellipsis");
+  //     }
+  //     if (currentPage !== 1 && currentPage !== totalPages) {
+  //       pageNumbers.push(currentPage);
+  //     }
+  //     if (currentPage < totalPages - 1) {
+  //       pageNumbers.push("ellipsis");
+  //     }
+  //     pageNumbers.push(totalPages);
+  //   }
+  //   return pageNumbers;
+  // };
 
+  const currentData = filteredData;
   // Calculate totals for numeric columns
   const totals = numericColumns.reduce((acc, column) => {
     const total = filteredData.reduce((sum, row) => {
@@ -207,183 +276,7 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
     return { ...acc, [column]: total.toFixed(2) };
   }, {});
 
-  // If source is lifo or fifo, render a different table
-  if (source === "LIFO" || source === "FIFO") {
-    return (
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div className="">
-              <CardTitle className="text-lg font-medium dark:text-slate-300">
-                {source} Transaction
-              </CardTitle>
-              <CardDescription className="text-sm">
-                View and manage your data
-              </CardDescription>
-            </div>
-            <div className="relative flex items-center gap-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search..."
-                className="pl-10 w-[400px] text-sm"
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-              />
-              <Button
-                variant="default"
-                className="text-sm"
-                onClick={() => clearFilters()}
-              >
-                Clear Filters
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {data.length === 0 ? (
-            <div className="text-center text-sm">
-              No data available for {source}.
-            </div>
-          ) : (
-            <div className="relative">
-              <Table className="text-sm">
-                <TableHeader>
-                  <TableRow>
-                    {columns.map((column) => (
-                      <TableHead key={column} className="text-base">
-                        <div className="flex items-center gap-2">
-                          {column.charAt(0).toUpperCase() +
-                            column.slice(1).toLowerCase()}
-                          {column.toLowerCase() !== "description" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => {
-                                if (numericColumns.includes(column)) {
-                                  setCurrentNumericColumn(column);
-                                  setNumericFilterModalOpen(true);
-                                } else {
-                                  setCurrentFilterColumn(column);
-                                  setSelectedCategories([]);
-                                  setCategorySearchTerm("");
-                                  setFilterModalOpen(true);
-                                }
-                              }}
-                            >
-                              ▼
-                            </Button>
-                          )}
-                        </div>
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {currentData.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={columns.length}
-                        className="text-center text-sm"
-                      >
-                        No matching results found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    currentData.map((row, index) => (
-                      <TableRow key={index}>
-                        {columns.map((column) => (
-                          <TableCell
-                            key={column}
-                            className={`max-w-[200px] relative ${
-                              column.toLowerCase() === "description"
-                                ? "group"
-                                : ""
-                            } text-[15px]`}
-                          >
-                            {/* Truncate only for the description column */}
-                            {column.toLowerCase() === "description" ? (
-                              <>
-                                <div className="truncate">{row[column]}</div>
-                                {/* Tooltip */}
-                                <div className="absolute left-0 top-10 hidden group-hover:block bg-black text-white text-xs rounded p-2 z-50 whitespace-normal min-w-[200px] max-w-[400px]">
-                                  {row[column]}
-                                </div>
-                              </>
-                            ) : (
-                              <div>{row[column]}</div>
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-
-                <TableFooter>
-                  <TableRow>
-                    <TableCell className="text-sm">Total</TableCell>
-                    {columns.slice(1).map((column) => (
-                      <TableCell key={column} className="text-sm">
-                        {numericColumns.includes(column) ? totals[column] : ""}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                </TableFooter>
-              </Table>
-            </div>
-          )}
-
-          {totalPages > 1 && (
-            <div className="mt-6">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() =>
-                        setCurrentPage((prev) => Math.max(prev - 1, 1))
-                      }
-                      className={cn(
-                        "cursor-pointer",
-                        currentPage === 1 && "pointer-events-none opacity-50"
-                      )}
-                    />
-                  </PaginationItem>
-                  {getPageNumbers().map((pageNumber, index) => (
-                    <PaginationItem key={index}>
-                      {pageNumber === "ellipsis" ? (
-                        <PaginationEllipsis />
-                      ) : (
-                        <PaginationLink
-                          onClick={() => setCurrentPage(pageNumber)}
-                          isActive={currentPage === pageNumber}
-                          className="cursor-pointer text-sm"
-                        >
-                          {pageNumber}
-                        </PaginationLink>
-                      )}
-                    </PaginationItem>
-                  ))}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() =>
-                        setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                      }
-                      className={cn(
-                        "cursor-pointer",
-                        currentPage === totalPages &&
-                          "pointer-events-none opacity-50"
-                      )}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
+  
 
   return (
     // if source is equal to lifo or fifo then show the table
@@ -402,29 +295,17 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
           className="pl-10 w-[300px]"
           value={searchTerm}
           onChange={(e) => handleSearch(e.target.value)}
-        />
-        <select
-          className="p-2 border rounded-md text-sm dark:bg-slate-800 dark:border-slate-700 w-[120px]"
-          value={showAllRows ? "all" : rowsPerPage}
-          onChange={(e) => {
-            const value = e.target.value;
-            if (value === "all") {
-              setShowAllRows(true);
-              setCurrentPage(1);
-            } else {
-              setShowAllRows(false);
-              setRowsPerPage(Number(value));
-              setCurrentPage(1);
-            }
+        />              
+        {/* <Button
+          variant="outline"
+          onClick={() => {
+            setViewMode(viewMode === "paginated" ? "all" : "paginated");
+            setCurrentPage(1); // Reset to first page when toggling view mode
           }}
+          className="whitespace-nowrap"
         >
-          <option value="5">5 rows</option>
-          <option value="10">10 rows</option>
-          <option value="20">20 rows</option>
-          <option value="50">50 rows</option>
-          <option value="100">100 rows</option>
-          <option value="all">Show all</option>
-        </select>
+          {viewMode === "paginated" ? "Show All" : "Show Paginated"}
+        </Button> */}
         <Button
           className="dark:bg-slate-300 dark:hover:bg-slate-200"
           variant="default"
@@ -443,7 +324,7 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
               <TableRow>
                 {columns.map((column) => (
                   <TableHead key={column}
-                  // className={source === "summary" ? "bg-gray-900 dark:bg-slate-800 text-white" : ""}
+                    className="bg-gray-900 dark:bg-slate-800 text-white"
                   >
                     <div className="flex items-center gap-2">
                       {column.charAt(0).toUpperCase() +
@@ -485,6 +366,9 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
                   <TableRow 
                     key={index}
                     // className={source === "summary" ? "even:bg-slate-200 even:dark:bg-slate-800 hover:bg-transparent even:hover:bg-slate-200" : ""}
+                    
+                    className="even:bg-slate-200 even:dark:bg-slate-800 hover:bg-transparent even:hover:bg-slate-200 cursor-pointer"
+                    onClick={source === 'particulars' ? undefined : () => handleRowClick(row)}
                   >
                     {columns.map((column) => (
                       <TableCell
@@ -504,66 +388,43 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
                 ))
               )}
             </TableBody>
-              <TableFooter>
-                <TableRow>
-                  <TableCell>Total</TableCell>
-                  {columns.slice(1).map((column) => (
-                    <TableCell key={column}>
-                      {numericColumns.includes(column) ? totals[column] : ""}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableFooter>
           </Table>
         </div>
 
-        {/* Pagination */}
-        {!showAllRows && totalPages > 1 && (
-          <div className="mt-6">
+        {/* {showPagination  && totalPages > 1 && (
+          <div className="mt-4 flex justify-center">
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.max(prev - 1, 1))
-                    }
-                    className={cn(
-                      "cursor-pointer",
-                      currentPage === 1 && "pointer-events-none opacity-50"
-                    )}
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
                   />
                 </PaginationItem>
-                {getPageNumbers().map((pageNumber, index) => (
+                {getPageNumbers().map((pageNum, index) => (
                   <PaginationItem key={index}>
-                    {pageNumber === "ellipsis" ? (
+                    {pageNum === "ellipsis" ? (
                       <PaginationEllipsis />
                     ) : (
                       <PaginationLink
-                        onClick={() => setCurrentPage(pageNumber)}
-                        isActive={currentPage === pageNumber}
-                        className="cursor-pointer"
+                        onClick={() => setCurrentPage(pageNum)}
+                        isActive={currentPage === pageNum}
                       >
-                        {pageNumber}
+                        {pageNum}
                       </PaginationLink>
                     )}
                   </PaginationItem>
                 ))}
                 <PaginationItem>
                   <PaginationNext
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                    }
-                    className={cn(
-                      "cursor-pointer",
-                      currentPage === totalPages &&
-                        "pointer-events-none opacity-50"
-                    )}
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
                   />
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
           </div>
-        )}
+            )} */}
       </CardContent>
 
       {/* Category Filter Modal - Apple Style */}
@@ -672,8 +533,42 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
           <Loader2 className="animate-spin h-8 w-8 text-[#3498db]" />
         </div>
       )}
+
+      <Dialog 
+          open={!!selectedRow} 
+          onOpenChange={(isOpen) => {
+            if (!isOpen) {
+              setSelectedRow(null);
+              setFilteredTransactions([]);
+            }
+          }}
+        >
+          {selectedRow && filteredTransactions.length > 0 ? (
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                </DialogTitle>
+              </DialogHeader>
+                <DataTable 
+                  data={filteredTransactions}
+                  title={`Transactions Details: ${Object.values(selectedRow)[0]}`}
+                />
+            </DialogContent>
+          ) : (
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+            </DialogHeader>
+              <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
+                <p className="text-gray-800 text-center mt-3 font-medium text-base">
+                  No data Available for this category
+                </p>
+              </div>
+          </DialogContent>
+          )}
+
+        </Dialog>
     </Card>
   );
 };
 
-export default DataTable;
+export default SummaryTable;

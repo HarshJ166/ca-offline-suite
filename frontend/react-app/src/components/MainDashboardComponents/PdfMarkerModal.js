@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect ,useState} from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,36 +10,54 @@ import PdfMarker  from './PdfMarker';
 const PDFMarkerModal = ({ 
   isOpen, 
   onClose,
-  onSave,
-  initialConfig,
-  pdfName
+  selectedFailedFile,
+  setFailedDatasOfCurrentReport
 }) => {
+  const [initialConfigFormatted, setInitialConfigFormatted] = useState({lines:[]});
+
   const handleSave = (data) => {
-    onSave(data);
+
+    // onSave(data);
     onClose();
   };
 
+  const addColsToStatementData = (pdfName,columns) => {
+    if(!selectedFailedFile) return;
+    if(selectedFailedFile.pdfName !== pdfName) return;
+    selectedFailedFile.rectifiedColumns = columns;
+    selectedFailedFile.resolved = true;
+    setFailedDatasOfCurrentReport((prev)=>prev.map((item)=>item.pdfName === selectedFailedFile.pdfName ? selectedFailedFile : item))
+    onClose();
+  }
+
+
 
   useEffect(() => {
-    console.log("PDFMarkerModal pdfName:", pdfName)
-  }, [pdfName])
+    if(selectedFailedFile?.columns){
+      
+      let tempinitialConfigFormatted = {};
+      tempinitialConfigFormatted.lines = selectedFailedFile?.columns.map((line) => ({ x: line }))
+      setInitialConfigFormatted(tempinitialConfigFormatted);
+    }
+    console.log("PDFMarkerModal pdfName:", selectedFailedFile?.pdfName, "initialConfig ",initialConfigFormatted)
+  }, [selectedFailedFile])
+
+
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-6">
-        <DialogHeader>
-          <DialogTitle>PDF Column Marker</DialogTitle>
-        </DialogHeader>
-        <div>
-      {pdfName ? (
-        <PdfMarker setPdfColMarkerData={handleSave} initialConfig={initialConfig} pdfName={pdfName} />
+      <DialogContent   className="max-w-7xl h-[95vh] flex flex-col p-6 overflow-y-auto">
+      {selectedFailedFile ? (
+        <PdfMarker addColsToStatementData={addColsToStatementData} initialConfig={initialConfigFormatted} pdfName={selectedFailedFile?.pdfName} />
       ) : (
         <div className="text-center text-red-500">Error: PDF path not available</div>
       )}
-    </div>
       </DialogContent>
     </Dialog>
   );
 };
+
+
 
 export default PDFMarkerModal;
