@@ -356,28 +356,63 @@ const GenerateReportForm = ({
   // In GenerateReportForm.js, modify the handleSubmit function:
 
   const handleSubmit = async (e) => {
-    console.log("Inside handleSubmit..", caseName);
     e.preventDefault();
+    console.log("Inside handleSubmit..", caseName);
 
-    const validationErrors = [];
+    if (!caseName) {
+      toast({
+        title: "Error",
+        description: "Please enter a report name",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
 
-    handleReportSubmit(
-      setProgress,
-      setLoading,
-      setToastId,
-      selectedFiles,
-      fileDetails,
-      setSelectedFiles,
-      setFileDetails,
-      setCaseName,
-      toast,
-      progressIntervalRef,
-      simulateProgress,
-      convertDateFormat,
-      "CASE_1",
-      caseName,
-      financialYear
-    );
+    try {
+      // Check if report name exists
+      const response = await window.electron.getReportNameExists({
+        reportName: caseName,
+      });
+
+      if (response.exists) {
+        toast({
+          title: "Error",
+          description:
+            "Report name already exists. Please choose a different name.",
+          variant: "destructive",
+          duration: 3000,
+        });
+        return;
+      }
+
+      // If report name is unique, proceed with report generation
+      handleReportSubmit(
+        setProgress,
+        setLoading,
+        setToastId,
+        selectedFiles,
+        fileDetails,
+        setSelectedFiles,
+        setFileDetails,
+        setCaseName,
+        toast,
+        progressIntervalRef,
+        simulateProgress,
+        convertDateFormat,
+        "CASE_1",
+        caseName,
+        financialYear
+      );
+    } catch (error) {
+      console.error("Error checking report name:", error);
+      toast({
+        title: "Error",
+        description: "Failed to validate report name",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
 
     // if (selectedFiles.length === 0) {
     //   toast({

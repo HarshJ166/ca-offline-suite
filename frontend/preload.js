@@ -77,6 +77,9 @@ contextBridge.exposeInMainWorld("electron", {
 
   getCustomerName: (caseId) => ipcRenderer.invoke("get-Customer-Name", caseId),
 
+  getReportNameExists: (reportName) =>
+    ipcRenderer.invoke("check-Report-Name-Exists", reportName),
+
   downloadExcelReport: (data) =>
     ipcRenderer.invoke("download-excel-report", data),
 
