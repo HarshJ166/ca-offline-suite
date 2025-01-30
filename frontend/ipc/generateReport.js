@@ -557,10 +557,12 @@ function generateReportIpc(tmpdir_path) {
     const tempDir = tmpdir_path;
     log.info("Temp Directory : ", tempDir);
     let caseId = null;
-
-    const successfulFiles = [];
-    const failedFiles = [];
-
+  
+    // Track files status
+    const successfulFiles = new Set();
+    const failedFiles = new Set();
+    const allProcessedFiles = new Set();
+  
     try {
       caseId = await getOrCreateCase(caseName);
       if (!receivedResult?.files?.length) {
@@ -573,16 +575,19 @@ function generateReportIpc(tmpdir_path) {
           throw new Error(`Missing required fields for file at index ${index}`);
         }
 
+        // log.info("file details", fileDetail);
+
         const filePath = path.join(tempDir, fileDetail.pdf_paths);
-
+        allProcessedFiles.add(filePath);
+  
         console.log(`Saving file to ${filePath}`);
-
+  
         if (fileDetail.fileContent) {
           fs.writeFileSync(filePath, fileDetail.fileContent, "binary");
         } else {
           log.warn(`No file content for ${fileDetail.bankName}`);
         }
-
+  
         return {
           ...fileDetail,
           pdf_paths: filePath,
@@ -590,7 +595,7 @@ function generateReportIpc(tmpdir_path) {
           end_date: fileDetail.end_date || "",
         };
       });
-
+  
       const payload = {
         bank_names: fileDetails.map((d) => d.bankName),
         pdf_paths: fileDetails.map((d) => d.pdf_paths),
@@ -599,7 +604,7 @@ function generateReportIpc(tmpdir_path) {
         end_date: fileDetails.map((d) => d.end_date || ""),
         ca_id: fileDetails[0]?.ca_id || "DEFAULT_CASE",
       };
-
+  
       const response = await axios.post(generateReportEndpoint, payload, {
         headers: { "Content-Type": "application/json" },
         timeout: 300000,
@@ -618,21 +623,28 @@ function generateReportIpc(tmpdir_path) {
         await updateCaseStatus(caseId, "Failed");
         const validCaseId = await getOrCreateCase(caseName);
 
+        // Store failed statements in the database
         await db.insert(failedStatements).values({
           caseId: validCaseId,
           data: JSON.stringify(response.data["pdf_paths_not_extracted"]),
         });
-
-        failedPdfPaths = response.data["pdf_paths_not_extracted"].paths || [];
-        log.warn("Some PDF paths were not extracted", failedPdfPaths);
+  
+        // Add failed paths to failedFiles set
+        const failedPdfPaths = response.data["pdf_paths_not_extracted"].paths || [];
+        failedPdfPaths.forEach(path => {
+          failedFiles.add(path);
+          // Remove from successful files if it was marked as successful
+          successfulFiles.delete(path);
+        });
+        
+        log.warn("Some PDF paths were not extracted", Array.from(failedFiles));
       }
 
+      // Continue processing if data exists
       if (!response.data || !response.data.data) {
-        throw new Error(
-          "Empty or invalid response received from analysis server"
-        );
+        throw new Error("Empty or invalid response received from analysis server");
       }
-
+  
       let parsedData;
       try {
         const sanitizedJsonString = sanitizeJSONString(response.data.data);
@@ -641,35 +653,24 @@ function generateReportIpc(tmpdir_path) {
         log.error("JSON parsing error:", error);
         throw error;
       }
-
-      const transactions = (parsedData.Transactions || []).filter(
-        (transaction) => {
-          if (
-            typeof transaction.Credit === "number" &&
-            isNaN(transaction.Credit)
-          ) {
-            transaction.Credit = null;
-          }
-          if (
-            typeof transaction.Debit === "number" &&
-            isNaN(transaction.Debit)
-          ) {
-            transaction.Debit = null;
-          }
-          if (
-            typeof transaction.Balance === "number" &&
-            isNaN(transaction.Balance)
-          ) {
-            transaction.Balance = 0;
-          }
-
-          return (
-            (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
-            (transaction.Debit !== null && !isNaN(transaction.Debit))
-          );
+  
+      const transactions = (parsedData.Transactions || []).filter((transaction) => {
+        if (typeof transaction.Credit === "number" && isNaN(transaction.Credit)) {
+          transaction.Credit = null;
         }
-      );
-
+        if (typeof transaction.Debit === "number" && isNaN(transaction.Debit)) {
+          transaction.Debit = null;
+        }
+        if (typeof transaction.Balance === "number" && isNaN(transaction.Balance)) {
+          transaction.Balance = 0;
+        }
+  
+        return (
+          (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
+          (transaction.Debit !== null && !isNaN(transaction.Debit))
+        );
+      });
+  
       const processedData = [];
       for (let i = 0; i < fileDetails.length; i++) {
         try {
@@ -682,9 +683,14 @@ function generateReportIpc(tmpdir_path) {
             i // Pass the index to match with NER results
           );
           processedData.push(result);
-          successfulFiles.push(fileDetails[i].pdf_paths);
+          // Only mark as successful if not in failedFiles
+          if (!failedFiles.has(fileDetail.pdf_paths)) {
+            successfulFiles.add(fileDetail.pdf_paths);
+          }
         } catch (error) {
-          failedFiles.push(fileDetails[i].pdf_paths);
+          failedFiles.add(fileDetail.pdf_paths);
+          // Remove from successful files if it was marked as successful
+          successfulFiles.delete(fileDetail.pdf_paths);
           log.error(
             `Error processing file detail for ${fileDetails[i].bankName}:`,
             error
@@ -692,7 +698,7 @@ function generateReportIpc(tmpdir_path) {
           throw error;
         }
       }
-
+  
       // Process Summary Data
       try {
         await processSummaryData(
@@ -708,7 +714,10 @@ function generateReportIpc(tmpdir_path) {
         log.error("Error processing summary data:", error);
         throw error;
       }
-
+      console.log(
+        "Opportunity to Earn data: 1",
+        parsedData["Opportunity to Earn"] || "not data"
+      );
       // Process Opportunity to Earn Data
       try {
         await processOpportunityToEarnData(
@@ -719,20 +728,26 @@ function generateReportIpc(tmpdir_path) {
         log.error("Error processing opportunity to earn data:", error);
         throw error;
       }
-
-      // Cleanup
-      fileDetails.forEach((detail) => {
+  
+      // Cleanup - Only delete files that were successfully processed
+      Array.from(successfulFiles).forEach((filePath) => {
         try {
-          if (fs.existsSync(detail.pdf_paths)) {
-            fs.unlinkSync(detail.pdf_paths);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            log.info(`Successfully deleted processed file: ${filePath}`);
           }
         } catch (error) {
-          log.warn(`Failed to cleanup temp file: ${detail.pdf_paths}`, error);
+          log.warn(`Failed to cleanup successful file: ${filePath}`, error);
         }
       });
-
+  
+      // Log remaining files
+      Array.from(failedFiles).forEach((filePath) => {
+        log.info(`Keeping failed file for review: ${filePath}`);
+      });
+  
       await updateCaseStatus(caseId, "Success");
-
+  
       return {
         success: true,
         data: {
@@ -744,8 +759,8 @@ function generateReportIpc(tmpdir_path) {
           eodProcessed: true,
           summaryProcessed: true,
           failedStatements: response.data["pdf_paths_not_extracted"] || null,
-          failedFiles: failedFiles,
-          successfulFiles: successfulFiles,
+          failedFiles: Array.from(failedFiles),
+          successfulFiles: Array.from(successfulFiles),
           nerResults: nerResults,
         },
       };
@@ -760,31 +775,35 @@ function generateReportIpc(tmpdir_path) {
         status: error.response?.status,
       });
 
+      // If there's a specific PDF paths not extracted data, store it
       if (error.response?.data?.["pdf_paths_not_extracted"]) {
         try {
           const validCaseId = await getOrCreateCase(caseName);
-
+  
           await db.insert(failedStatements).values({
             caseId: validCaseId,
-            data: JSON.stringify(
-              error.response.data["pdf_paths_not_extracted"]
-            ),
+            data: JSON.stringify(error.response.data["pdf_paths_not_extracted"]),
           });
 
+          // Track failed PDF paths
           const failedPdfPaths =
             error.response.data["pdf_paths_not_extracted"].paths || [];
-          failedFiles.push(...failedPdfPaths);
+          failedPdfPaths.forEach(path => {
+            failedFiles.add(path);
+            // Remove from successful files if it was marked as successful
+            successfulFiles.delete(path);
+          });
         } catch (dbError) {
           log.error("Failed to store failed statements:", dbError);
         }
       }
-
+  
       throw {
         message: error.message || "Failed to generate report",
         code: error.response?.status || 500,
         details: error.response?.data || error.toString(),
         timestamp: new Date().toISOString(),
-        failedFiles: failedFiles,
+        failedFiles: Array.from(failedFiles),
       };
     }
   });
