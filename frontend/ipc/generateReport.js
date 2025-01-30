@@ -13,6 +13,7 @@ const { failedStatements } = require("../db/schema/FailedStatements");
 const { eq, and } = require("drizzle-orm");
 const { opportunityToEarn } = require("../db/schema/OpportunityToEarn");
 
+
 const sanitizeJSONString = (jsonString) => {
   return jsonString
     .replace(/: *NaN/g, ": null")
@@ -523,7 +524,8 @@ async function processOpportunityToEarnData(opportunityToEarnData, CaseId) {
 
 function generateReportIpc(tmpdir_path) {
   const baseUrl = `http://localhost:7500`;
-  const serverEndPoint = `${baseUrl}/analyze-statements/`;
+  const generateReportEndpoint = `${baseUrl}/analyze-statements/`;
+  const editPdfEndpoint = `${baseUrl}/column-rectify-add-pdf/`;
   // const client = axios.create({ socketPath: udsPath, baseURL: 'http://unix' });
   // const payload = {
   //   bank_names: ["ICICI", "HDFC"],
@@ -552,6 +554,7 @@ function generateReportIpc(tmpdir_path) {
     const tempDir = tmpdir_path;
     log.info("Temp Directory : ", tempDir);
     let caseId = null;
+
 
     // Track successfully processed files to avoid deleting them
     const successfulFiles = [];
@@ -598,7 +601,7 @@ function generateReportIpc(tmpdir_path) {
         ca_id: fileDetails[0]?.ca_id || "DEFAULT_CASE",
       };
 
-      const response = await axios.post(serverEndPoint, payload, {
+      const response = await axios.post(generateReportEndpoint, payload, {
         headers: { "Content-Type": "application/json" },
         timeout: 300000,
         validateStatus: (status) => status === 200,
@@ -788,6 +791,233 @@ function generateReportIpc(tmpdir_path) {
       };
     }
   });
+
+  ipcMain.handle("edit-pdf", async (event, result, caseName) => {
+    log.info("IPC handler invoked for edit-pdf", caseName);
+    const tempDir = tmpdir_path;
+    log.info("Temp Directory : ", tempDir);
+    let caseId = null;
+    console.log("CaseName backend edit pdf: ", caseName);
+    console.log("Result backend edit pdf: ", result);
+
+    // Track successfully processed files to avoid deleting them
+    const successfulFiles = [];
+    const failedFiles = [];
+
+    try {
+      caseId = await getOrCreateCase(caseName);
+
+     
+
+      const payload = {
+        bank_names: result.map((d) => d.bankName),
+        pdf_paths: result.map((d) => d.path),
+        passwords: result.map((d) => d.passwords || ""),
+        start_dates: result.map((d) => d.start_date || ""),
+        end_dates: result.map((d) => d.end_date || ""),
+        ca_id:caseId|| "DEFAULT_CASE",
+        aiyaz_array_of_array:result.map((d) => d.rectifiedColumns || ""),
+        // whole_transaction_sheet:result.map((d) => d.whole_transaction_sheet || ""),
+      };
+
+      log.info("aiyaz Payload: ", payload);
+
+
+      const response = await axios.post(editPdfEndpoint, payload, {
+        headers: { "Content-Type": "application/json" },
+        timeout: 300000,
+        validateStatus: (status) => status === 200,
+      });
+
+      log.info("Response from edit-pdf: ", response);
+      log.info("Response data from edit-pdf: ", response.data);
+
+      // // Track failed PDF paths
+      // let failedPdfPaths = [];
+
+      // // Check if there are any PDF paths not extracted
+      // if (response.data?.["pdf_paths_not_extracted"]) {
+      //   await updateCaseStatus(caseId, 'Failed');
+      //   // Get the case ID
+      //   const validCaseId = await getOrCreateCase(caseName);
+
+      //   // Store failed statements in the database
+      //   await db.insert(failedStatements).values({
+      //     caseId: validCaseId,
+      //     data: JSON.stringify(response.data["pdf_paths_not_extracted"]),
+      //   });
+
+      //   // Track failed PDF paths
+      //   failedPdfPaths = response.data["pdf_paths_not_extracted"].paths || [];
+      //   log.warn("Some PDF paths were not extracted", failedPdfPaths);
+      // }
+
+      // // Continue processing if data exists
+      // if (!response.data || !response.data.data) {
+      //   throw new Error(
+      //     "Empty or invalid response received from analysis server"
+      //   );
+      // }
+
+      // let parsedData;
+      // try {
+      //   const sanitizedJsonString = sanitizeJSONString(response.data.data);
+      //   parsedData = JSON.parse(sanitizedJsonString);
+      // } catch (error) {
+      //   log.error("JSON parsing error:", error);
+      //   throw error;
+      // }
+
+      // const transactions = (parsedData.Transactions || []).filter(
+      //   (transaction) => {
+      //     if (
+      //       typeof transaction.Credit === "number" &&
+      //       isNaN(transaction.Credit)
+      //     ) {
+      //       transaction.Credit = null;
+      //     }
+      //     if (
+      //       typeof transaction.Debit === "number" &&
+      //       isNaN(transaction.Debit)
+      //     ) {
+      //       transaction.Debit = null;
+      //     }
+      //     if (
+      //       typeof transaction.Balance === "number" &&
+      //       isNaN(transaction.Balance)
+      //     ) {
+      //       transaction.Balance = 0;
+      //     }
+
+      //     return (
+      //       (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
+      //       (transaction.Debit !== null && !isNaN(transaction.Debit))
+      //     );
+      //   }
+      // );
+
+      // const processedData = [];
+      // for (const fileDetail of fileDetails) {
+      //   try {
+      //     const result = await processStatementAndEOD(
+      //       fileDetail,
+      //       transactions,
+      //       parsedData.EOD,
+      //       caseName
+      //     );
+      //     processedData.push(result);
+      //     // Track successfully processed files
+      //     successfulFiles.push(fileDetail.pdf_paths);
+      //   } catch (error) {
+      //     // Track failed files
+      //     failedFiles.push(fileDetail.pdf_paths);
+      //     log.error(
+      //       `Error processing file detail for ${fileDetail.bankName}:`,
+      //       error
+      //     );
+      //     throw error;
+      //   }
+      // }
+
+      // // Process Summary Data
+      // try {
+      //   await processSummaryData(
+      //     {
+      //       "Income Receipts": parsedData["Income Receipts"] || [],
+      //       "Important Expenses": parsedData["Important Expenses"] || [],
+      //       "Other Expenses": parsedData["Other Expenses"] || [],
+      //     },
+      //     caseName
+      //   );
+      // } catch (error) {
+      //   log.error("Error processing summary data:", error);
+      //   throw error;
+      // }
+      // console.log(
+      //   "Opportunity to Earn data: 1",
+      //   parsedData["Opportunity to Earn"] || "not data"
+      // );
+      // // Process Opportunity to Earn Data
+      // try {
+      //   await processOpportunityToEarnData(
+      //     parsedData["Opportunity to Earn"] || [],
+      //     payload.ca_id
+      //   );
+      // } catch (error) {
+      //   log.error("Error processing opportunity to earn data:", error);
+      //   throw error;
+      // }
+
+      // // Cleanup
+      // fileDetails.forEach((detail) => {
+      //   try {
+      //     if (fs.existsSync(detail.pdf_paths)) {
+      //       fs.unlinkSync(detail.pdf_paths);
+      //     }
+      //   } catch (error) {
+      //     log.warn(`Failed to cleanup temp file: ${detail.pdf_paths}`, error);
+      //   }
+      // });
+      // await updateCaseStatus(caseId, 'Success');
+
+      return {
+        success: true,
+        // data: {
+        //   processed: processedData,
+        //   totalTransactions: processedData.reduce(
+        //     (sum, d) => sum + d.transactionCount,
+        //     0
+        //   ),
+        //   eodProcessed: true,
+        //   summaryProcessed: true,
+        //   failedStatements: response.data["pdf_paths_not_extracted"] || null,
+        //   failedFiles: failedFiles,
+        //   successfulFiles: successfulFiles,
+        // },
+      };
+    } catch (error) {
+      if (caseId) {
+        await updateCaseStatus(caseId, 'Failed');
+      }
+      log.error("Error in report generation:", {
+        message: error.message,
+        stack: error.stack,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+
+      // If there's a specific PDF paths not extracted data, store it
+      if (error.response?.data?.["pdf_paths_not_extracted"]) {
+        try {
+          const validCaseId = await getOrCreateCase(caseName);
+
+          await db.insert(failedStatements).values({
+            caseId: validCaseId,
+            data: JSON.stringify(
+              error.response.data["pdf_paths_not_extracted"]
+            ),
+          });
+
+          // Track failed PDF paths
+          const failedPdfPaths =
+            error.response.data["pdf_paths_not_extracted"].paths || [];
+          failedFiles.push(...failedPdfPaths);
+        } catch (dbError) {
+          log.error("Failed to store failed statements:", dbError);
+        }
+      }
+
+      throw {
+        message: error.message || "Failed to generate report",
+        code: error.response?.status || 500,
+        details: error.response?.data || error.toString(),
+        timestamp: new Date().toISOString(),
+        failedFiles: failedFiles,
+      };
+    }
+  });
+
+ 
 }
 
 module.exports = { generateReportIpc };

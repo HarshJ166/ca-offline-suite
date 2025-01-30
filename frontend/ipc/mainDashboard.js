@@ -4,8 +4,13 @@ const db = require("../db/db");
 const { statements } = require("../db/schema/Statement");
 const { cases } = require("../db/schema/Cases");
 const { count } = require("drizzle-orm");
+const fs = require("fs");
+const path = require("path");
+const axios = require("axios");
 
-function registerMainDashboardIpc() {
+
+
+function registerMainDashboardIpc(tmpdir_path) {
   
   ipcMain.handle("get-reports-processed", async (event) => {
     try {
@@ -71,6 +76,17 @@ function registerMainDashboardIpc() {
       throw error;
     }
   });
+
+  ipcMain.handle('fetch-pdf-content', async (event,fileName) => {
+    console.log({fileName});
+    // This hander takes in a file path and returns the base64 encoded data of the file
+    // const filePath = 'E:/Workplace/Bizpedia/ca-offline-suite/frontend/tmp/52 Kotak bank account statement - Apr 23 to Mar 24.pdf'; // The path to the PDF file
+    const filePath = path.join(tmpdir_path, fileName);
+    const data = await fs.promises.readFile(filePath);
+    return data.toString('base64'); // Convert file data to base64 string
+  });
+
+
 
 }
 

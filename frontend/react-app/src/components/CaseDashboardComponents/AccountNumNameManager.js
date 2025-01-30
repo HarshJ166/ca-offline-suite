@@ -265,7 +265,7 @@ const AccountNumNameManager = ({ caseId }) => {
                   </TableCell>
                   <TableCell>
                     <div
-                      className="truncate max-w-full"
+                      className="truncate max-w-[450px]"
                       title={statement.filePath}
                     >
                       {statement.filePath}
