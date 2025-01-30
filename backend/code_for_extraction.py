@@ -313,14 +313,14 @@ def unlock_and_add_margins_to_pdf(pdf_path, pdf_password, timestamp, CA_ID):
         pdf_document = fitz.open(unlocked_pdf_path)
         first_page = pdf_document[0]
         text = first_page.get_text("text").strip()
-        if not text:
-            raise ValueError("The PDF is of image-only (non-text) format. Please upload a text PDF.")
 
+        if not text or text == "CamScanner":
+            raise Exception("The PDF is of image-only (non-text) format. Please upload a text PDF.")
         pdf_document.close()
         return unlocked_pdf_path
 
     except Exception as e:
-        raise ValueError(f"An error occurred while processing the PDF: {e}")
+        raise ValueError(f"Error: {e}")
 
     finally:
         # Ensure all temporary documents are closed and cleaned up
