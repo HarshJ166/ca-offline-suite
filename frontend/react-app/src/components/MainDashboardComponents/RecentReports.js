@@ -450,26 +450,7 @@ const RecentReports = ({ key }) => {
     setIsAddPdfModalOpen(false);
   };
 
-  const handleOpenMarker = () => {
-    if (
-      selectedReportFailedData &&
-      selectedReportFailedData[0] &&
-      selectedReportFailedData[0].parsedContent
-    ) {
-      const pdfPath = selectedReportFailedData[0].parsedContent.paths[0];
-      const pdfName = pdfPath.split("\\").pop();
-      setPdfNameForMarker(pdfName);
-      console.log("Opening marker with pdfPath:", pdfPath, "pdfName:", pdfName);
-      setIsMarkerModalOpen(true);
-    } else {
-      console.error("No PDF path available");
-      toast({
-        title: "Error",
-        description: "No PDF path available for this report",
-        variant: "destructive",
-      });
-    }
-  };
+
 
   const handleSaveMarkerData = (data) => {
     // Handle saving marker data here

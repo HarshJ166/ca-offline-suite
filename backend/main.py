@@ -1,7 +1,7 @@
 import os
 import uvicorn
 import logging
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException,Request
 from pydantic import BaseModel
 from typing import List, Optional
 from fastapi.responses import HTMLResponse
@@ -27,6 +27,16 @@ class BankStatementRequest(BaseModel):
     passwords: Optional[List[str]] = []  # Optional field, defaults to empty list
     start_date: List[str]
     end_date: List[str]
+    ca_id: str
+
+class EditPdfRequest(BaseModel):
+    bank_names: List[str]
+    pdf_paths: List[str]
+    passwords: Optional[List[str]] = []  # Optional field, defaults to empty list
+    start_dates: List[str]
+    end_dates: List[str]
+    aiyaz_array_of_array: List[List[int]]
+    whole_transaction_sheet: bool
     ca_id: str
 
 class DummyRequest(BaseModel):
@@ -103,43 +113,43 @@ async def analyze_bank_statements(request: BankStatementRequest):
 
 
 @app.post("/column-rectify-add-pdf/")
-async def column_rectify_add_pdf(request: BankStatementRequest):
+async def column_rectify_add_pdf(request:EditPdfRequest):
+    data = await request.json()  # This parses the request body as JSON
+    print("Received request data:", data)
     try:
 
-        logger.info(f"Received request with banks: {request.bank_names}")
+        # # Create a progress tracking function
+        # def progress_tracker(current: int, total: int, info: str) -> None:
+        #     logger.info(f"{info} ({current}/{total})")
+
+        # progress_data = {
+        # "progress_func": progress_tracker,
+        # "current_progress": 10,
+        # "total_progress": 100,
+        # }
+
+        # # Validate passwords length if provided
+        # if request.passwords and len(request.passwords) != len(request.pdf_paths):
+        #     raise HTTPException(
+        #         status_code=400,
+        #         detail=(
+        #             f"Number of passwords ({len(request.passwords)}) "
+        #             f"must match number of PDFs ({len(request.pdf_paths)})"
+        #         ),
+        #     )
         
-        # Create a progress tracking function
-        def progress_tracker(current: int, total: int, info: str) -> None:
-            logger.info(f"{info} ({current}/{total})")
+        # bank_names = request.bank_names 
+        # pdf_paths = request.pdf_paths
+        # passwords =  request.passwords if request.passwords else []
+        # start_date = request.start_date if request.start_date else []
+        # end_date = request.end_date if request.end_date else []
+        # CA_ID = request.ca_id
+        # progress_data = progress_data
+        # column_coordinates = request.columns
+        # whole_transaction_sheet = request.whole_transaction_sheet
+        # result = start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_date, end_date, CA_ID, progress_data,aiyaz_array_of_array=column_coordinates,whole_transaction_sheet=whole_transaction_sheet)
 
-        progress_data = {
-        "progress_func": progress_tracker,
-        "current_progress": 10,
-        "total_progress": 100,
-        }
-
-        # Validate passwords length if provided
-        if request.passwords and len(request.passwords) != len(request.pdf_paths):
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"Number of passwords ({len(request.passwords)}) "
-                    f"must match number of PDFs ({len(request.pdf_paths)})"
-                ),
-            )
-        
-        bank_names = request.bank_names 
-        pdf_paths = request.pdf_paths
-        passwords =  request.passwords if request.passwords else []
-        start_date = request.start_date if request.start_date else []
-        end_date = request.end_date if request.end_date else []
-        CA_ID = request.ca_id
-        progress_data = progress_data
-        column_coordinates = request.columns
-        whole_transaction_sheet = request.whole_transaction_sheet
-        result = start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_date, end_date, CA_ID, progress_data,aiyaz_array_of_array=column_coordinates,whole_transaction_sheet=whole_transaction_sheet)
-
-        return result
+        return {"success": True, "message": "PDF rectification done (mocked)."}
     except Exception as e:
         logger.error(f"Error processing bank statements: {str(e)}")
         raise HTTPException(
