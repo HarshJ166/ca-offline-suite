@@ -58,7 +58,7 @@ export default function GenerateReport() {
           <div className="flex items-center gap-4">
             <CircularProgress className="w-full" />
             {/* <span className="text-sm font-medium">0%</span> */}
-//             <CircularProgress value={0} className="w-full" />
+             <CircularProgress value={0} className="w-full" />
           </div>
           <p className="text-sm text-gray-500">Preparing to process files...</p>
         </div>
@@ -177,12 +177,17 @@ export default function GenerateReport() {
     setRefreshTrigger((prev) => prev + 1);
   }, []);
 
+  const handleTestEdit = () => {
+    window.electron.editCategory({});
+  };
+
   return (
     <div className="p-8 pt-0 space-y-8 bg-white dark:bg-black min-h-screen">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight dark:text-slate-300">
           Report Generator
         </h2>
+        <button onClick={handleTestEdit}>Test Edit</button>
         <div className="flex items-center space-x-4">
           <button
             onClick={() => setNotificationsOpen(!notificationsOpen)}

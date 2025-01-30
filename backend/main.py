@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from fastapi.responses import HTMLResponse
 from fastapi import Body
+import pandas as pd
 # import matplotlib
 # matplotlib.use('Agg')
 # from findaddy.exceptions import ExtractionError
@@ -13,7 +14,7 @@ from backend.utils import get_saved_pdf_dir
 TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
 
 # If you have other custom imports:
-from backend.tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf,start_extraction_edit_pdf
+from backend.tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf,start_extraction_edit_pdf, refresh_category_all_sheets
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -28,6 +29,10 @@ class BankStatementRequest(BaseModel):
     start_date: List[str]
     end_date: List[str]
     ca_id: str
+    
+class EditCategoryRequest(BaseModel):
+    transaction_data: List[dict]
+    new_categories: List[dict]
 
 class DummyRequest(BaseModel):
     data: str
@@ -158,6 +163,26 @@ async def add_pdf(request: BankStatementRequest):
 async def health_check():
     return {"status": "healthy"}
 
+@app.post("/edit-category/")
+async def edit_category(request: EditCategoryRequest):
+    try:
+        transaction_data = request.transaction_data
+        new_categories = request.new_categories
+        logger.info(f"Received request with new categories: {new_categories}")
+        logger.info(f"Received request with transaction data: {transaction_data[0]}")
+
+        # convert transaction_data to df
+        transaction_df = pd.DataFrame(transaction_data)
+        print(transaction_df.head())
+
+        refresh_category_all_sheets(transaction_df, )
+
+    except Exception as e:
+        logger.error(f"Error processing bank statements: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error processing bank statements: {str(e)}"
+        )
+
 
 if __name__ == "__main__":
     # Optionally use environment variables for host/port. Falls back to "127.0.0.1" and 7500 if none provided.
@@ -175,6 +200,6 @@ if __name__ == "__main__":
 
 
     # IMPORTANT: reload=False for production usage
-    import time
-    time.sleep(8)
-    uvicorn.run(app, host=host, port=port, reload=False)
+    # import time
+    # time.sleep(8)
+    uvicorn.run("backend.main:app", host=host, port=port, reload=True)
