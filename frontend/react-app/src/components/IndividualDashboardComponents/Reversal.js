@@ -71,7 +71,7 @@ const Reversal = () => {
             />
           </div>
           <div>
-            <DataTable data={data} />
+            <DataTable data={data} title="Refund/Reversal Table" />
           </div>
         </>
       )}

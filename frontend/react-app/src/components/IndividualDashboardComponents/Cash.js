@@ -124,7 +124,10 @@ const Cash = () => {
                 />
               </div>
               <div>
-                <DataTable data={withdrawalData} />
+                <DataTable
+                  data={withdrawalData}
+                  title="Cash Widthdrawal Table"
+                />
               </div>
             </>
           )}
@@ -148,7 +151,7 @@ const Cash = () => {
                 />
               </div>
               <div>
-                <DataTable data={depositData} />
+                <DataTable data={depositData} title="Cash Deposit Table" />
               </div>
             </>
           )}

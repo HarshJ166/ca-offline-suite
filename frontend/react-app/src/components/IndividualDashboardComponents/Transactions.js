@@ -292,7 +292,7 @@ const Transactions = () => {
                 </MaximizableChart>
               </div>
 
-              <DataTable data={filteredData} />
+              <DataTable data={filteredData} title="Transactions Table" />
             </>
           )}
         </>

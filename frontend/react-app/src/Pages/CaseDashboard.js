@@ -15,17 +15,35 @@ const CaseDashboard = () => {
   const [activeTab, setActiveTab] = useState("Acc No and Acc Name");
   const navigate = useNavigate();
   const { caseId, defaultTab } = useParams();
+  const [reportNameFromDb, setReportNameFromDb] = useState(null);
+
   console.log("CaseId : ", caseId, "Default Tab : ", defaultTab);
+
+  useEffect(() => {
+    const fetchReportName = async () => {
+      try {
+        const result = await window.electron.getReportName(caseId);
+        console.log("Report Name fetched successfully:", result);
+        setReportNameFromDb(result);
+      } catch (error) {
+        console.error("Error fetching report name:", error);
+      }
+    };
+
+    fetchReportName();
+  }, [caseId]);
+
+  console.log("Report Name : ", reportNameFromDb);
+
   useEffect(() => {
     setCaseDashboard(activeTab, `/case-dashboard/${caseId}/${activeTab}`);
   }, [activeTab]);
 
   const navItems = [
-  
     {
       title: "Reports",
       url: "#",
-      icon:User,
+      icon: User,
     },
     {
       title: "Acc No and Acc Name",
@@ -33,7 +51,6 @@ const CaseDashboard = () => {
       icon: UserPen,
       isActive: true,
     },
-    
   ];
 
   useEffect(() => {
@@ -42,45 +59,37 @@ const CaseDashboard = () => {
   }, []);
 
   const handleTabChange = (newTab) => {
-    // Reset scroll position when tab changes
     setActiveTab(newTab);
     const scrollableNode = document.querySelector(
       "[data-radix-scroll-area-viewport]"
     );
     if (scrollableNode) {
-      // smooth scroll to top
       scrollableNode.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
-  const handleView = () => {
-    navigate(`/individual-dashboard/${1}/${1}`);
-  };
-
   return (
-    <>
-      <div className={cn("w-full flex h-screen bg-background")}>
-        <Sidebar
-          navItems={navItems}
-          activeTab={activeTab}
-          setActiveTab={handleTabChange} // Use handleTabChange instead of setActiveTab
-        />
-        <ScrollArea className="w-full">
-          <BreadcrumbDynamic items={breadcrumbs} />
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <main className="flex-1">
-              {activeTab === "Acc No and Acc Name" && (
-                <AccountNumNameManager caseId={caseId} />
-              )}
-              {activeTab === "Reports" && (
-                <IndividualTable caseId={caseId} />
-              )}
-              {activeTab === "Combined Table" && <CombinedTable />}
-            </main>
-          </div>
-        </ScrollArea>
-      </div>
-    </>
+    <div className={cn("w-full flex h-screen bg-background")}>
+      <Sidebar
+        navItems={navItems}
+        activeTab={activeTab}
+        setActiveTab={handleTabChange}
+        caseId={caseId}
+        reportName={reportNameFromDb}
+      />
+      <ScrollArea className="w-full">
+        <BreadcrumbDynamic items={breadcrumbs} />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <main className="flex-1">
+            {activeTab === "Acc No and Acc Name" && (
+              <AccountNumNameManager caseId={caseId} />
+            )}
+            {activeTab === "Reports" && <IndividualTable caseId={caseId} />}
+            {activeTab === "Combined Table" && <CombinedTable />}
+          </main>
+        </div>
+      </ScrollArea>
+    </div>
   );
 };
 

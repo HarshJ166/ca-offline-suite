@@ -278,12 +278,14 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
     account_number = ""
     dfs = {}
     name_dfs = {}
+    errorz = {}
     pdf_paths_not_extracted = {
         "paths": [],
         "passwords": [],
         "start_dates": [],
         "end_dates": [],
-        "respective_list_of_columns": []
+        "respective_list_of_columns": [],
+        "respective_reasons_for_error": []
     }
     i = 0
 
@@ -307,6 +309,7 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
 
 
         dfs[bank], name_dfs[bank] = extraction_process_explicit_lines(bank, pdf_path, pdf_password, start_date, end_date, explicit_lines, labels)
+        errorz[bank] = ""
 
         print(f"Extracted {bank} bank statement successfully")
         # account_number += f"{name_dfs[bank][1][:4]}x{name_dfs[bank][1][-4:]}_"
@@ -317,6 +320,7 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
             pdf_paths_not_extracted["start_dates"].append(start_date)
             pdf_paths_not_extracted["end_dates"].append(end_date)
             pdf_paths_not_extracted["respective_list_of_columns"].append(name_dfs[bank])
+            pdf_paths_not_extracted["respective_reasons_for_error"].append(errorz[bank])
             del dfs[bank]
             del name_dfs[bank]
         i += 1
@@ -387,12 +391,15 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
     account_number = ""
     dfs = {}
     name_dfs = {}
+    errorz = {}
+
     pdf_paths_not_extracted = {
         "paths": [],
         "passwords": [],
         "start_dates": [],
         "end_dates": [],
-        "respective_list_of_columns": []
+        "respective_list_of_columns": [],
+        "respective_reasons_for_error": []
     }
     i = 0
 
@@ -404,6 +411,7 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
         end_date = end_dates[i]
 
         dfs[bank], name_dfs[bank] = extraction_process(bank, pdf_path, pdf_password, start_date, end_date)
+        errorz[bank] = ""
 
         print(f"Extracted {bank} bank statement successfully")
         # account_number += f"{name_dfs[bank][1][:4]}x{name_dfs[bank][1][-4:]}_"
@@ -414,6 +422,7 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
             pdf_paths_not_extracted["start_dates"].append(start_date)
             pdf_paths_not_extracted["end_dates"].append(end_date)
             pdf_paths_not_extracted["respective_list_of_columns"].append(name_dfs[bank])
+            pdf_paths_not_extracted["respective_reasons_for_error"].append(errorz[bank])
             del dfs[bank]
             del name_dfs[bank]
 
