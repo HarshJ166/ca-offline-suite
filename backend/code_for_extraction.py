@@ -675,10 +675,10 @@ def crdr_to_credit_debit_columns(df, description_column, date_column, bal_column
     return final_df
 
 def extract_text_from_pdf(unlocked_file_path):
-    with fitz.open(unlocked_file_path) as pdf_doc:
-        # Use a list comprehension for faster text concatenation
-        text = ''.join([pdf_doc.load_page(i).get_text("text") for i in range(pdf_doc.page_count)])
-    return text
+    with pdfplumber.open(unlocked_file_path) as pdf:
+        first_page = pdf.pages[0]
+        text = first_page.extract_text()
+        return text.strip() if text else None
 
 ##____________AFTER EXTRACTION (cleaning)_________________
 
