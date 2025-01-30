@@ -87,7 +87,7 @@ def load_new_first_page_function(pdf_document):
 
         if crop_y is not None:
             # Adjust crop_y to include some distance above the keywords
-            buffer_distance = 30  # Points to keep above the line
+            buffer_distance = 5  # Points to keep above the line
             crop_y = max(page.mediabox.y0, crop_y - buffer_distance)
 
             # Define the cropping rectangle
@@ -313,14 +313,14 @@ def unlock_and_add_margins_to_pdf(pdf_path, pdf_password, timestamp, CA_ID):
         pdf_document = fitz.open(unlocked_pdf_path)
         first_page = pdf_document[0]
         text = first_page.get_text("text").strip()
-        if not text:
-            raise ValueError("The PDF is of image-only (non-text) format. Please upload a text PDF.")
 
+        if not text or text == "CamScanner":
+            raise Exception("The PDF is of image-only (non-text) format. Please upload a text PDF.")
         pdf_document.close()
         return unlocked_pdf_path
 
     except Exception as e:
-        raise ValueError(f"An error occurred while processing the PDF: {e}")
+        raise ValueError(f"Error: {e}")
 
     finally:
         # Ensure all temporary documents are closed and cleaned up
@@ -919,6 +919,11 @@ def check_balance_consistency(df):
     :param tolerance: Allowed error range for balance comparison (default is 1.0)
     :return: List of rows with balance inconsistencies
     """
+    if df.empty:
+        raise ValueError(
+            "Empty DF returned from extraction"
+        )
+
     df.reset_index(inplace=True)
     tolerance = 1.0
     df['Debit'] = df['Debit'].fillna(0)
@@ -1056,7 +1061,7 @@ def run_test_case_A(page):
             "vertical_strategy": "lines",
             "horizontal_strategy": "lines",
             "edge_min_length": 20,
-            "intersection_y_tolerance": 40,
+            # "intersection_y_tolerance": 40,
         })
         model_df, lists = model_for_pdf(df)  # Process the DataFrame
         return model_df, lists  # No coordinates for Test Case A
@@ -1070,7 +1075,7 @@ def run_test_case_B(page_with_rows_added):
         df = extract_dataframe_from_pdf(page_with_rows_added, table_settings={
             "vertical_strategy": "lines",
             "horizontal_strategy": "text",
-            "edge_min_length": 40,
+            "edge_min_length": 30,
             "intersection_x_tolerance": 120,
         })
         model_df, lists = model_for_pdf(df)
@@ -1086,7 +1091,6 @@ def run_test_case_C(page_with_columns_added, explicit_lines):
             "vertical_strategy": "explicit",
             "explicit_vertical_lines": explicit_lines,
             "horizontal_strategy": "lines",
-            "edge_min_length": 40,
             "intersection_x_tolerance": 120
         })
         model_df, lists = model_for_pdf(df)
@@ -1102,7 +1106,6 @@ def run_test_case_D(page_with_rows_n_columns_added, explicit_lines):
             "vertical_strategy": "explicit",
             "explicit_vertical_lines": explicit_lines,
             "horizontal_strategy": "text",
-            "edge_min_length": 40,
             "intersection_x_tolerance": 120,
         })
         model_df, lists = model_for_pdf(df)
@@ -1169,7 +1172,7 @@ def run_test_output_on_whole_pdf(list_a, pdf_in_saved_pdf, bank_name, timestamp,
             "vertical_strategy": "lines",
             "horizontal_strategy": "lines",
             # "edge_min_length": 30,
-            "intersection_y_tolerance": 30,
+            # "intersection_y_tolerance": 30,
         })
         model_df = new_mode_for_pdf(df, lists_of_columns)
 
@@ -1197,7 +1200,6 @@ def run_test_output_on_whole_pdf(list_a, pdf_in_saved_pdf, bank_name, timestamp,
             "vertical_strategy": "explicit",
             "explicit_vertical_lines": explicit_lines,
             "horizontal_strategy": "lines",
-            "edge_min_length": 40,
             "intersection_x_tolerance": 120
         })
         model_df = new_mode_for_pdf(df, lists_of_columns)
@@ -1213,7 +1215,6 @@ def run_test_output_on_whole_pdf(list_a, pdf_in_saved_pdf, bank_name, timestamp,
             "vertical_strategy": "explicit",
             "explicit_vertical_lines": explicit_lines,
             "horizontal_strategy": "text",
-            "edge_min_length": 40,
             "intersection_x_tolerance": 120,
         })
         model_df = new_mode_for_pdf(df, lists_of_columns)

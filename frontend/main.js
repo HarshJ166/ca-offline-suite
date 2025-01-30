@@ -24,8 +24,9 @@ const { registerOpportunityToEarnIpc } = require("./ipc/opportunityToEarn");
 const db = require("./db/db");
 const { spawn, execFile } = require("child_process");
 const log = require("electron-log");
-const portscanner = require("portscanner");  // Import portscanner
+const portscanner = require("portscanner"); // Import portscanner
 const { autoUpdater } = require("electron-updater");
+const { getdata } = require("./ipc/getData.js");
 
 // Configure electron-log
 log.transports.console.level = "debug"; // Set the log level
@@ -33,13 +34,95 @@ log.transports.file.level = "info"; // Only log info level and above in the log 
 
 // Configure autoUpdater logging
 autoUpdater.logger = log;
-autoUpdater.logger.transports.file.level = 'info';
-
-log.info("Working Directory:", process.cwd());
+autoUpdater.logger.transports.file.level = "info";
 
 // Instead of electron-is-dev, we'll use this simple check
 const isDev = process.env.NODE_ENV === "development";
+
+// Configure autoUpdater for testing without code signing
+autoUpdater.autoDownload = false;
+autoUpdater.disableWebInstaller = true;
+autoUpdater.allowPrerelease = true;
+
+// Platform specific configurations
+if (process.platform === 'darwin') {
+  autoUpdater.allowDowngrade = true;
+} else if (process.platform === 'win32') {
+  app.setAppUserModelId('com.electron.electronapp');
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.allowDowngrade = false;
+}
+
+// Log update configuration
+log.info('Update Configuration:', {
+  platform: process.platform,
+  appVersion: app.getVersion(),
+  autoDownload: autoUpdater.autoDownload,
+  allowPrerelease: autoUpdater.allowPrerelease,
+  feedURL: autoUpdater.getFeedURL()
+});
 log.info("process.env.NODE_ENV", process.env.NODE_ENV);
+
+// Allow updates without code signing in development
+if (isDev) {
+  autoUpdater.forceDevUpdateConfig = true;
+}
+
+autoUpdater.autoDownload = false;
+autoUpdater.allowDowngrade = false;
+autoUpdater.allowPrerelease = false;
+
+// Configure autoUpdater for GitHub repository
+autoUpdater.setFeedURL({
+  provider: 'github',
+  owner: 'Shama-Cyphersol',
+  repo: 'ca-offline-suite'
+});
+
+// Auto-update event handlers with detailed logging
+autoUpdater.on('checking-for-update', () => {
+  log.info('Checking for updates...');
+  win?.webContents.send('update-status', 'checking');
+});
+
+autoUpdater.on('update-available', (info) => {
+  log.info('Update available. Current version:', app.getVersion());
+  log.info('New version:', info.version);
+  log.info('Release date:', info.releaseDate);
+  win?.webContents.send('update-status', 'available', info);
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  log.info('Update not available. Current version:', app.getVersion());
+  log.info('Latest version:', info?.version);
+  win?.webContents.send('update-status', 'not-available');
+});
+
+autoUpdater.on('download-progress', (progress) => {
+  const logMessage = `
+    Download progress:
+    • Speed: ${progress.bytesPerSecond} bytes/s
+    • Downloaded: ${progress.transferred} bytes
+    • Total: ${progress.total} bytes
+    • Percent: ${progress.percent}%
+  `;
+  log.info(logMessage);
+  win?.webContents.send('update-progress', progress);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  log.info('Update downloaded. Version:', info.version);
+  log.info('Release notes:', info.releaseNotes);
+  win?.webContents.send('update-downloaded', info);
+});
+
+autoUpdater.on('error', (err) => {
+  log.error('Auto-updater error:', err.message);
+  log.error('Error details:', err);
+  win?.webContents.send('update-error', err.message);
+});
+
+log.info("Working Directory:", process.cwd());
 
 const BASE_DIR = isDev ? __dirname : app.getPath("module");
 log.info("current directory", app.getAppPath());
@@ -49,7 +132,7 @@ log.info("__dirname", __dirname);
 let win = null;
 let pythonProcess = null;
 
-const BACKEND_PORT = 5000;  // Replace with the port your backend is listening to
+const BACKEND_PORT = 5000; // Replace with the port your backend is listening to
 
 // Listen for remaining seconds updates
 // sessionManager.on('remainingSecondsUpdated', (seconds) => {
@@ -57,14 +140,13 @@ const BACKEND_PORT = 5000;  // Replace with the port your backend is listening t
 // });
 
 // Listen for license expiration
-sessionManager.on('licenseExpired', () => {
-  log.info('License expired');
+sessionManager.on("licenseExpired", () => {
+  log.info("License expired");
   // Optionally handle the license expiration, e.g., show a dialog or quit the app
   sessionManager.clearUser();
 
-  win.webContents.send('navigateToLogin');
+  win.webContents.send("navigateToLogin");
   // win?.destroy();
-
 });
 
 function checkPortAvailability(port) {
@@ -185,7 +267,6 @@ async function startPythonExecutable() {
   });
 }
 
-
 // Add this function to handle file protocol
 function createProtocol() {
   protocol.registerFileProtocol("app", (request, callback) => {
@@ -229,27 +310,28 @@ async function createWindow() {
     });
   }
 
-  win.on('close', (event) => {
+  win.on("close", (event) => {
     // event.preventDefault();
-    log.info('Close event triggered');
+    log.info("Close event triggered");
     // win.hide();
     // if (process.platform === 'darwin') {
-      // Show the confirmation dialog when the close button is clicked
-      const choice = dialog.showMessageBoxSync(win, {
-        type: 'warning',
-        buttons: ['Yes', 'Cancel'],
-        defaultId: 1,
-        title: 'Confirm Exit',
-        message: 'Closing the app will log out your session. Do you want to proceed?',
-      });
+    // Show the confirmation dialog when the close button is clicked
+    const choice = dialog.showMessageBoxSync(win, {
+      type: "warning",
+      buttons: ["Yes", "Cancel"],
+      defaultId: 1,
+      title: "Confirm Exit",
+      message:
+        "Closing the app will log out your session. Do you want to proceed?",
+    });
 
-      if (choice === 0) {
-        log.info('User confirmed app close. Logging out...');
-        // Add your session logout logic here
-      } else {
-        log.info('User canceled app close.');
-        event.preventDefault(); // Prevent app from closing, keeping it in the background
-      }
+    if (choice === 0) {
+      log.info("User confirmed app close. Logging out...");
+      // Add your session logout logic here
+    } else {
+      log.info("User canceled app close.");
+      event.preventDefault(); // Prevent app from closing, keeping it in the background
+    }
     // }
   });
   // setTimeout(() => {
@@ -263,7 +345,6 @@ async function createWindow() {
     log.info("Window closed");
     app.quit();
   });
-
 
   const createTempDirectory = () => {
     let tempDir = "";
@@ -291,6 +372,77 @@ async function createWindow() {
   registerReportHandlers(TMP_DIR);
   registerAuthHandlers();
   registerOpportunityToEarnIpc();
+  getdata();
+
+  // Auto-update IPC handlers with detailed logging
+  ipcMain.handle('check-for-updates', async () => {
+    log.info('Manual update check requested');
+    if (isDev) {
+      const msg = 'Skip update check in dev mode';
+      log.info(msg);
+      return msg;
+    }
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      log.info('Check for updates result:', result);
+      return result;
+    } catch (err) {
+      log.error('Check for updates failed:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('download-update', async () => {
+    log.info('Update download requested');
+    try {
+      // Backup database before update
+      const dbPath = path.join(app.getPath('userData'), 'database.sqlite');
+      const backupDir = path.join(app.getPath('userData'), 'backups');
+      
+      log.info('Creating backup directory:', backupDir);
+      if (!fs.existsSync(backupDir)) {
+        fs.mkdirSync(backupDir, { recursive: true });
+      }
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupPath = path.join(backupDir, `db-backup-${timestamp}.sqlite`);
+      
+      log.info('Creating database backup:', backupPath);
+      if (fs.existsSync(dbPath)) {
+        fs.copyFileSync(dbPath, backupPath);
+        log.info('Database backup created successfully');
+      } else {
+        log.info('No database found to backup');
+      }
+
+      const result = await autoUpdater.downloadUpdate();
+      log.info('Update download completed');
+      return result;
+    } catch (err) {
+      log.error('Update download failed:', err);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('install-update', () => {
+    log.info('Update installation requested. Quitting app and installing update...');
+    if (process.platform === 'win32') {
+      // For Windows, we want to restart the app after update
+      autoUpdater.quitAndInstall(true, true);
+    } else {
+      // For macOS, let the user choose when to restart
+      autoUpdater.quitAndInstall(false, true);
+    }
+  });
+
+  // Add platform-specific update settings
+  if (process.platform === 'win32') {
+    ipcMain.handle('get-update-location', () => {
+      const updatePath = path.join(app.getPath('temp'), 'cyphersol-updates');
+      log.info('Windows update location:', updatePath);
+      return updatePath;
+    });
+  }
 
   // Handle file saving to temp directory
   ipcMain.handle("save-file-to-temp", async (event, fileBuffer) => {
@@ -371,8 +523,8 @@ app.whenReady().then(async () => {
     // Initial update check after 1 minute
     if (!isDev) {
       setTimeout(() => {
-        autoUpdater.checkForUpdates().catch(err => {
-          log.error('Error in initial update check:', err);
+        autoUpdater.checkForUpdates().catch((err) => {
+          log.error("Error in initial update check:", err);
         });
       }, 60 * 1000);
     }

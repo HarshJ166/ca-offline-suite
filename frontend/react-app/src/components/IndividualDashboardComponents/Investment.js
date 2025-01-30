@@ -72,7 +72,7 @@ const Investment = () => {
           </div>
 
           <div>
-            <DataTable data={data} />
+            <DataTable data={data} title="Investment Table" />
           </div>
         </>
       )}

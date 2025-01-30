@@ -438,6 +438,7 @@ const RecentReports = ({ key }) => {
 
   const toggleEdit = (id) => {
     setIsCategoryEditOpen(!isCategoryEditOpen);
+    setCurrentCaseId(id);
   };
   const handleAddReport = (caseName, caseID) => {
     setCurrentCaseName(caseName);
@@ -447,6 +448,27 @@ const RecentReports = ({ key }) => {
 
   const closeModal = () => {
     setIsAddPdfModalOpen(false);
+  };
+
+  const handleOpenMarker = () => {
+    if (
+      selectedReportFailedData &&
+      selectedReportFailedData[0] &&
+      selectedReportFailedData[0].parsedContent
+    ) {
+      const pdfPath = selectedReportFailedData[0].parsedContent.paths[0];
+      const pdfName = pdfPath.split("\\").pop();
+      setPdfNameForMarker(pdfName);
+      console.log("Opening marker with pdfPath:", pdfPath, "pdfName:", pdfName);
+      setIsMarkerModalOpen(true);
+    } else {
+      console.error("No PDF path available");
+      toast({
+        title: "Error",
+        description: "No PDF path available for this report",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSaveMarkerData = (data) => {
@@ -464,7 +486,11 @@ const RecentReports = ({ key }) => {
         selectedFailedFile={selectedFailedFile}
         setFailedDatasOfCurrentReport={setFailedDatasOfCurrentReport}
       />
-      <CategoryEditModal open={isCategoryEditOpen} onOpenChange={toggleEdit} />
+      <CategoryEditModal
+        open={isCategoryEditOpen}
+        onOpenChange={toggleEdit}
+        caseId={currentCaseId}
+      />
 
       <CardHeader>
         <div className="flex justify-between items-center">
@@ -627,7 +653,6 @@ const RecentReports = ({ key }) => {
                     </AlertDialogContent>
                   </AlertDialog>
                 </TableCell>
-
               </TableRow>
             ))}
           </TableBody>

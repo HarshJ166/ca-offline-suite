@@ -63,7 +63,8 @@ const validateAndTransformTransaction = (transaction, statementId) => {
     category: transaction.Category || "uncategorized",
     type: type,
     balance: balance,
-    entity: transaction.Bank || "unknown",
+    bank: transaction.Bank || "unknown",
+    entity: transaction.Entity || "unknown",
   };
 };
 
@@ -98,6 +99,7 @@ const storeTransactionsBatch = async (transformedTransactions) => {
           category: t.category,
           type: t.type,
           balance: t.balance,
+          bank: t.bank,
           entity: t.entity,
         });
       } else {
@@ -387,6 +389,7 @@ const processSummaryData = async (parsedData, caseName) => {
     if (
       !parsedData ||
       typeof parsedData !== "object" ||
+      !parsedData["Particulars"] ||
       !parsedData["Income Receipts"] ||
       !parsedData["Important Expenses"] ||
       !parsedData["Other Expenses"]
@@ -396,6 +399,7 @@ const processSummaryData = async (parsedData, caseName) => {
 
     // Prepare summary data object
     const summaryData = {
+      particulars: parsedData["Particulars"],
       incomeReceipts: parsedData["Income Receipts"],
       importantExpenses: parsedData["Important Expenses"],
       otherExpenses: parsedData["Other Expenses"],
@@ -440,17 +444,16 @@ const updateCaseStatus = async (caseId, status) => {
       .update(cases)
       .set({
         status: status,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       })
       .where(eq(cases.id, caseId));
-    
+
     log.info(`Updated case ${caseId} status to ${status}`);
   } catch (error) {
     log.error(`Failed to update case ${caseId} status to ${status}:`, error);
     throw error;
   }
 };
-
 
 async function processOpportunityToEarnData(opportunityToEarnData, CaseId) {
   try {
@@ -563,7 +566,7 @@ function generateReportIpc(tmpdir_path) {
     try {
       caseId = await getOrCreateCase(caseName);
       if (!result?.files?.length) {
-        await updateCaseStatus(caseId, 'Failed');
+        await updateCaseStatus(caseId, "Failed");
         throw new Error("Invalid or empty files array received");
       }
 
@@ -612,7 +615,7 @@ function generateReportIpc(tmpdir_path) {
 
       // Check if there are any PDF paths not extracted
       if (response.data?.["pdf_paths_not_extracted"]) {
-        await updateCaseStatus(caseId, 'Failed');
+        await updateCaseStatus(caseId, "Failed");
         // Get the case ID
         const validCaseId = await getOrCreateCase(caseName);
 
@@ -698,6 +701,7 @@ function generateReportIpc(tmpdir_path) {
       try {
         await processSummaryData(
           {
+            Particulars: parsedData["Particulars"] || [],
             "Income Receipts": parsedData["Income Receipts"] || [],
             "Important Expenses": parsedData["Important Expenses"] || [],
             "Other Expenses": parsedData["Other Expenses"] || [],
@@ -733,7 +737,7 @@ function generateReportIpc(tmpdir_path) {
           log.warn(`Failed to cleanup temp file: ${detail.pdf_paths}`, error);
         }
       });
-      await updateCaseStatus(caseId, 'Success');
+      await updateCaseStatus(caseId, "Success");
 
       return {
         success: true,
@@ -752,7 +756,7 @@ function generateReportIpc(tmpdir_path) {
       };
     } catch (error) {
       if (caseId) {
-        await updateCaseStatus(caseId, 'Failed');
+        await updateCaseStatus(caseId, "Failed");
       }
       log.error("Error in report generation:", {
         message: error.message,
