@@ -808,7 +808,7 @@ function generateReportIpc(tmpdir_path) {
     const successfulFiles = [];
     const failedFiles = [];
 
-    try {
+    // try {
       caseId = await getOrCreateCase(caseName);
 
      
@@ -821,6 +821,7 @@ function generateReportIpc(tmpdir_path) {
         end_dates: result.map((d) => d.end_date || ""),
         ca_id:caseId|| "DEFAULT_CASE",
         aiyaz_array_of_array:result.map((d) => d.rectifiedColumns || ""),
+        whole_transaction_sheet:true,
         // whole_transaction_sheet:result.map((d) => d.whole_transaction_sheet || ""),
       };
 
@@ -830,7 +831,7 @@ function generateReportIpc(tmpdir_path) {
       const response = await axios.post(editPdfEndpoint, payload, {
         headers: { "Content-Type": "application/json" },
         timeout: 300000,
-        validateStatus: (status) => status === 200,
+        // validateStatus: (status) => status === 200,
       });
 
       log.info("Response from edit-pdf: ", response);
@@ -979,46 +980,46 @@ function generateReportIpc(tmpdir_path) {
         //   successfulFiles: successfulFiles,
         // },
       };
-    } catch (error) {
-      if (caseId) {
-        await updateCaseStatus(caseId, 'Failed');
-      }
-      log.error("Error in report generation:", {
-        message: error.message,
-        stack: error.stack,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
+  //   } catch (error) {
+  //     // if (caseId) {
+  //     //   await updateCaseStatus(caseId, 'Failed');
+  //     // }
+  //     log.error("Error in Edit pdf:", {
+  //       message: error.message,
+  //       stack: error.stack,
+  //       response: error.response?.data,
+  //       status: error.response?.status,
+  //     });
 
-      // If there's a specific PDF paths not extracted data, store it
-      if (error.response?.data?.["pdf_paths_not_extracted"]) {
-        try {
-          const validCaseId = await getOrCreateCase(caseName);
+  //     // If there's a specific PDF paths not extracted data, store it
+  //     if (error.response?.data?.["pdf_paths_not_extracted"]) {
+  //       try {
+  //         const validCaseId = await getOrCreateCase(caseName);
 
-          await db.insert(failedStatements).values({
-            caseId: validCaseId,
-            data: JSON.stringify(
-              error.response.data["pdf_paths_not_extracted"]
-            ),
-          });
+  //         await db.insert(failedStatements).values({
+  //           caseId: validCaseId,
+  //           data: JSON.stringify(
+  //             error.response.data["pdf_paths_not_extracted"]
+  //           ),
+  //         });
 
-          // Track failed PDF paths
-          const failedPdfPaths =
-            error.response.data["pdf_paths_not_extracted"].paths || [];
-          failedFiles.push(...failedPdfPaths);
-        } catch (dbError) {
-          log.error("Failed to store failed statements:", dbError);
-        }
-      }
+  //         // Track failed PDF paths
+  //         const failedPdfPaths =
+  //           error.response.data["pdf_paths_not_extracted"].paths || [];
+  //         failedFiles.push(...failedPdfPaths);
+  //       } catch (dbError) {
+  //         log.error("Failed to store failed statements:", dbError);
+  //       }
+  //     }
 
-      throw {
-        message: error.message || "Failed to generate report",
-        code: error.response?.status || 500,
-        details: error.response?.data || error.toString(),
-        timestamp: new Date().toISOString(),
-        failedFiles: failedFiles,
-      };
-    }
+  //     throw {
+  //       message: error.message || "Failed to generate report",
+  //       code: error.response?.status || 500,
+  //       details: error.response?.data || error.toString(),
+  //       timestamp: new Date().toISOString(),
+  //       failedFiles: failedFiles,
+  //     };
+  //   }
   });
 
  
