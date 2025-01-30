@@ -426,6 +426,7 @@ const RecentReports = ({ key }) => {
   const toggleEdit = (id) => {
     console.log("Clicked on edit");
     setIsCategoryEditOpen(!isCategoryEditOpen);
+    setCurrentCaseId(id);
   };
   const handleAddReport = (caseName, caseID) => {
     console.log("Case name clicked on add report:", caseName);
@@ -478,7 +479,11 @@ const RecentReports = ({ key }) => {
             : []
         }
       />
-      <CategoryEditModal open={isCategoryEditOpen} onOpenChange={toggleEdit} />
+      <CategoryEditModal
+        open={isCategoryEditOpen}
+        onOpenChange={toggleEdit}
+        caseId={currentCaseId}
+      />
 
       <CardHeader>
         <div className="flex justify-between items-center">

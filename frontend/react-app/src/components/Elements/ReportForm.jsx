@@ -767,8 +767,10 @@ const GenerateReportForm = ({
                                     )
                                   }
                                   className="w-full"
+                                  onOpenChange={() => setBankSearchTerm("")}
                                 >
                                   <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select Bank Name" />
                                     <SelectValue>
                                       {detail.bankName || "Select a bank"}
                                     </SelectValue>
