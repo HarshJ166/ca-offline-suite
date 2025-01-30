@@ -17,6 +17,7 @@ const { registerMainDashboardIpc } = require("./ipc/mainDashboard.js");
 const { registerCaseDashboardIpc } = require("./ipc/caseDashboard.js");
 const { registerReportHandlers } = require("./ipc/reportHandlers.js");
 const { registerAuthHandlers } = require("./ipc/authHandlers.js");
+const { registerCategoryHandlers } = require("./ipc/editCategory.js");
 const sessionManager = require("./SessionManager");
 const licenseManager = require("./LicenseManager");
 const { generateReportIpc } = require("./ipc/generateReport");
@@ -373,6 +374,7 @@ async function createWindow() {
   registerAuthHandlers();
   registerOpportunityToEarnIpc();
   getdata();
+  registerCategoryHandlers();
 
   // Auto-update IPC handlers with detailed logging
   ipcMain.handle('check-for-updates', async () => {
@@ -398,7 +400,7 @@ async function createWindow() {
       // Backup database before update
       const dbPath = path.join(app.getPath('userData'), 'database.sqlite');
       const backupDir = path.join(app.getPath('userData'), 'backups');
-      
+
       log.info('Creating backup directory:', backupDir);
       if (!fs.existsSync(backupDir)) {
         fs.mkdirSync(backupDir, { recursive: true });
@@ -406,7 +408,7 @@ async function createWindow() {
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const backupPath = path.join(backupDir, `db-backup-${timestamp}.sqlite`);
-      
+
       log.info('Creating database backup:', backupPath);
       if (fs.existsSync(dbPath)) {
         fs.copyFileSync(dbPath, backupPath);
@@ -508,12 +510,12 @@ app.whenReady().then(async () => {
       throw error;
     }
 
-    try {
-      startPythonExecutable();
-    } catch (error) {
-      log.error("Python initialization failed:", error);
-      throw error;
-    }
+    // try {
+    //   startPythonExecutable();
+    // } catch (error) {
+    //   log.error("Python initialization failed:", error);
+    //   throw error;
+    // }
 
     // Proceed with the window creation and other tasks after initialization
     log.info("After all initializations");

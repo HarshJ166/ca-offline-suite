@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld("electron", {
 
   getTransactions: (caseId, individualId) =>
     ipcRenderer.invoke("get-transactions", caseId, individualId),
+
   getTransactionsCount: (caseId) =>
     ipcRenderer.invoke("get-transactions-count", caseId),
   getEodBalance: (caseId) => ipcRenderer.invoke("get-eod-balance", caseId),
@@ -109,6 +110,7 @@ contextBridge.exposeInMainWorld("electron", {
   onLicenseExpired: (callback) => ipcRenderer.on("navigateToLogin", callback),
   removeLicenseExpiredListener: () =>
     ipcRenderer.removeAllListeners("navigateToLogin"),
+  editCategory: (data) => ipcRenderer.invoke("edit-category", data),
 
   // // Add auto-update related methods
   // updates: {
@@ -134,7 +136,7 @@ contextBridge.exposeInMainWorld("electron", {
 
   // Add auto-update related methods
   updates: {
-    checkForUpdates: () => ipcRenderer.invoke("check-for-updates", () => {}),
+    checkForUpdates: () => ipcRenderer.invoke("check-for-updates", () => { }),
     // downloadUpdate: () => ipcRenderer.invoke('download-update'),
     // installUpdate: () => ipcRenderer.invoke('install-update'),
     onUpdateStatus: (callback) =>
