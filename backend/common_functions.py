@@ -1103,7 +1103,7 @@ def category_add_ca(df):
     ] = "POS-Cr"
 
     def categorize_bank_charges(df):
-        Bank_charges = r"^(bctt|nchg|tChg|tip/scg|rate\.diff|owchquereturncharges|inwardchqreturncharge|chrg|incidentalcharges|iwchq|smschrg|chrg:sms|\*chrg:sms|nachreturncharges|fundtransfercharges|cashwithdrawalchgs|impschg|monthlysmscha|amcatmcharges|monthlyservicechrgs|smsalert|penalcharges|sgst|cgst)"
+        Bank_charges = r"^(bctt|nchg|tChg|tip/scg|rate\.diff|owchquereturncharges|inwardchqreturncharge|chrg|incidentalcharges|iwchq|smschrg|chrg:sms|\*chrg:sms|nachreturncharges|fundtransfercharges|cashwithdrawalchgs|impschg|monthlysmscha|amcatmcharges|monthlyservicechrgs|smsalert|penalcharges|sgst|cgst|bulkcharges)"
 
         df = df[
             ~df["Description"].str.contains("POS-Cr|POS-Dr", regex=True, na=False)
@@ -1137,7 +1137,7 @@ def category_add_ca(df):
         "Category",
     ] = "Bounce"
 
-    Cash_Withdrawal = r"^(ccwd|vat|mat|nfs|atm|atm-cash-axis|atm-cash|atw|csw|atd|ati|vmt|inf|cwdr|self|cash-atm|atl/|cashpmt|chqpaid|withdrawal|chequewdl)"
+    Cash_Withdrawal = r"^(ccwd|vat|mat|nfs|atm|atm-cash-axis|atm-cash|atw|csw|atd|ati|vmt|inf|cwdr|self|cash-atm|atl/|cashpm|withdrawal|chequewdl)"
     df.loc[
         (df["Description"].str.contains(Cash_Withdrawal, case=False, regex=True))
         & (df["Debit"] > 0),
@@ -1196,10 +1196,6 @@ def category_add_ca(df):
         "Category",
     ] = "Probable EMI"
 
-    # Utility_Bills = r'^(bbps|bpay|axmob-mer|axmob-dthr)'
-    # df.loc[(df['Description'].str.contains(Utility_Bills, case=False, regex=True)) & (
-    #         df['Debit'] > 0), 'Category'] = 'Utility Bills'
-
     Tax_Payment = r"^(gib)"
     df.loc[
         (df["Description"].str.contains(Tax_Payment, case=False, regex=True))
@@ -1240,6 +1236,25 @@ def category_add_ca(df):
         & (df["Credit"] > 0),
         "Category",
     ] = "Recharge"
+
+    # Function to extract and clean name from 'ipay/inst/neft/' transactions
+    def extract_ipay_neft_name(description):
+        if "neft" in description.lower():
+            try:
+                name_part = description.split("neft", 1)[1]
+                name_cleaned = re.sub(r"[/\d\s]+", " ", name_part).strip()
+                name_match = re.search(r"[a-zA-Z]+", name_cleaned)
+                if name_match:
+                    return name_match.group(0).strip()  # Cleaned Name (without slashes/spaces)
+                else:
+                    return "Suspense"  # Default if name is not found
+            except IndexError:
+                return "Suspense"
+
+    NEFT_ipay = df[df["Description"].str.contains("ipay/inst/neft/", case=False, na=False)].copy()
+    if not NEFT_ipay.empty:
+        NEFT_ipay["Category"] = NEFT_ipay["Description"].apply(extract_ipay_neft_name)
+        df.update(NEFT_ipay)
 
     # SBI
     NEFT_SBI = df[df["Description"].str.contains("bytransfer-neft*", na=False)]
@@ -1403,7 +1418,6 @@ def category_add_ca(df):
         )
     ]
     if not rtgs_ib.empty:
-
         def extract_category(description):
             parts = description.split("/")
             return (
@@ -1483,7 +1497,7 @@ def category_add_ca(df):
     NEFT_IO = df[
         df["Description"].str.contains("neft-", na=False)
         & df["Category"].str.contains("Suspense", na=False)
-    ]
+        ]
     if not NEFT_IO.empty:
         NEFT_IO = NEFT_IO[
             ~NEFT_IO["Category"].str.contains(
@@ -1555,7 +1569,7 @@ def category_add_ca(df):
     NEFT_UCO = df[
         (df["Description"].str.contains("neft/", na=False))
         & (df["Category"] == "Suspense")
-    ]
+        ]
     if not NEFT_UCO.empty:
         NEFT_1 = NEFT_UCO[
             ~NEFT_UCO["Category"].str.contains(
@@ -1648,7 +1662,7 @@ def category_add_ca(df):
     NEFT_IO = df[
         df["Description"].str.contains("neft-", na=False)
         & df["Category"].str.contains("Suspense", na=False)
-    ]
+        ]
     if not NEFT_IO.empty:
         NEFT_IO = NEFT_IO[
             ~NEFT_IO["Category"].str.contains(
@@ -1687,7 +1701,7 @@ def category_add_ca(df):
     NEFT_Kar = df[
         df["Description"].str.contains("neft-", na=False)
         & df["Category"].str.contains("Suspense", na=False)
-    ]
+        ]
     NEFT_Kar = NEFT_Kar[
         ~NEFT_Kar["Category"].str.contains(
             "Redemption, Dividend & Interest|Bank Interest Received,Salary Paid,Salary Received"
@@ -1725,11 +1739,36 @@ def category_add_ca(df):
         )
         df.update(neft_SBI)
 
-    def filter_emi_transactions(df):
-        # Convert 'Debit' to numeric, coercing errors to NaN
-        df["Debit"] = pd.to_numeric(df["Debit"], errors="coerce")
+    def Bounce(df):
+        keywords = ["return", "Bounce", "i/wchqreturn", "out-chqreturn"]
+        pattern = r"\b(" + "|".join(keywords) + r")\b"
+        df.loc[
+            df["Description"].str.contains(pattern, regex=True) & (df["Debit"] > 0),
+            "Category",
+        ] = "Bounce"
+        # print(df)
+        return df
 
-        # Define the pattern for EMI-related keywords
+    Bounce(df)
+
+    # Iterate through the rows of df2
+    for _, keyword_row in df2.iterrows():
+        mask = df["Description"].str.contains(
+            keyword_row["Description"], case=False, na=False
+        )
+
+        if keyword_row["Debit / Credit"] == "Debit":
+            mask = mask & (df["Debit"] > 0)  # check if Debit is greater than 0
+        elif keyword_row["Debit / Credit"] == "Credit":
+            mask = mask & (df["Credit"] > 0)  # check if Credit is greater than 0
+
+        # Update the category for matching transactions
+        df.loc[mask, "Category"] = keyword_row["Category"]
+
+    # df = df[['Value Date', 'Description', 'Debit', 'Credit', 'Balance', 'Category', 'Bank']]
+    #####
+    def filter_emi_transactions(df):
+        df["Debit"] = pd.to_numeric(df["Debit"], errors="coerce")
         keywords = [
             "emi",
             "achidfcfblimited",
@@ -1771,64 +1810,22 @@ def category_add_ca(df):
             "achracpc",
         ]
         pattern = r"(" + "|".join(keywords) + r")"
-
-        # Filter for transactions containing the keywords
         emi_transactions = df[
-            df["Description"].str.contains(pattern, case=False, regex=True)
-            & (~df["Debit"].isnull())
-            & (df["Debit"] > 0)
-        ]
-
-        # Find repeated transactions with the same debit value
-        repeated_emi = emi_transactions[
-            emi_transactions.duplicated(subset=["Debit"], keep=False)
-        ]
-
-        # Exclude transactions with values ending in '000' and values <= 1000
+            df["Description"].str.contains(pattern, case=False, regex=True) & (~df["Debit"].isnull()) & (
+                        df["Debit"] > 0)]
+        repeated_emi = emi_transactions[emi_transactions.duplicated(subset=["Debit"], keep=False)]
+        repeated_emi = repeated_emi[~repeated_emi["Category"].str.contains("Investment", na=False)]
         filtered_emi_indices = repeated_emi[
-            ~repeated_emi["Debit"].astype(str).str.endswith("000")
-            & (repeated_emi["Debit"] > 1000)
-        ].index
-
-        # Categorize as 'Probable EMI'
+            ~repeated_emi["Debit"].astype(str).str.endswith("000") & (repeated_emi["Debit"] > 1000)].index
         df.loc[filtered_emi_indices, "Category"] = "Probable EMI"
 
         return df
 
     filter_emi_transactions(df)
-
-    def Bounce(df):
-        keywords = ["return", "Bounce", "i/wchqreturn", "out-chqreturn"]
-        pattern = r"\b(" + "|".join(keywords) + r")\b"
-        df.loc[
-            df["Description"].str.contains(pattern, regex=True) & (df["Debit"] > 0),
-            "Category",
-        ] = "Bounce"
-        # print(df)
-        return df
-
-    Bounce(df)
-
-    # Iterate through the rows of df2
-    for _, keyword_row in df2.iterrows():
-        mask = df["Description"].str.contains(
-            keyword_row["Description"], case=False, na=False
-        )
-
-        if keyword_row["Debit / Credit"] == "Debit":
-            mask = mask & (df["Debit"] > 0)  # check if Debit is greater than 0
-        elif keyword_row["Debit / Credit"] == "Credit":
-            mask = mask & (df["Credit"] > 0)  # check if Credit is greater than 0
-
-        # Update the category for matching transactions
-        df.loc[mask, "Category"] = keyword_row["Category"]
-
-    # df = df[['Value Date', 'Description', 'Debit', 'Credit', 'Balance', 'Category', 'Bank']]
-    #####
     MPS = df[
         df["Description"].str.contains("mps/", na=False)
         & ~df["Description"].str.contains("imps/")
-    ]
+        ]
     if not MPS.empty:
         for idx, row in MPS.iterrows():
             if row["Credit"] > 0:
@@ -1836,24 +1833,12 @@ def category_add_ca(df):
             elif row["Debit"] > 0:
                 df.at[idx, "Category"] = "UPI-Dr"
 
-    Salary_credit = (
-        (df["Description"].str.contains("imps|neft|rtgs", case=False, na=False))
-        & (df["Description"].str.contains("salary", case=False, na=False))
-        & (df["Credit"] > 0)
-    )
-    Salary_debit = (
-        (df["Description"].str.contains("imps|neft|rtgs", case=False, na=False))
-        & (df["Description"].str.contains("salary", case=False, na=False))
-        & (df["Debit"] > 0)
-    )
-    df.loc[Salary_credit, "Category"] = "Salary Received"
-    df.loc[Salary_debit, "Category"] = "Salary Paid"
 
     mask_withdrawal = (
-        df["Description"].str.contains(
-            "eaw-|nwd-|atw-|tocash", case=False, na=False
-        )
-    ) & (df["Debit"] > 0)
+                          df["Description"].str.contains(
+                              "eaw-|nwd-|atw-|tocash", case=False, na=False
+                          )
+                      ) & (df["Debit"] > 0)
     df.loc[mask_withdrawal, "Category"] = "Cash Withdrawal"
 
     General_insurance = [
@@ -1910,20 +1895,15 @@ def category_add_ca(df):
             lambda x: any(
                 keyword in x.lower() for keyword in online_shopping_keywords
             )
-            and "amazonpay" not in x.lower()
+                      and "amazonpay" not in x.lower()
         )
         & (df["Debit"] > 0),
         "Category",
     ] = "Online Shopping"
 
     INB = df[df["Description"].str.contains("inb/|inb-td/", na=False)]
-
     INB = INB[~INB["Description"].str.contains("gsttaxpayments", na=False)]
-    INB = INB[
-        ~INB["Category"].str.contains(
-            "Salary Paid|Salary Received|GST Paid", na=False
-        )
-    ]
+    INB = INB[~INB["Category"].str.contains("Salary Paid|Salary Received|GST Paid", na=False)]
 
     if not INB.empty:
         INB["Category"] = INB["Description"].apply(
@@ -2042,7 +2022,6 @@ def category_add_ca(df):
             extract_bulkposting_category
         )
         df.update(bulkposting_idfc)
-
 
     def extract_category_axis(x):
         try:
@@ -2203,7 +2182,7 @@ def category_add_ca(df):
             prefix_position = description.find("sentimps")
             if prefix_position != -1:
                 # Extract the part after the prefix
-                after_prefix = description[prefix_position + len("sentimps") :]
+                after_prefix = description[prefix_position + len("sentimps"):]
                 # Find the first non-digit character after the numeric part
                 first_non_digit_index = len(after_prefix)
                 for i, char in enumerate(after_prefix):
@@ -2241,11 +2220,11 @@ def category_add_ca(df):
 
     BRN = df[
         (
-            df["Description"].str.contains("brn-flexi")
-            | df["Description"].str.contains("/SBI Funds/STATE BAN//ATTN//")
+                df["Description"].str.contains("brn-flexi")
+                | df["Description"].str.contains("/SBI Funds/STATE BAN//ATTN//")
         )
         & df["Credit"].notnull()
-    ]
+        ]
     if not BRN.empty:
         df.loc[BRN.index, "Category"] = "Redemption of Investment"
 
@@ -2274,7 +2253,7 @@ def category_add_ca(df):
     RTGS_HDFC_DR = df[
         df["Description"].str.contains("rtgsdr", na=False)
         | df["Description"].str.contains("rtgs-", na=False)
-    ]
+        ]
     RTGS_HDFC_DR = RTGS_HDFC_DR[
         ~RTGS_HDFC_DR["Category"].str.contains("Salary Paid,Salary Received")
     ]
@@ -2415,7 +2394,7 @@ def category_add_ca(df):
     RTGS_jankalyan = df[
         (df["Description"].str.contains("rtgs", case=False, na=False))
         & (df["Category"] == "Suspense")
-    ]
+        ]
     RTGS_jankalyan = RTGS_jankalyan[
         ~RTGS_jankalyan["Category"].str.contains("Salary Paid,Salary Received")
     ]
@@ -2440,7 +2419,7 @@ def category_add_ca(df):
     NEFT = df[
         (df["Description"].str.contains("neft", case=False, na=False))
         & (df["Category"] == "Suspense")
-    ]
+        ]
     NEFT = NEFT[~NEFT["Category"].str.contains("Salary Paid,Salary Received")]
     if not NEFT.empty:
         NEFT["Category"] = NEFT["Description"].apply(extract_neft_jankalyan)
@@ -2465,11 +2444,92 @@ def category_add_ca(df):
     IMPS = df[
         (df["Description"].str.contains("imps\[", case=False, na=False))
         & (df["Category"] == "Suspense")
-    ]
+        ]
     IMPS = IMPS[~IMPS["Category"].str.contains("Salary Paid,Salary Received")]
     if not IMPS.empty:
         IMPS["Category"] = IMPS["Description"].apply(extract_imps_category)
         df.update(IMPS)
+
+    def extract_trtr_imps_category(description):
+        try:
+            parts = description.split("/")
+            if len(parts) >= 4 and parts[0].lower() == "trtr" and parts[2].lower() == "imps":
+                name_part = parts[3]  # Extract the part after "imps"
+                if any(char.isdigit() for char in name_part):
+                    return "Suspense"
+                return name_part  # Return clean name
+            else:
+                return "Suspense"
+        except IndexError:
+            return "Suspense"
+
+    imps_trtr = df[df["Description"].str.contains(r"trtr/\d+/imps/", case=False, na=False)].copy()
+    imps_trtr = imps_trtr[~imps_trtr["Category"].str.contains("Salary Paid|Salary Received", case=False, na=False)]
+    if not imps_trtr.empty:
+        imps_trtr["Category"] = imps_trtr["Description"].apply(extract_trtr_imps_category)
+        df.update(imps_trtr)  # Update original DataFrame
+
+    def extract_imps_in_category(description):
+        try:
+            parts = description.split("/")
+            if len(parts) >= 4 and parts[0].lower() == "imps-in":
+                name_part = parts[3]  # Extract the part after the second number
+                if any(char.isdigit() for char in name_part):
+                    return "Suspense"
+                return name_part  # Return the cleaned name
+            else:
+                return "Suspense"
+        except IndexError:
+            return "Suspense"
+
+    imps_in_df = df[df["Description"].str.contains(r"imps-in/\d+/\d+/", case=False, na=False)].copy()
+    imps_in_df = imps_in_df[
+        ~imps_in_df["Category"].str.contains("Salary Paid|Salary Received", case=False, na=False)]
+    if not imps_in_df.empty:
+        imps_in_df["Category"] = imps_in_df["Description"].apply(extract_imps_in_category)
+        df.update(
+            imps_in_df)
+
+    def extract_neft_in_category(description):
+        try:
+            parts = description.split("/")
+            if len(parts) >= 3 and parts[0].startswith("neft_in:ioban"):
+                name_part = parts[2]
+                if any(char.isdigit() for char in name_part):
+                    return "Suspense"
+                return name_part
+            else:
+                return "Suspense"
+        except IndexError:
+            return "Suspense"
+
+    neft_in_df = df[df["Description"].str.contains(r"neft_in:ioban\d+/\d+/", case=False, na=False)].copy()
+    neft_in_df = neft_in_df[
+        ~neft_in_df["Category"].str.contains("Salary Paid|Salary Received", case=False, na=False)]
+
+    if not neft_in_df.empty:
+        neft_in_df["Category"] = neft_in_df["Description"].apply(extract_neft_in_category)
+        df.update(neft_in_df)  # Update original DataFrame
+
+    def extract_imps_io_category(description):
+        try:
+            parts = description.split("/")
+            if len(parts) >= 4 and parts[0].lower() == "imps" and parts[1] in ["in", "out"]:
+                name_part = parts[3]  # Extract the last part (actual name)
+                if any(char.isdigit() for char in name_part):
+                    return "Suspense"
+                return name_part  # Return clean name
+            else:
+                return "Suspense"
+        except IndexError:
+            return "Suspense"
+
+    imps_io_df = df[df["Description"].str.contains(r"imps/(in|out)/\d+/", case=False, na=False)].copy()
+    imps_io_df = imps_io_df[
+        ~imps_io_df["Category"].str.contains("Salary Paid|Salary Received", case=False, na=False)]
+    if not imps_io_df.empty:
+        imps_io_df["Category"] = imps_io_df["Description"].apply(extract_imps_io_category)
+        df.update(imps_io_df)  # Update original DataFrame
 
     # df = categorize_name_transactions(df)
     PF = df[df["Description"].str.contains("providentfund", na=False)]
@@ -2483,132 +2543,31 @@ def category_add_ca(df):
         ] = "Provident Fund"
 
     Salary_credit = (
-        (df["Description"].str.contains("mmt/imps", case=False, na=False))
-        & (df["Description"].str.contains("salary", case=False, na=False))
-        & (df["Credit"] > 0)
+            (df["Description"].str.contains("imps", case=False, na=False))
+            & (df["Description"].str.contains("salary", case=False, na=False))
+            & (df["Credit"] > 0)
     )
     Salary_debit = (
-        (df["Description"].str.contains("mmt/imps", case=False, na=False))
-        & (df["Description"].str.contains("salary", case=False, na=False))
-        & (df["Debit"] > 0)
+            (df["Description"].str.contains("imps", case=False, na=False))
+            & (df["Description"].str.contains("salary", case=False, na=False))
+            & (df["Debit"] > 0)
     )
     df.loc[Salary_credit, "Category"] = "Salary Received"
     df.loc[Salary_debit, "Category"] = "Salary Paid"
 
-    last_move = r"(imps|neft|rtgs)"
+    last_move = r"(imps|neft|rtgs|chqpaid|chqdep)"
     df.loc[
         (df["Description"].str.contains(last_move, regex=True))
         & (df["Debit"] > 0)
         & (df["Category"] == "Suspense"),
         "Category",
-    ] = "Creditor"
+    ] = ""
     df.loc[
         (df["Description"].str.contains(last_move, regex=True))
         & (df["Credit"] > 0)
         & (df["Category"] == "Suspense"),
         "Category",
-    ] = "Debtor"
-
-    categories_to_include = ["UPI-Cr", "UPI-Dr"]
-
-    def apply_regex_to_empty_entities_axis(row):
-        if row['Category'] in categories_to_include:
-            if "upi/p2a" in row['Description'] or "upi/p2m" in row['Description']:
-                match = re.search(r'upi/p2[am]/\d+/([^/]+)/', row['Description'])
-                if match:
-                    return match.group(1)
-        return row['Category']
-
-    def apply_regex_to_categories_hdfc(row):
-        if row['Category'] in categories_to_include:
-            if "upi-" in row['Description']:
-                match = re.search(r'(?<=upi-)([a-zA-Z]+)', row['Description'])
-                if match:
-                    return match.group(1)
-        return row['Category']
-
-    def apply_regex_to_empty_entities_sbi(row):
-        if row['Category'] in categories_to_include:
-            if "totransfer-upi" in row['Description'] or "bytransfer-upi" in row['Description']:
-                match = re.search(r'(totransfer|bytransfer)-upi/[cd]r/\d+/([a-zA-Z]+)/', row['Description'])
-                if match:
-                    return match.group(2)
-        return row['Category']
-
-    def apply_regex_to_empty_entities_kotak(row):
-        if row['Category'] in categories_to_include:
-            # Check if 'upi/' is in the description
-            if "upi/" in row['Description']:
-                # Match the name immediately after 'upi/'
-                match = re.search(r'upi/([a-zA-Z.]+)', row['Description'])
-                if match:
-                    # Clean the name by removing special characters and numbers
-                    name = re.sub(r'[^a-zA-Z]', '', match.group(1))  # Keep only alphabetic characters
-                    return name if name else "Suspense"  # Return 'Suspense' if the name is empty
-        return row['Category']
-
-    def apply_regex_to_empty_entities_rbl(row):
-        if row['Category'] in categories_to_include:
-            if "upi/" in row['Description']:
-                match = re.search(r'upi/\d+/\w+/([a-zA-Z0-9@.]+)', row['Description'])
-                if match:
-                    # Extract the raw name
-                    raw_name = match.group(1)
-                    # Remove numeric and '@' characters
-                    cleaned_name = re.sub(r'[0-9@]', '', raw_name)
-                    return cleaned_name
-        return row['Category']
-
-    def apply_regex_to_empty_entities_idfc(row):
-        if row['Category'] in categories_to_include:
-            if "upi/mob" in row['Description']:
-                match = re.search(r'upi/mob/\d+/([\w]+)', row['Description'])
-                if match:
-                    raw_name = match.group(1)
-                    cleaned_name = re.sub(r'[0-9@]', '', raw_name)
-                    print(f"Extracted Name: {cleaned_name}")
-                    return cleaned_name
-        return row['Category']
-
-    def apply_regex_to_empty_entities_vasai(row):
-        if row['Category'] in categories_to_include:
-            match = re.search(r'upi/(cr|dr)/\d+/([\w]+)/', row['Description'])
-            if match:
-                extracted_name = match.group(2)
-                return extracted_name
-        return row['Category']
-
-        # Step 1: Apply regex logic first
-
-    def extract_name_upiab(row):
-        if row['Category'] in categories_to_include:
-            match = re.search(r'upiab/\d+/cr/([\w]+)/', row['Description'])
-            if match:
-                extracted_name = match.group(1)  # Use group(1) for the first capturing group
-                return extracted_name.capitalize()  # Capitalize the name for consistency
-        return row['Category']
-
-    def extract_name_mpay(row):
-        if row['Category'] in categories_to_include and row['Description'].startswith("mpay/upi/"):
-            match = re.search(r'mpay/upi/.+?/\w+/([\w]+)+@', row['Description'])
-            if match:
-                extracted_name = match.group(1)
-                cleaned_name = re.sub(r'[0-9@]', '', extracted_name)
-                return cleaned_name
-        return row['Category']
-
-    df['Category'] = df.apply(apply_regex_to_empty_entities_axis, axis=1)
-    df['Category'] = df.apply(apply_regex_to_categories_hdfc, axis=1)
-    df['Category'] = df.apply(apply_regex_to_empty_entities_sbi, axis=1)
-    df['Category'] = df.apply(apply_regex_to_empty_entities_kotak, axis=1)
-    df['Category'] = df.apply(apply_regex_to_empty_entities_rbl, axis=1)
-    df['Category'] = df.apply(apply_regex_to_empty_entities_idfc, axis=1)
-    df['Category'] = df.apply(apply_regex_to_empty_entities_vasai, axis=1)
-    df['Category'] = df.apply(extract_name_upiab, axis=1)
-    df['Category'] = df.apply(extract_name_mpay, axis=1)
-
-    df['Category'] = df.apply(apply_regex_to_categories_hdfc, axis=1)
-
+    ] = ""
 
     df["Balance"] = x  # Manish
     return df
@@ -2821,13 +2780,14 @@ def transaction_sheet( df):
                 "Credit",
                 "Balance",
                 "Category",
+                "Entity",
                 "Bank",
             ]
         ]
     else:
         #1234_temp
         tdf = df[
-            ["Value Date", "Description", "Debit", "Credit", "Balance", "Category", "Bank"]
+            ["Value Date", "Description", "Debit", "Credit", "Balance", "Category","Entity","Bank"]
         ]
     return tdf
 
@@ -3016,17 +2976,20 @@ def refund_reversal( df):
         )
     return refund
 
-def creditor_list( df):
+
+def creditor_list(df):
     df["Debit"] = pd.to_numeric(df["Debit"], errors="coerce")
     df["Credit"] = pd.to_numeric(df["Credit"], errors="coerce")
     debit = df[
         (~df["Debit"].isnull()) & ((df["Credit"].isnull()) | (df["Credit"] == 0))
-    ]
+        ]
     patterns = [
-        "toib-","brn-clg-chq","mmt/imps","neftdr","neft/mb/","nft/","mob/tpft","nlcindialtd","neft/mb/ax","tortgs",
-        "rtgsdr","mob/tpft/","imb/","imps","imps/p2a","mob/selfft/","inb/","inb-","chqpaid","fundtrf","iconn",
-        "imps-cib","imps-inet","imps-rib","imps-mob","inft","mbk/xfer","neft","payc","r-utr","vmt-icon","chqpaid",
-        "byclg","rtgs","neftn","inb-","neft-barb","ecs/","bulkposting"
+        "toib-", "brn-clg-chq", "mmt/imps", "neftdr", "neft/mb/", "nft/", "mob/tpft", "nlcindialtd", "neft/mb/ax",
+        "tortgs",
+        "rtgsdr", "mob/tpft/", "imb/", "imps", "imps/p2a", "mob/selfft/", "inb/", "inb-", "chqpaid", "fundtrf", "iconn",
+        "imps-cib", "imps-inet", "imps-rib", "imps-mob", "inft", "mbk/xfer", "neft", "payc", "r-utr", "vmt-icon",
+        "chqpaid",
+        "byclg", "rtgs", "neftn", "inb-", "neft-barb", "ecs/", "bulkposting"
     ]
     regex_pattern = "|".join(patterns)
     Creditor_list = debit[
@@ -3039,25 +3002,29 @@ def creditor_list( df):
 
     name_transactions = df[
         (df["Category"] == "Creditor") & (df["Description"].apply(is_name))
-    ]
+        ]
     name_transactions["Category"] = name_transactions["Description"].apply(
         extract_name
     )
     Creditor_list = pd.concat([Creditor_list, name_transactions])
 
     # Additional code to exclude specified keywords
-    exclude_keywords = ["ach/","ach-","achdr","achd","bajajfinance","cms/","lamum","lcfm","lnpy",
-                        "loanreco","lptne","nach","magmafincorpltd","toachdraditybirl","toachdrambitfinv",
-                        "toachdrclixcapita","toachdrdeutscheb","toachdrdhaniloan","toachdrfedbankfi","toachdrfullerton",
-                        "toachdrindiabulls","toachdrindinfhouf","toachdrindusind","toachdrlendingkar","toachdrmagmafinco",
-                        "toachdrmahnimahin","toachdrmoneywisef","toachdrneogrowth","toachdrtatacapita","toachdrtpachmag",
-                        "toachdrtpachneo","toachdrtpcapfrst","toachdryesbankr","gsttaxpayment",
-    ]
+    exclude_keywords = ["ach/", "ach-", "achdr", "achd", "bajajfinance", "cms/", "lamum", "lcfm", "lnpy",
+                        "loanreco", "lptne", "nach", "magmafincorpltd", "toachdraditybirl", "toachdrambitfinv",
+                        "toachdrclixcapita", "toachdrdeutscheb", "toachdrdhaniloan", "toachdrfedbankfi",
+                        "toachdrfullerton",
+                        "toachdrindiabulls", "toachdrindinfhouf", "toachdrindusind", "toachdrlendingkar",
+                        "toachdrmagmafinco",
+                        "toachdrmahnimahin", "toachdrmoneywisef", "toachdrneogrowth", "toachdrtatacapita",
+                        "toachdrtpachmag",
+                        "toachdrtpachneo", "toachdrtpcapfrst", "toachdryesbankr", "gsttaxpayment",
+                        ]
     exclude_pattern = "|".join(exclude_keywords)
     Creditor_list = Creditor_list[
         ~Creditor_list["Description"].str.contains(exclude_pattern, case=False)
     ]
-    exclude_descriptions = ["billdesk", "gsttaxpayment", "atomstockbroker"]
+    exclude_descriptions = ["billdesk", "gsttaxpayment", "atomstockbroker", "Probable Claim Settlement",
+                            "Subscription / Entertainment"]
     for exclude in exclude_descriptions:
         Creditor_list = Creditor_list[
             ~Creditor_list["Description"].str.contains(exclude, case=False)
@@ -3065,7 +3032,6 @@ def creditor_list( df):
     exclude_categories = [
         "Payment Received",
         "Payment Made",
-        "Suspense",
         "fastag",
         "Refund/Reversal",
         "Salary Paid",
@@ -3098,15 +3064,17 @@ def creditor_list( df):
     Creditor_list = Creditor_list.sort_values(by="Category")
     return Creditor_list
 
-def debtor_list( df):
+def debtor_list(df):
     df["Debit"] = pd.to_numeric(df["Debit"], errors="coerce")
     df["Credit"] = pd.to_numeric(df["Credit"], errors="coerce")
     credit = df[
         (~df["Credit"].isnull()) & ((df["Debit"].isnull()) | (df["Debit"] == 0))
-    ]
-    patterns = ["toib-","neft","mmt/imps","neftcr","imps","tortgs","rtgs","rtgscr","ecs/","mob/tpft/","imb/","mob/selfft/",
-                "inb/","imps-mob","nft/","byclg","inb-","neft-","googleindiadigital","gsttaxpayment","bulkposting"
-    ]
+        ]
+    patterns = ["toib-", "neft", "mmt/imps", "neftcr", "imps", "tortgs", "rtgs", "rtgscr", "ecs/", "mob/tpft/", "imb/",
+                "mob/selfft/",
+                "inb/", "imps-mob", "nft/", "byclg", "inb-", "neft-", "googleindiadigital", "gsttaxpayment",
+                "bulkposting", "chqdep"
+                ]
     regex_pattern = "|".join(patterns)
     Debtor_list = credit[
         credit["Description"].str.contains(regex_pattern, case=False)
@@ -3114,7 +3082,6 @@ def debtor_list( df):
 
     exclude_categories = [
         "Redemption, Dividend & Interest",
-        "Suspense",
         "Redemption of Investment",
         "Refund/Reversal",
         "Loan",
@@ -3124,6 +3091,8 @@ def debtor_list( df):
         "Bounce",
         "Reimbursement",
         "GST Paid",
+        "Probable Claim Settlement",
+        "Subscription / Entertainment"
     ]
     Debtor_list = Debtor_list[
         ~Debtor_list["Category"].str.contains(
@@ -3137,7 +3106,7 @@ def debtor_list( df):
 
     name_transactions = df[
         (df["Category"] == "Debtor") & (df["Description"].apply(is_name))
-    ]
+        ]
     name_transactions["Category"] = name_transactions["Description"].apply(
         extract_name
     )
@@ -3145,6 +3114,168 @@ def debtor_list( df):
 
     Debtor_list = Debtor_list.sort_values(by="Category")
     return Debtor_list
+
+def Upi(df):
+    categories_to_include = ["UPI-Cr", "UPI-Dr"]
+
+    def apply_regex_to_empty_entities_axis(row):
+        if row['Category'] in categories_to_include:
+            if "upi/p2a" in row['Description'] or "upi/p2m" in row['Description']:
+                match = re.search(r'upi/p2[am]/\d+/([^/]+)/', row['Description'])
+                if match:
+                    return match.group(1)
+        return row['Entity']
+
+    def apply_regex_to_categories_hdfc(row):
+        if row['Category'] in categories_to_include:
+            if "upi-" in row['Description']:
+                match = re.search(r'(?<=upi-)([a-zA-Z]+)', row['Description'])
+                if match:
+                    return match.group(1)
+        return row['Entity']
+
+    def apply_regex_to_empty_entities_sbi(row):
+        if row['Category'] in categories_to_include:
+            if "totransfer-upi" in row['Description'] or "bytransfer-upi" in row['Description']:
+                match = re.search(r'(totransfer|bytransfer)-upi/[cd]r/\d+/([a-zA-Z]+)/', row['Description'])
+                if match:
+                    return match.group(2)
+        return row['Entity']
+
+    def apply_regex_to_empty_entities_kotak(row):
+        if row['Category'] in categories_to_include:
+            # Check if 'upi/' is in the description
+            if "upi/" in row['Description']:
+                # Match the name immediately after 'upi/'
+                match = re.search(r'upi/([a-zA-Z.]+)', row['Description'])
+                if match:
+                    # Clean the name by removing special characters and numbers
+                    name = re.sub(r'[^a-zA-Z]', '', match.group(1))  # Keep only alphabetic characters
+                    return name if name else "Suspense"  # Return 'Suspense' if the name is empty
+        return row['Entity']
+
+    def apply_regex_to_empty_entities_rbl(row):
+        if row['Category'] in categories_to_include:
+            if "upi/" in row['Description']:
+                match = re.search(r'upi/\d+/\w+/([a-zA-Z0-9@.]+)', row['Description'])
+                if match:
+                    # Extract the raw name
+                    raw_name = match.group(1)
+                    # Remove numeric and '@' characters
+                    cleaned_name = re.sub(r'[0-9@]', '', raw_name)
+                    return cleaned_name
+        return row['Entity']
+
+    def apply_regex_to_empty_entities_idfc(row):
+        if row['Category'] in categories_to_include:
+            if "upi/mob" in row['Description']:
+                match = re.search(r'upi/mob/\d+/([\w]+)', row['Description'])
+                if match:
+                    raw_name = match.group(1)
+                    cleaned_name = re.sub(r'[0-9@]', '', raw_name)
+                    print(f"Extracted Name: {cleaned_name}")
+                    return cleaned_name
+        return row['Entity']
+
+    def apply_regex_to_empty_entities_vasai(row):
+        if row['Category'] in categories_to_include:
+            match = re.search(r'upi/(cr|dr)/\d+/([\w]+)/', row['Description'])
+            if match:
+                extracted_name = match.group(2)
+                return extracted_name
+        return row['Entity']
+
+        # Step 1: Apply regex logic first
+
+    def extract_name_upiab(row):
+        if row['Category'] in categories_to_include:
+            match = re.search(r'upiab/\d+/cr/([\w]+)/', row['Description'])
+            if match:
+                extracted_name = match.group(1)  # Use group(1) for the first capturing group
+                return extracted_name.capitalize()  # Capitalize the name for consistency
+        return row['Entity']
+
+    def extract_name_mpay(row):
+        if row['Category'] in categories_to_include and row['Description'].startswith("mpay/upi/"):
+            match = re.search(r'mpay/upi/.+?/\w+/([\w]+)+@', row['Description'])
+            if match:
+                extracted_name = match.group(1)
+                cleaned_name = re.sub(r'[0-9@]', '', extracted_name)
+                return cleaned_name
+        return row['Entity']
+
+    def apply_regex_to_categories_jsbl(row):
+        if row['Category'] in categories_to_include:
+            pattern = r"upi/(?:cr|dr)/\d+/([^/]+)"
+            match = re.search(pattern, row['Description'])
+            if match:
+                return match.group(1)  # group(1) is the name
+        return row['Entity']
+
+    def apply_regex_to_categories_dcb(row):
+        if row['Category'] in categories_to_include:
+            # Modified pattern to match "upi:pay:" or "upi:rec:" format
+            pattern = r"upi:(?:pay|rec):\d+/([^/]+)"
+            match = re.search(pattern, row['Description'])
+            if match:
+                return match.group(1)  # Extract the name
+        return row['Entity']
+
+    def apply_regex_to_categories_idfc(row):
+        if row['Category'] in categories_to_include:
+            pattern = r"upi/mob/\d+/([^/]+)"  # Added 'mob' to the pattern
+            match = re.search(pattern, row['Description'])
+            if match:
+                return match.group(1)  # Returns the captured name
+        return row['Entity']
+
+    def apply_regex_to_categories_uco(row):
+        if row['Category'] in categories_to_include:
+            new_pattern = r"(?:mpay/)?upi/trtr/\d+/[^/]+/([^/.]+)"
+            new_match = re.search(new_pattern, row['Description'])
+            if new_match:
+                return new_match.group(1)  # Returns 'dream11'
+        return row['Entity']
+
+    def apply_regex_to_categories_nkgsb(row):
+        if row['Category'] in categories_to_include:
+            pattern1 = r"upi/(?:credit|debit)/\d+/([^/]+)"
+            pattern2 = r"upi/(?:credit|debit)/([^/]+/\d+/)"
+            match1 = re.search(pattern1, row['Description'])
+            if match1:
+                return match1.group(1)  # Returns the captured name
+            match2 = re.search(pattern2, row['Description'])
+            if match2:
+                return match2.group(1).split('/')[0]  # Extracts only the name part
+        return row['Entity']
+
+    def apply_regex_to_categories_surat(row):
+        if row['Category'] in categories_to_include:
+            pattern2 = r"upi/(?:credit|debit)/([^/]+/\d+/)"
+            match1 = re.search(pattern2, row['Description'])
+            if match1:
+                return match1.group(1)
+        return row['Entity']
+
+
+    df['Entity'] = df.apply(apply_regex_to_categories_uco, axis=1)
+    df['Entity'] = df.apply(apply_regex_to_categories_nkgsb, axis=1)
+    df['Entity'] = df.apply(apply_regex_to_categories_surat, axis=1)
+    df['Entity'] = df.apply(apply_regex_to_categories_idfc, axis=1)
+    df['Entity'] = df.apply(apply_regex_to_categories_jsbl, axis=1)
+    df['Entity'] = df.apply(apply_regex_to_empty_entities_axis, axis=1)
+    df['Entity'] = df.apply(apply_regex_to_categories_hdfc, axis=1)
+    df['Entity'] = df.apply(apply_regex_to_empty_entities_sbi, axis=1)
+    df['Entity'] = df.apply(apply_regex_to_empty_entities_kotak, axis=1)
+    df['Entity'] = df.apply(apply_regex_to_empty_entities_rbl, axis=1)
+    df['Entity'] = df.apply(apply_regex_to_empty_entities_idfc, axis=1)
+    df['Entity'] = df.apply(apply_regex_to_empty_entities_vasai, axis=1)
+    df['Entity'] = df.apply(extract_name_upiab, axis=1)
+    df['Entity'] = df.apply(extract_name_mpay, axis=1)
+    df['Entity'] = df.apply(apply_regex_to_categories_dcb, axis=1)
+
+    print(df)
+    return df
 
 # def is_name( description):
 #     return bool(re.match(r"^[a-zA-Z\s]+$", description))
@@ -3214,19 +3345,24 @@ def categorize_name_transactions(df):
     return df
 
 
-def another_method( df):
+def another_method(df):
     # Categorize transactions as Creditor and Debtor
     Creditor_list = creditor_list(df)
     Debtor_list = debtor_list(df)
     NEW_DF = df.copy()
+    NEW_DF["Entity"] = ''
+    Creditor_list["Entity"] = Creditor_list["Category"]
+    Debtor_list["Entity"] = Debtor_list["Category"]
     Creditor_list["Category"] = "Creditor"
     Debtor_list["Category"] = "Debtor"
     NEW_DF.update(Creditor_list)
     NEW_DF.update(Debtor_list)
-    NEW_DF.loc[(NEW_DF["Description"].str.contains("UPI", case=False)) & (NEW_DF["Debit"] > 0),"Category"] = "UPI-Dr"
-    NEW_DF.loc[(NEW_DF["Description"].str.contains("UPI", case=False)) & (NEW_DF["Credit"] > 0),"Category",] = "UPI-Cr"
-
+    # NEW_DF.loc[(NEW_DF["Description"].str.contains("UPI", case=False)) & (NEW_DF["Debit"] > 0),"Category"] = "UPI-Dr"
+    # NEW_DF.loc[(NEW_DF["Description"].str.contains("UPI", case=False)) & (NEW_DF["Credit"] > 0),"Category",] = "UPI-Cr"
+    print("another_method")
+    print(NEW_DF)
     return NEW_DF
+
 
 def suspense_credit( df):
     c_df = pd.DataFrame()

@@ -46,19 +46,19 @@ export default function Eligibility() {
             type: "Home Loan / Balance Transfer",
             amount: item.homeLoanValue || 0,
             rate: "0.45%",
-            value: (item.homeLoanValue || 0) * 0.45,
+            value: (item.homeLoanValue || 0) * 0.0045,
           },
           loanAgainstProperty: {
             type: "Loan Against Property / Balance Transfer",
             amount: item.loanAgainstProperty || 0,
             rate: "0.65%",
-            value: (item.loanAgainstProperty || 0) * 0.65,
+            value: (item.loanAgainstProperty || 0) * 0.0065,
           },
           businessLoan: {
             type: "Business Loan",
             amount: item.businessLoan || 0,
             rate: "1.00%",
-            value: (item.businessLoan || 0) * 1.0,
+            value: (item.businessLoan || 0) * 0.01,
           },
           termPlan: {
             type: "Term Plan",
