@@ -376,7 +376,8 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
 
         df = category_add_ca(initial_df)
         new_tran_df = another_method(df)
-
+        new_tran_df = Upi(new_tran_df)
+        print(new_tran_df)
         #############################------------------------#######################################
 
         json_lists_of_df = returns_json_output_of_all_sheets(new_tran_df, name_n_num_df)
@@ -442,6 +443,7 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
     print("|------------------------------|")
 
     if not dfs:
+        print("|-------------xxx---------------|")
         folder_path = "saved_pdf"
         try:
             shutil.rmtree(folder_path)
@@ -480,13 +482,15 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
 
         df = category_add_ca(initial_df)
         new_tran_df = another_method(df)
-
+        new_tran_df = Upi(new_tran_df)
+        print("transaction")
+        print(new_tran_df)
         #############################------------------------#######################################
 
         json_lists_of_df = returns_json_output_of_all_sheets(new_tran_df, name_n_num_df)
 
-        # excel_file_path = reconstruct_dict_from_json_save_to_excel(json_lists_of_df, account_number, CA_ID)
-
+        excel_file_path = reconstruct_dict_from_json_save_to_excel(json_lists_of_df, account_number, CA_ID)
+        print(excel_file_path)
 
         folder_path = "saved_pdf"
         try:
