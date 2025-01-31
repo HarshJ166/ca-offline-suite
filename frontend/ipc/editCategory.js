@@ -9,24 +9,14 @@ const { cases } = require('../db/schema/Cases');
 const { summary } = require('../db/schema/Summary');
 const { eod } = require('../db/schema/Eod');
 const { opportunityToEarn } = require('../db/schema/OpportunityToEarn');
-const { eq, and } = require("drizzle-orm");
+const { eq, and, SQL, sql, inArray } = require("drizzle-orm");
 const axios = require("axios");
 
 function registerCategoryHandlers() {
 
-    const formatDate = (dateString) => {
-        const date = new Date(dateString); // Parse the date string
-        const day = String(date.getDate()).padStart(2, '0'); // Get day and pad with zero
-        const month = String(date.getMonth() + 1).padStart(2, '0'); // Get month (0-based) and pad with zero
-        const year = date.getFullYear(); // Get full year
-
-        return `${day}-${month}-${year}`; // Format as dd-mm-yyyy
-    };
-
-
     async function processOpportunityToEarnData(opportunityToEarnData, caseId) {
         try {
-            console.log(
+            log.info(
                 "Full Opportunity to Earn Data:",
                 JSON.stringify(opportunityToEarnData)
             );
@@ -47,14 +37,39 @@ function registerCategoryHandlers() {
 
             const validCaseId = caseId
 
-            // Extract values with default fallbacks of 0
-            const homeLoanValue =
-                opportunityToEarnValues?.["Maximum Home Loan Value"] || 0;
-            const loanAgainstProperty =
-                opportunityToEarnValues?.["Maximum LAP Value"] || 0;
-            const businessLoan = opportunityToEarnValues?.["Maximum BL Value"] || 0;
-            const termPlan = opportunityToEarnValues?.["Maximum TP Value"] || 0;
-            const generalInsurance = opportunityToEarnValues?.["Maximum GI Value"] || 0;
+            let homeLoanValue = 0;
+            let loanAgainstProperty = 0;
+            let businessLoan = 0;
+            let termPlan = 0;
+            let generalInsurance = 0;
+
+            for (const item of opportunityToEarnArray) {
+                const product = item["Product"];
+                const amount = parseFloat(item["Amount"]) || 0;
+
+                if (!isNaN(amount)) {
+                    if (product.includes("Home Loan")) {
+                        homeLoanValue += amount;
+                    } else if (product.includes("Loan Against Property")) {
+                        loanAgainstProperty += amount;
+                    } else if (product.includes("Business Loan")) {
+                        businessLoan += amount;
+                    } else if (product.includes("Term Plan")) {
+                        termPlan += amount;
+                    } else if (product.includes("General Insurance")) {
+                        generalInsurance += amount;
+                    }
+                }
+            }
+
+            log.info(
+                "Extracted opportunity to earn values:",
+                homeLoanValue,
+                loanAgainstProperty,
+                businessLoan,
+                termPlan,
+                generalInsurance
+            );
 
             const existingOpportunityToEarn = await db
                 .select()
@@ -152,15 +167,64 @@ function registerCategoryHandlers() {
         }
     };
 
+
+    const formatDate = (dateString) => {
+        const date = new Date(dateString); // Parse the date string
+        const day = String(date.getDate()).padStart(2, '0'); // Get day and pad with zero
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Get month (0-based) and pad with zero
+        const year = date.getFullYear(); // Get full year
+
+        return `${day}-${month}-${year}`; // Format as dd-mm-yyyy
+    };
+
+    const sanitizeJSONString = (jsonString) => {
+        return jsonString
+            .replace(/: *NaN/g, ": null")
+            .replace(/: *undefined/g, ": null")
+            .replace(/: *Infinity/g, ": null")
+            .replace(/: *-Infinity/g, ": null");
+    };
+
+    const bulkUpdateTransactions = async (finalSql, ids) => {
+        await db.update(transactions).set({ category: finalSql }).where(inArray(transactions.id, ids));
+    };
+
+    // Prepare data for database insertion
+    const prepareTransactionsForDB = async (data) => {
+        if (!data || Object.keys(data).length === 0) {
+            return; // No data to process
+        }
+
+        // Prepare SQL chunks and IDs
+        const sqlChunks = [];
+        const ids = [];
+
+        // Start the SQL case statement
+        sqlChunks.push(sql`(case`);
+
+        // Iterate through key-value pairs of data
+        for (const [key, item] of Object.entries(data)) {
+            log.info('Item : ', key, item.Category);
+            const id = key; // Use transactionId or fallback to key
+            const category = item.Category || "Uncategorized"; // Default to "Uncategorized"
+
+            sqlChunks.push(sql`when ${transactions.id} = ${id} then ${category}`); // Create case condition
+            ids.push(id); // Collect the IDs for the WHERE clause
+        }
+
+        // End the SQL case statement
+        sqlChunks.push(sql`end)`);
+
+        // Join the SQL chunks
+        const finalSql = sql.join(sqlChunks, sql.raw(' '));
+        // log.info("Final SQL : ", finalSql, ids);
+
+        return { finalSql, ids };
+    };
+
+
     ipcMain.handle('edit-category', async (event, data) => {
 
-        const sanitizeJSONString = (jsonString) => {
-            return jsonString
-                .replace(/: *NaN/g, ": null")
-                .replace(/: *undefined/g, ": null")
-                .replace(/: *Infinity/g, ": null")
-                .replace(/: *-Infinity/g, ": null");
-        };
 
         log.info('Edit Category : ', data);
         const caseId = 26;
@@ -312,10 +376,27 @@ function registerCategoryHandlers() {
 
             // log.info("API response:", parsedData);
 
+            try {
+
+                const { finalSql, ids } = await prepareTransactionsForDB(frontendData);
+                log.info("Final SQL:", "IDs:", finalSql, ids);
+
+                // Insert transactions
+                await bulkUpdateTransactions(finalSql, ids);
+
+                // db.run("SELECT * FROM transactions").then((result) => {
+                //     log.info("Transactions fetched successfully", result);
+                // });
+                log.info("Transactions updated successfully");
+            }
+            catch (error) {
+                log.error("Error inserting transactions in batch:", error);
+                throw error;
+            }
+
         }
         catch (error) {
             log.error("API call failed:", error);
-            log.error("Failed to make api call");
         }
 
 

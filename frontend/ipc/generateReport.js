@@ -157,11 +157,11 @@ const getOrCreateCase = async (caseName, userId = 1) => {
       .limit(1);
 
     if (existingCase.length > 0) {
-      log.info(`Found existing case with ID: ${existingCase[0].id,caseName}`);
+      log.info(`Found existing case with ID: ${existingCase[0].id, caseName}`);
       return existingCase[0].id;
     }
 
-    log.info({creatingNewCase:caseName});
+    log.info({ creatingNewCase: caseName });
     // Create new case if not found
     const newCase = await db
       .insert(cases)
@@ -174,7 +174,7 @@ const getOrCreateCase = async (caseName, userId = 1) => {
       .returning();
 
     if (newCase.length > 0) {
-      log.info(`Created new case with ID: ${newCase[0].id,caseName}`);
+      log.info(`Created new case with ID: ${newCase[0].id, caseName}`);
       return newCase[0].id;
     }
 
@@ -260,7 +260,7 @@ const processStatementAndEOD = async (
         createdAt: new Date(),
       };
 
-      log.info({addingStatementData:statementData});
+      log.info({ addingStatementData: statementData });
 
       const statementResult = await db
         .insert(statements)
@@ -388,7 +388,7 @@ const processSummaryData = async (parsedData, caseName) => {
   try {
     const validCaseId = await getOrCreateCase(caseName);
 
-    log.info({parsedDataFromProcessSummary :parsedData})
+    log.info({ parsedDataFromProcessSummary: parsedData })
 
     // Validate the summary data
     if (
@@ -535,13 +535,14 @@ function preprocessPayload(payload) {
   if (Array.isArray(payload.aiyaz_array_of_array)) {
     payload.aiyaz_array_of_array = payload.aiyaz_array_of_array.map((statement) => {
       return statement.map((col) => {
-      return {
-        ...col,
-        // rename `type` -> `column_type`; default to null if it's missing
-        column_type: col.type ?? null,
-        // remove the old `type` field if needed
-        type: undefined,
-      }})
+        return {
+          ...col,
+          // rename `type` -> `column_type`; default to null if it's missing
+          column_type: col.type ?? null,
+          // remove the old `type` field if needed
+          type: undefined,
+        }
+      })
     });
   }
 
@@ -556,7 +557,7 @@ function preprocessPayload(payload) {
         // remove or set to undefined so it doesn't get sent
         type: undefined,
         // Make sure numeric fields are actually numbers (not strings/null)
-        amount:tx.amount || 0,
+        amount: tx.amount || 0,
         balance: tx.balance || 0,
       };
     });
@@ -604,43 +605,43 @@ function generateReportIpc(tmpdir_path) {
   //   console.error(err.response.data.detail[0].loc);
   // });
   ipcMain.handle("generate-report", async (event, receivedResult, caseName) => {
-    log.info({event,receivedResult,caseName})
+    log.info({ event, receivedResult, caseName })
     let caseId = null;
     try {
       log.info("IPC handler invoked for generate-report", caseName);
-      
+
       const tempDir = tmpdir_path;
       log.info("Temp Directory : ", tempDir);
-  
+
       caseId = await getOrCreateCase(caseName);
       if (!receivedResult?.files?.length) {
         throw new Error("Invalid or empty files array received");
       }
-  
+
       // Track files status
       const successfulFiles = new Set();
       const failedFiles = new Set();
       const allProcessedFiles = new Set();
       const uploadedFiles = new Map(); // Track original filenames and their temp paths
-  
+
       // First, save all uploaded files and track them
       const fileDetails = receivedResult.files.map((fileDetail, index) => {
         if (!fileDetail.pdf_paths || !fileDetail.bankName) {
           throw new Error(`Missing required fields for file at index ${index}`);
         }
-  
+
         const originalFilename = fileDetail.pdf_paths;
         const tempFilename = `${Date.now()}-${originalFilename}`;
         const filePath = path.join(tempDir, tempFilename);
-        
+
         allProcessedFiles.add(filePath);
         uploadedFiles.set(filePath, {
           originalName: originalFilename,
           bankName: fileDetail.bankName
         });
-  
+
         console.log(`Saving file to ${filePath}`);
-  
+
         if (fileDetail.fileContent) {
           fs.writeFileSync(filePath, fileDetail.fileContent, "binary");
           successfulFiles.add(filePath); // Initially mark as successful
@@ -648,7 +649,7 @@ function generateReportIpc(tmpdir_path) {
           log.warn(`No file content for ${fileDetail.bankName}`);
           failedFiles.add(filePath);
         }
-  
+
         return {
           ...fileDetail,
           pdf_paths: filePath,
@@ -656,7 +657,7 @@ function generateReportIpc(tmpdir_path) {
           end_date: fileDetail.end_date || "",
         };
       });
-  
+
       // Rest of the API call setup
       const payload = {
         bank_names: fileDetails.map((d) => d.bankName),
@@ -666,38 +667,38 @@ function generateReportIpc(tmpdir_path) {
         end_date: fileDetails.map((d) => d.end_date || ""),
         ca_id: fileDetails[0]?.ca_id || "DEFAULT_CASE",
       };
-  
+
       const response = await axios.post(generateReportEndpoint, payload, {
         headers: { "Content-Type": "application/json" },
         timeout: 300000,
         validateStatus: (status) => status === 200,
       });
-  
+
       // Handle failed extractions from API response
       if (response.data?.["pdf_paths_not_extracted"]) {
         const failedPdfPaths = response.data["pdf_paths_not_extracted"].paths || [];
-        
+
         // Store failed statements in database
         await db.insert(failedStatements).values({
           caseId: caseId,
           data: JSON.stringify(response.data["pdf_paths_not_extracted"]),
         });
-  
+
         // Mark files as failed based on API response
         for (const failedPath of failedPdfPaths) {
           // Find the corresponding full path in our processed files
-          const fullPath = fileDetails.find(detail => 
+          const fullPath = fileDetails.find(detail =>
             detail.pdf_paths.includes(path.basename(failedPath)))?.pdf_paths;
-          
+
           if (fullPath) {
             failedFiles.add(fullPath);
             successfulFiles.delete(fullPath);
           }
         }
-  
+
         log.warn("Some PDF paths were not extracted", Array.from(failedFiles));
       }
-  
+
       // Process transactions
       const parsedData = JSON.parse(sanitizeJSONString(response.data.data));
       const transactions = (parsedData.Transactions || []).filter((transaction) => {
@@ -710,13 +711,13 @@ function generateReportIpc(tmpdir_path) {
         if (typeof transaction.Balance === "number" && isNaN(transaction.Balance)) {
           transaction.Balance = 0;
         }
-  
+
         return (
           (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
           (transaction.Debit !== null && !isNaN(transaction.Debit))
         );
       });
-  
+
       // Process each file and update status
       const processedData = [];
       for (const fileDetail of fileDetails) {
@@ -730,7 +731,7 @@ function generateReportIpc(tmpdir_path) {
             fileDetails.indexOf(fileDetail)
           );
           processedData.push(result);
-          
+
           if (!failedFiles.has(fileDetail.pdf_paths)) {
             successfulFiles.add(fileDetail.pdf_paths);
           }
@@ -743,7 +744,7 @@ function generateReportIpc(tmpdir_path) {
           );
         }
       }
-  
+
       // Process summary data
       try {
         await processSummaryData(
@@ -755,7 +756,7 @@ function generateReportIpc(tmpdir_path) {
           },
           caseName
         );
-  
+
         log.info("Summary Data : ", parsedData["Particulars"]);
         log.info("Income Receipts : ", parsedData["Income Receipts"]);
         log.info("Important Expenses : ", parsedData["Important Expenses"]);
@@ -764,7 +765,7 @@ function generateReportIpc(tmpdir_path) {
         log.error("Error processing summary data:", error);
         throw error;
       }
-  
+
       // Process Opportunity to Earn Data
       try {
         await processOpportunityToEarnData(
@@ -775,18 +776,18 @@ function generateReportIpc(tmpdir_path) {
         log.error("Error processing opportunity to earn data:", error);
         throw error;
       }
-  
+
       // Update case status
       if (failedFiles.size === 0) {
         await updateCaseStatus(caseId, "Success");
       } else {
         await updateCaseStatus(caseId, "Failed");
       }
-  
+
       // Create directory for failed PDFs
       const failedPDFsDir = path.join(tempDir, 'failed_pdfs', caseName);
       fs.mkdirSync(failedPDFsDir, { recursive: true });
-  
+
       // Handle failed and successful files
       for (const filePath of allProcessedFiles) {
         try {
@@ -807,7 +808,7 @@ function generateReportIpc(tmpdir_path) {
           log.error(`Error handling file ${filePath}:`, error);
         }
       }
-  
+
       return {
         success: true,
         data: {
@@ -829,9 +830,9 @@ function generateReportIpc(tmpdir_path) {
         message: error.message,
         stack: error.stack,
       });
-  
+
       await updateCaseStatus(caseId, "Failed");
-  
+
       throw {
         message: error.message || "Failed to generate report",
         code: 500,
@@ -859,37 +860,37 @@ function generateReportIpc(tmpdir_path) {
     console.log("Result: ", result);
     try {
       caseId = await getOrCreateCase(caseName);
-      
-      const allStatements = await db
-          .select()
-          .from(statements)
-          .where(eq(statements.caseId, caseId));
-        if (allStatements.length === 0) {
-          log.info("No statements found for case:", caseId);
-        }
 
-        const allTransactions = await db
-          .select()
-          .from(transactions)
-          .where(
-            inArray(
-              transactions.statementId,
-              allStatements.map((stmt) => stmt.id.toString()) // Convert integer ID to string
-            )
-          );
+      const allStatements = await db
+        .select()
+        .from(statements)
+        .where(eq(statements.caseId, caseId));
+      if (allStatements.length === 0) {
+        log.info("No statements found for case:", caseId);
+      }
+
+      const allTransactions = await db
+        .select()
+        .from(transactions)
+        .where(
+          inArray(
+            transactions.statementId,
+            allStatements.map((stmt) => stmt.id.toString()) // Convert integer ID to string
+          )
+        );
 
       const whole_transaction_sheet = allTransactions || null;
       // log.info("Whole Transaction Sheet: ",whole_transaction_sheet.length);
-      
+
       const payload = {
         bank_names: result.map((d) => d.bankName),
         pdf_paths: result.map((d) => d.path),
         passwords: result.map((d) => d.passwords || ""),
         start_dates: result.map((d) => d.startDate || ""),
         end_dates: result.map((d) => d.endDate || ""),
-        ca_id:caseId|| "DEFAULT_CASE",
-        aiyazs_array_of_array:result.map((d) => d.rectifiedColumns || ""),
-        whole_transaction_sheet:whole_transaction_sheet,
+        ca_id: caseId || "DEFAULT_CASE",
+        aiyazs_array_of_array: result.map((d) => d.rectifiedColumns || ""),
+        whole_transaction_sheet: whole_transaction_sheet,
         // whole_transaction_sheet:result.map((d) => d.whole_transaction_sheet || ""),
       };
 
@@ -1109,7 +1110,7 @@ function generateReportIpc(tmpdir_path) {
     }
   });
 
- 
+
 }
 
 module.exports = { generateReportIpc };
