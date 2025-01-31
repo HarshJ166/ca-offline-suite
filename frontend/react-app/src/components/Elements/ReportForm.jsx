@@ -216,7 +216,6 @@ const GenerateReportForm = ({
     </Select>
   );
 
-
   // Load the last case number from localStorage on component mount
   useEffect(() => {
     const savedLastNumber = localStorage.getItem("lastCaseNumber");
@@ -352,11 +351,10 @@ const GenerateReportForm = ({
 
   // console.log("Current Case Name: ", caseName);
 
-  
   const validateForm = () => {
     // Check if any file is missing bank selection
-    const missingBanks = fileDetails.some(detail => !detail.bankName);
-    
+    const missingBanks = fileDetails.some((detail) => !detail.bankName);
+
     if (missingBanks) {
       toast({
         title: "Error",
@@ -374,7 +372,7 @@ const GenerateReportForm = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("Inside handleSubmit..", caseName);
-    
+
     if (!validateForm()) {
       return;
     }
@@ -420,7 +418,7 @@ const GenerateReportForm = ({
         progressIntervalRef,
         simulateProgress,
         convertDateFormat,
-        caseName,
+        caseName
       );
     } catch (error) {
       console.error("Error checking report name:", error);
