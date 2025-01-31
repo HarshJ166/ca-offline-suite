@@ -1,4 +1,4 @@
-const { ipcMain } = require("electron");
+const { ipcMain, ipcRenderer } = require("electron");
 const fs = require("fs");
 const path = require("path");
 const log = require("electron-log");
@@ -10,10 +10,13 @@ const { cases } = require("../db/schema/Cases");
 const { eod } = require("../db/schema/Eod");
 const { summary } = require("../db/schema/Summary");
 const { failedStatements } = require("../db/schema/FailedStatements");
-const { eq, and } = require("drizzle-orm");
+const { eq, and, inArray } = require("drizzle-orm");
 const { opportunityToEarn } = require("../db/schema/OpportunityToEarn");
 
 const sanitizeJSONString = (jsonString) => {
+  if (!jsonString) return jsonString;
+  if (typeof jsonString !== "string") return jsonString;
+
   return jsonString
     .replace(/: *NaN/g, ": null")
     .replace(/: *undefined/g, ": null")
@@ -157,10 +160,13 @@ const getOrCreateCase = async (caseName, userId = 1) => {
       .limit(1);
 
     if (existingCase.length > 0) {
-      log.info(`Found existing case with ID: ${existingCase[0].id}`);
+      log.info(
+        `Found existing case with ID: ${(existingCase[0].id, caseName)}`
+      );
       return existingCase[0].id;
     }
 
+    log.info({ creatingNewCase: caseName });
     // Create new case if not found
     const newCase = await db
       .insert(cases)
@@ -173,7 +179,7 @@ const getOrCreateCase = async (caseName, userId = 1) => {
       .returning();
 
     if (newCase.length > 0) {
-      log.info(`Created new case with ID: ${newCase[0].id}`);
+      log.info(`Created new case with ID: ${(newCase[0].id, caseName)}`);
       return newCase[0].id;
     }
 
@@ -247,6 +253,27 @@ const processStatementAndEOD = async (
     const customerName = nerResults?.Name?.[fileIndex] || "UNKNOWN";
     const accountNumber = nerResults?.["Acc Number"]?.[fileIndex] || "UNKNOWN";
 
+    // First validate all transactions before creating the statement
+    const statementTransactions = transactions
+      .filter((t) => t.Bank === fileDetail.bankName)
+      .map((transaction) => {
+        try {
+          return validateAndTransformTransaction(transaction, null); // Pass null for statementId initially
+        } catch (error) {
+          log.warn(
+            `Invalid transaction found during validation: ${error.message}`,
+            transaction
+          );
+          return null;
+        }
+      })
+      .filter(Boolean);
+
+    // If no valid transactions found, throw error
+    if (statementTransactions.length === 0) {
+      throw new Error("No valid transactions found for statement");
+    }
+
     // Process Statement and Transactions
     try {
       const statementData = {
@@ -259,6 +286,8 @@ const processStatementAndEOD = async (
         createdAt: new Date(),
       };
 
+      log.info({ addingStatementData: statementData });
+
       const statementResult = await db
         .insert(statements)
         .values(statementData)
@@ -269,25 +298,13 @@ const processStatementAndEOD = async (
       }
 
       statementId = statementResult[0].id;
-
-      // Process transactions for this statement
-      const statementTransactions = transactions
-        .filter((t) => t.Bank === fileDetail.bankName)
-        .map((transaction) => {
-          try {
-            return validateAndTransformTransaction(transaction, statementId);
-          } catch (error) {
-            log.warn(
-              `Invalid transaction skipped: ${error.message}`,
-              transaction
-            );
-            return null;
-          }
-        })
-        .filter(Boolean);
-
-      await storeTransactionsBatch(statementTransactions);
-      processedTransactions = statementTransactions.length;
+      // Now update transactions with the new statementId and store them
+      const finalTransactions = statementTransactions.map((transaction) => ({
+        ...transaction,
+        statementId,
+      }));
+      await storeTransactionsBatch(finalTransactions);
+      processedTransactions = finalTransactions.length;
     } catch (error) {
       log.error("Error processing statement and transactions:", error);
       throw error;
@@ -385,11 +402,13 @@ const processSummaryData = async (parsedData, caseName) => {
   try {
     const validCaseId = await getOrCreateCase(caseName);
 
+    log.info({ parsedDataFromProcessSummary: parsedData });
+
     // Validate the summary data
     if (
       !parsedData ||
       typeof parsedData !== "object" ||
-      !parsedData["Particulars"] ||
+      // !parsedData["Particulars"] ||
       !parsedData["Income Receipts"] ||
       !parsedData["Important Expenses"] ||
       !parsedData["Other Expenses"]
@@ -455,14 +474,18 @@ const updateCaseStatus = async (caseId, status) => {
   }
 };
 
-async function processOpportunityToEarnData(opportunityToEarnData, CaseId) {
+const processOpportunityToEarnData = async (
+  opportunityToEarnData,
+  caseName
+) => {
+  log.info("Processing opportunity to earn data for case:", caseName);
   try {
     console.log(
       "Full Opportunity to Earn Data:",
       JSON.stringify(opportunityToEarnData)
     );
 
-    // Check if the data is an array with at least one element
+    // Extract the array from the object
     const opportunityToEarnArray = Array.isArray(opportunityToEarnData)
       ? opportunityToEarnData
       : opportunityToEarnData["Opportunity to Earn"];
@@ -472,57 +495,109 @@ async function processOpportunityToEarnData(opportunityToEarnData, CaseId) {
       return false;
     }
 
-    const opportunityToEarnValues = Array.isArray(opportunityToEarnArray)
-      ? opportunityToEarnArray[0]
-      : opportunityToEarnArray;
+    // Get the case ID for this specific report
+    const validCaseId = await getOrCreateCase(caseName);
 
-    const validCaseId = await getOrCreateCase(CaseId);
+    // Initialize sums for each category
+    let homeLoanValue = 0;
+    let loanAgainstProperty = 0;
+    let businessLoan = 0;
+    let termPlan = 0;
+    let generalInsurance = 0;
 
-    // Extract values with default fallbacks of 0
-    const homeLoanValue =
-      opportunityToEarnValues?.["Maximum Home Loan Value"] || 0;
-    const loanAgainstProperty =
-      opportunityToEarnValues?.["Maximum LAP Value"] || 0;
-    const businessLoan = opportunityToEarnValues?.["Maximum BL Value"] || 0;
-    const termPlan = opportunityToEarnValues?.["Maximum TP Value"] || 0;
-    const generalInsurance = opportunityToEarnValues?.["Maximum GI Value"] || 0;
+    // Loop through each product and categorize the amount correctly
+    for (const item of opportunityToEarnArray) {
+      const product = item["Product"];
+      const amount = parseFloat(item["Amount"]) || 0;
 
-    const existingOpportunityToEarn = await db
-      .select()
-      .from(opportunityToEarn)
-      .where(eq(opportunityToEarn.caseId, validCaseId));
-
-    if (existingOpportunityToEarn.length > 0) {
-      // Update the existing opportunity to earn record
-      await db
-        .update(opportunityToEarn)
-        .set({
-          homeLoanValue,
-          loanAgainstProperty,
-          businessLoan,
-          termPlan,
-          generalInsurance,
-        })
-        .where(eq(opportunityToEarn.caseId, validCaseId));
-    } else {
-      // Insert new opportunity to earn record
-      await db.insert(opportunityToEarn).values({
-        caseId: validCaseId,
-        homeLoanValue,
-        loanAgainstProperty,
-        businessLoan,
-        termPlan,
-        generalInsurance,
-        createdAt: new Date(),
-      });
+      if (!isNaN(amount)) {
+        if (product.includes("Home Loan")) {
+          homeLoanValue += amount;
+        } else if (product.includes("Loan Against Property")) {
+          loanAgainstProperty += amount;
+        } else if (product.includes("Business Loan")) {
+          businessLoan += amount;
+        } else if (product.includes("Term Plan")) {
+          termPlan += amount;
+        } else if (product.includes("General Insurance")) {
+          generalInsurance += amount;
+        }
+      }
     }
 
-    log.info(`Opportunity to earn data processed for case ${validCaseId}`);
+    // Always insert a new record to append the data
+    await db.insert(opportunityToEarn).values({
+      caseId: validCaseId,
+      homeLoanValue,
+      loanAgainstProperty,
+      businessLoan,
+      termPlan,
+      generalInsurance,
+    });
+
+    log.info(`New opportunity to earn data appended for case ${validCaseId}`);
     return true;
   } catch (error) {
     log.error("Error processing opportunity to earn data:", error);
     throw error;
   }
+};
+
+function preprocessPayload(payload) {
+  // 1) Rename or handle the ColumnData "type" field
+  //    e.g., rename "type" to "column_type"
+  if (Array.isArray(payload.aiyaz_array_of_array)) {
+    payload.aiyaz_array_of_array = payload.aiyaz_array_of_array.map(
+      (statement) => {
+        return statement.map((col) => {
+          return {
+            ...col,
+            // rename `type` -> `column_type`; default to null if it's missing
+            column_type: col.type ?? null,
+            // remove the old `type` field if needed
+            type: undefined,
+          };
+        });
+      }
+    );
+  }
+
+  // 2) Rename or handle the Transaction "type" field
+  //    e.g., rename "type" -> "transaction_type"
+  if (Array.isArray(payload.whole_transaction_sheet)) {
+    payload.whole_transaction_sheet = payload.whole_transaction_sheet.map(
+      (tx) => {
+        return {
+          ...tx,
+          // rename `type` -> `transaction_type`
+          transaction_type: tx.type ?? "",
+          // remove or set to undefined so it doesn't get sent
+          type: undefined,
+          // Make sure numeric fields are actually numbers (not strings/null)
+          amount: tx.amount || 0,
+          balance: tx.balance || 0,
+        };
+      }
+    );
+  }
+
+  // 3) Double-check that arrays aren’t undefined
+  payload.bank_names = Array.isArray(payload.bank_names)
+    ? payload.bank_names
+    : [];
+  payload.pdf_paths = Array.isArray(payload.pdf_paths) ? payload.pdf_paths : [];
+  payload.passwords = Array.isArray(payload.passwords) ? payload.passwords : [];
+  payload.start_dates = Array.isArray(payload.start_dates)
+    ? payload.start_dates
+    : [];
+  payload.end_dates = Array.isArray(payload.end_dates) ? payload.end_dates : [];
+
+  // 4) Ensure `ca_id` is a string if that’s what FastAPI expects
+  if (payload.ca_id != null) {
+    payload.ca_id = String(payload.ca_id);
+  }
+
+  return payload;
 }
 
 function generateReportIpc(tmpdir_path) {
@@ -552,41 +627,43 @@ function generateReportIpc(tmpdir_path) {
   //   console.error(err.response.data.detail[0].loc);
   // });
   ipcMain.handle("generate-report", async (event, receivedResult, caseName) => {
+    log.info({ event, receivedResult, caseName });
+    let caseId = null;
+    // Track files status
+    const successfulFiles = new Set();
+    const failedFiles = new Set();
+    const allProcessedFiles = new Set();
+    const uploadedFiles = new Map(); // Track original filenames and their temp paths
     try {
       log.info("IPC handler invoked for generate-report", caseName);
-      
+
       const tempDir = tmpdir_path;
       log.info("Temp Directory : ", tempDir);
-  
-      const caseId = await getOrCreateCase(caseName);
+
+      caseId = await getOrCreateCase(caseName);
       if (!receivedResult?.files?.length) {
         throw new Error("Invalid or empty files array received");
       }
-  
-      // Track files status
-      const successfulFiles = new Set();
-      const failedFiles = new Set();
-      const allProcessedFiles = new Set();
-      const uploadedFiles = new Map(); // Track original filenames and their temp paths
-  
+
       // First, save all uploaded files and track them
       const fileDetails = receivedResult.files.map((fileDetail, index) => {
         if (!fileDetail.pdf_paths || !fileDetail.bankName) {
           throw new Error(`Missing required fields for file at index ${index}`);
         }
-  
+
         const originalFilename = fileDetail.pdf_paths;
-        const tempFilename = `${Date.now()}-${originalFilename}`;
+        // add a random string at the end to the filename to prevent overwriting
+        const tempFilename = `${Date.now()}-${path.basename(originalFilename)}`;
         const filePath = path.join(tempDir, tempFilename);
-        
+
         allProcessedFiles.add(filePath);
         uploadedFiles.set(filePath, {
           originalName: originalFilename,
-          bankName: fileDetail.bankName
+          bankName: fileDetail.bankName,
         });
-  
+
         console.log(`Saving file to ${filePath}`);
-  
+
         if (fileDetail.fileContent) {
           fs.writeFileSync(filePath, fileDetail.fileContent, "binary");
           successfulFiles.add(filePath); // Initially mark as successful
@@ -594,7 +671,7 @@ function generateReportIpc(tmpdir_path) {
           log.warn(`No file content for ${fileDetail.bankName}`);
           failedFiles.add(filePath);
         }
-  
+
         return {
           ...fileDetail,
           pdf_paths: filePath,
@@ -602,7 +679,7 @@ function generateReportIpc(tmpdir_path) {
           end_date: fileDetail.end_date || "",
         };
       });
-  
+
       // Rest of the API call setup
       const payload = {
         bank_names: fileDetails.map((d) => d.bankName),
@@ -612,57 +689,94 @@ function generateReportIpc(tmpdir_path) {
         end_date: fileDetails.map((d) => d.end_date || ""),
         ca_id: fileDetails[0]?.ca_id || "DEFAULT_CASE",
       };
-  
+
       const response = await axios.post(generateReportEndpoint, payload, {
         headers: { "Content-Type": "application/json" },
         timeout: 300000,
         validateStatus: (status) => status === 200,
       });
-  
+
       // Handle failed extractions from API response
       if (response.data?.["pdf_paths_not_extracted"]) {
-        const failedPdfPaths = response.data["pdf_paths_not_extracted"].paths || [];
-        
+        const failedPdfPaths =
+          response.data["pdf_paths_not_extracted"].paths || [];
+
         // Store failed statements in database
         await db.insert(failedStatements).values({
           caseId: caseId,
           data: JSON.stringify(response.data["pdf_paths_not_extracted"]),
         });
-  
+
         // Mark files as failed based on API response
         for (const failedPath of failedPdfPaths) {
           // Find the corresponding full path in our processed files
-          const fullPath = fileDetails.find(detail => 
-            detail.pdf_paths.includes(path.basename(failedPath)))?.pdf_paths;
-          
+          const fullPath = fileDetails.find((detail) =>
+            detail.pdf_paths.includes(path.basename(failedPath))
+          )?.pdf_paths;
+
           if (fullPath) {
             failedFiles.add(fullPath);
             successfulFiles.delete(fullPath);
           }
         }
-  
+
         log.warn("Some PDF paths were not extracted", Array.from(failedFiles));
       }
-  
+
       // Process transactions
       const parsedData = JSON.parse(sanitizeJSONString(response.data.data));
-      const transactions = (parsedData.Transactions || []).filter((transaction) => {
-        if (typeof transaction.Credit === "number" && isNaN(transaction.Credit)) {
-          transaction.Credit = null;
+      log.info({ parsedDataFromGenerateReport: parsedData });
+
+      if (parsedData == null) {
+        await updateCaseStatus(caseId, "Failed");
+        const failedPDFsDir = path.join(tempDir, "failed_pdfs", caseName);
+        fs.mkdirSync(failedPDFsDir, { recursive: true });
+        return {
+          success: true,
+          data: {
+            caseId: caseId,
+            processed: null,
+            totalTransactions: 0,
+            eodProcessed: false,
+            summaryProcessed: false,
+            failedStatements: response.data["pdf_paths_not_extracted"] || null,
+            failedFiles: Array.from(failedFiles),
+            successfulFiles: Array.from(successfulFiles),
+            nerResults: response.data?.ner_results || {
+              Name: [],
+              "Acc Number": [],
+            },
+          },
+        };
+      }
+      const transactions = (parsedData.Transactions || []).filter(
+        (transaction) => {
+          if (
+            typeof transaction.Credit === "number" &&
+            isNaN(transaction.Credit)
+          ) {
+            transaction.Credit = null;
+          }
+          if (
+            typeof transaction.Debit === "number" &&
+            isNaN(transaction.Debit)
+          ) {
+            transaction.Debit = null;
+          }
+          if (
+            typeof transaction.Balance === "number" &&
+            isNaN(transaction.Balance)
+          ) {
+            transaction.Balance = 0;
+          }
+
+          return (
+            (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
+            (transaction.Debit !== null && !isNaN(transaction.Debit))
+          );
         }
-        if (typeof transaction.Debit === "number" && isNaN(transaction.Debit)) {
-          transaction.Debit = null;
-        }
-        if (typeof transaction.Balance === "number" && isNaN(transaction.Balance)) {
-          transaction.Balance = 0;
-        }
-  
-        return (
-          (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
-          (transaction.Debit !== null && !isNaN(transaction.Debit))
-        );
-      });
-  
+      );
+
       // Process each file and update status
       const processedData = [];
       for (const fileDetail of fileDetails) {
@@ -676,7 +790,7 @@ function generateReportIpc(tmpdir_path) {
             fileDetails.indexOf(fileDetail)
           );
           processedData.push(result);
-          
+
           if (!failedFiles.has(fileDetail.pdf_paths)) {
             successfulFiles.add(fileDetail.pdf_paths);
           }
@@ -689,7 +803,7 @@ function generateReportIpc(tmpdir_path) {
           );
         }
       }
-  
+
       // Process summary data
       try {
         await processSummaryData(
@@ -701,7 +815,7 @@ function generateReportIpc(tmpdir_path) {
           },
           caseName
         );
-  
+
         log.info("Summary Data : ", parsedData["Particulars"]);
         log.info("Income Receipts : ", parsedData["Income Receipts"]);
         log.info("Important Expenses : ", parsedData["Important Expenses"]);
@@ -710,29 +824,29 @@ function generateReportIpc(tmpdir_path) {
         log.error("Error processing summary data:", error);
         throw error;
       }
-  
+
       // Process Opportunity to Earn Data
       try {
         await processOpportunityToEarnData(
           parsedData["Opportunity to Earn"] || [],
-          payload.ca_id
+          caseName
         );
       } catch (error) {
         log.error("Error processing opportunity to earn data:", error);
         throw error;
       }
-  
+
       // Update case status
       if (failedFiles.size === 0) {
         await updateCaseStatus(caseId, "Success");
       } else {
         await updateCaseStatus(caseId, "Failed");
       }
-  
+
       // Create directory for failed PDFs
-      const failedPDFsDir = path.join(tempDir, 'failed_pdfs', caseName);
+      const failedPDFsDir = path.join(tempDir, "failed_pdfs", caseName);
       fs.mkdirSync(failedPDFsDir, { recursive: true });
-  
+
       // Handle failed and successful files
       for (const filePath of allProcessedFiles) {
         try {
@@ -753,10 +867,11 @@ function generateReportIpc(tmpdir_path) {
           log.error(`Error handling file ${filePath}:`, error);
         }
       }
-  
+
       return {
         success: true,
         data: {
+          caseId: caseId,
           processed: processedData,
           totalTransactions: processedData.reduce(
             (sum, d) => sum + d.transactionCount,
@@ -767,7 +882,10 @@ function generateReportIpc(tmpdir_path) {
           failedStatements: response.data["pdf_paths_not_extracted"] || null,
           failedFiles: Array.from(failedFiles),
           successfulFiles: Array.from(successfulFiles),
-          nerResults: response.data?.ner_results || { Name: [], "Acc Number": [] },
+          nerResults: response.data?.ner_results || {
+            Name: [],
+            "Acc Number": [],
+          },
         },
       };
     } catch (error) {
@@ -775,9 +893,9 @@ function generateReportIpc(tmpdir_path) {
         message: error.message,
         stack: error.stack,
       });
-  
+
       await updateCaseStatus(caseId, "Failed");
-  
+
       throw {
         message: error.message || "Failed to generate report",
         code: 500,
@@ -790,9 +908,270 @@ function generateReportIpc(tmpdir_path) {
     }
   });
 
-  
-    
-  
+  ipcMain.handle("edit-pdf", async (event, result, caseName) => {
+    log.info("IPC handler invoked for edit-pdf", caseName);
+    const tempDir = tmpdir_path;
+    log.info("Temp Directory : ", tempDir);
+    let caseId = null;
+    console.log("CaseName backend edit pdf: ", caseName);
+    console.log("Result backend edit pdf: ", result);
+
+    // Track successfully processed files to avoid deleting them
+    const successfulFiles = [];
+    const failedFiles = [];
+
+    console.log("Result: ", result);
+    try {
+      caseId = await getOrCreateCase(caseName);
+
+      const allStatements = await db
+        .select()
+        .from(statements)
+        .where(eq(statements.caseId, caseId));
+      if (allStatements.length === 0) {
+        log.info("No statements found for case:", caseId);
+      }
+
+      const allTransactions = await db
+        .select()
+        .from(transactions)
+        .where(
+          inArray(
+            transactions.statementId,
+            allStatements.map((stmt) => stmt.id.toString()) // Convert integer ID to string
+          )
+        );
+
+      const whole_transaction_sheet = allTransactions || null;
+      // log.info("Whole Transaction Sheet: ",whole_transaction_sheet.length);
+
+      const payload = {
+        bank_names: result.map((d) => d.bankName),
+        pdf_paths: result.map((d) => d.path),
+        passwords: result.map((d) => d.passwords || ""),
+        start_dates: result.map((d) => d.startDate || ""),
+        end_dates: result.map((d) => d.endDate || ""),
+        ca_id: caseId || "DEFAULT_CASE",
+        aiyazs_array_of_array: result.map((d) => d.rectifiedColumns || ""),
+        whole_transaction_sheet: whole_transaction_sheet,
+        // whole_transaction_sheet:result.map((d) => d.whole_transaction_sheet || ""),
+      };
+
+      const finalPayload = preprocessPayload(payload);
+
+      log.info("finalPayload: ", finalPayload);
+      log.info("editPdfEndpoint: ", editPdfEndpoint);
+      const response = await axios.post(editPdfEndpoint, finalPayload, {
+        headers: { "Content-Type": "application/json" },
+        timeout: 300000,
+        validateStatus: (status) => status === 200,
+      });
+
+      let failedPdfPaths = [];
+
+      // Check if there are any PDF paths not extracted
+      if (response.data?.["pdf_paths_not_extracted"]) {
+        await updateCaseStatus(caseId, "Failed");
+        // Get the case ID
+        const validCaseId = await getOrCreateCase(caseName);
+
+        // Store failed statements in the database
+        await db.insert(failedStatements).values({
+          caseId: validCaseId,
+          data: JSON.stringify(response.data["pdf_paths_not_extracted"]),
+        });
+
+        // Track failed PDF paths
+        failedPdfPaths = response.data["pdf_paths_not_extracted"].paths || [];
+        log.warn("Some PDF paths were not extracted", failedPdfPaths);
+      }
+
+      // Continue processing if data exists
+      if (!response.data || !response.data.data) {
+        throw new Error(
+          "Empty or invalid response received from analysis server"
+        );
+      }
+
+      let parsedData;
+      try {
+        const sanitizedJsonString = sanitizeJSONString(response.data.data);
+        parsedData = JSON.parse(sanitizedJsonString);
+      } catch (error) {
+        log.error("JSON parsing error:", error);
+        throw error;
+      }
+
+      log.info("Parsed Data aq : ", parsedData);
+
+      const transactions_temp = (parsedData.Transactions || []).filter(
+        (transaction_temp) => {
+          if (
+            typeof transaction_temp.Credit === "number" &&
+            isNaN(transaction_temp.Credit)
+          ) {
+            transaction.Credit = null;
+          }
+          if (
+            typeof transaction_temp.Debit === "number" &&
+            isNaN(transaction_temp.Debit)
+          ) {
+            transaction.Debit = null;
+          }
+          if (
+            typeof transaction_temp.Balance === "number" &&
+            isNaN(transaction_temp.Balance)
+          ) {
+            transaction_temp.Balance = 0;
+          }
+
+          return (
+            (transaction_temp.Credit !== null &&
+              !isNaN(transaction_temp.Credit)) ||
+            (transaction_temp.Debit !== null && !isNaN(transaction_temp.Debit))
+          );
+        }
+      );
+
+      const processedData = [];
+
+      // create filedetails from result but remove rectifiedColumns
+
+      const fileDetails = result.map((fileDetail, index) => {
+        // remove rectifiedColumns
+        return {
+          end_date: fileDetail.endDate || "",
+          start_date: fileDetail.startDate || "",
+          pdf_paths: fileDetail.path,
+          bankName: fileDetail.bankName,
+          passwords: fileDetail.password || "",
+        };
+      });
+
+      for (const fileDetail of fileDetails) {
+        try {
+          const result = await processStatementAndEOD(
+            fileDetail,
+            transactions_temp,
+            parsedData.EOD,
+            caseName
+          );
+          processedData.push(result);
+          // Track successfully processed files
+          successfulFiles.push(fileDetail.pdf_paths);
+        } catch (error) {
+          // Track failed files
+          failedFiles.push(fileDetail.pdf_paths);
+          log.error(
+            `Error processing file detail for ${fileDetail.bankName}:`,
+            error
+          );
+          throw error;
+        }
+      }
+
+      // Process Summary Data
+      try {
+        await processSummaryData(
+          {
+            "Income Receipts": parsedData["Income Receipts"] || [],
+            "Important Expenses": parsedData["Important Expenses"] || [],
+            "Other Expenses": parsedData["Other Expenses"] || [],
+          },
+          caseName
+        );
+      } catch (error) {
+        log.error("Error processing summary data:", error);
+        throw error;
+      }
+      log.info(
+        "Opportunity to Earn data: 1",
+        parsedData["Opportunity to Earn"] || "not data"
+      );
+      // Process Opportunity to Earn Data
+      try {
+        await processOpportunityToEarnData(
+          parsedData["Opportunity to Earn"] || [],
+          caseName
+        );
+      } catch (error) {
+        log.error("Error processing opportunity to earn data:", error);
+        throw error;
+      }
+
+      // Cleanup
+      fileDetails.forEach((detail) => {
+        try {
+          if (fs.existsSync(detail.pdf_paths)) {
+            fs.unlinkSync(detail.pdf_paths);
+          }
+        } catch (error) {
+          log.warn(`Failed to cleanup temp file: ${detail.pdf_paths}`, error);
+        }
+      });
+      await updateCaseStatus(caseId, "Success");
+
+      return {
+        success: true,
+        data: {
+          processed: processedData,
+          totalTransactions: processedData.reduce(
+            (sum, d) => sum + d.transactionCount,
+            0
+          ),
+          eodProcessed: true,
+          summaryProcessed: true,
+          failedStatements: response.data["pdf_paths_not_extracted"] || null,
+          failedFiles: failedFiles,
+          successfulFiles: successfulFiles,
+        },
+      };
+    } catch (error) {
+      // if (caseId) {
+      //   await updateCaseStatus(caseId, 'Failed');
+      // }
+      console.error(
+        "Validation error detail:",
+        JSON.stringify(error.response?.data?.detail, null, 2)
+      );
+
+      log.error("Error in Edit pdf:", {
+        message: error.message,
+        stack: error.stack,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+
+      // If there's a specific PDF paths not extracted data, store it
+      if (error.response?.data?.["pdf_paths_not_extracted"]) {
+        try {
+          const validCaseId = await getOrCreateCase(caseName);
+
+          await db.insert(failedStatements).values({
+            caseId: validCaseId,
+            data: JSON.stringify(
+              error.response.data["pdf_paths_not_extracted"]
+            ),
+          });
+
+          // Track failed PDF paths
+          const failedPdfPaths =
+            error.response.data["pdf_paths_not_extracted"].paths || [];
+          failedFiles.push(...failedPdfPaths);
+        } catch (dbError) {
+          log.error("Failed to store failed statements:", dbError);
+        }
+      }
+
+      throw {
+        message: error.message || "Failed to generate report",
+        code: error.response?.status || 500,
+        details: error.response?.data || error.toString(),
+        timestamp: new Date().toISOString(),
+        failedFiles: failedFiles,
+      };
+    }
+  });
 }
 
 module.exports = { generateReportIpc };

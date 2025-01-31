@@ -998,7 +998,7 @@ def model_for_pdf(df):
         final_df = cleaning(new_df)
 
     print(final_df.head(10))
-    bal = check_balance_consistency(final_df)
+    # bal = check_balance_consistency(final_df)
     return final_df, lists
 
 def new_mode_for_pdf(df, lists):

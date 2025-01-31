@@ -216,8 +216,6 @@ const GenerateReportForm = ({
     </Select>
   );
 
-  console.log("Financial Year: ", financialYear);
-
   // Load the last case number from localStorage on component mount
   useEffect(() => {
     const savedLastNumber = localStorage.getItem("lastCaseNumber");
@@ -264,7 +262,7 @@ const GenerateReportForm = ({
         const increment = Math.max(1, Math.floor((90 - prev) / 10));
         return Math.min(90, prev + increment);
       });
-    }, 300);
+    }, 3000);
     return interval;
   };
 
@@ -274,7 +272,7 @@ const GenerateReportForm = ({
         id: toastId,
         title: "Generating Report",
         description: (
-          <div className="mt-2 w-full flex flex-col gap-2">
+          <div className="mt-2 w-full flex items-center gap-2">
             <div className="flex items-center gap-4">
               <CircularProgress value={progress} className="w-full" />
               {/* <span className="text-sm font-medium">{progress}%</span> */}
@@ -351,13 +349,12 @@ const GenerateReportForm = ({
     return `${day}-${month}-${year}`;
   };
 
-  console.log("Current Case Name: ", caseName);
+  // console.log("Current Case Name: ", caseName);
 
-  
   const validateForm = () => {
     // Check if any file is missing bank selection
-    const missingBanks = fileDetails.some(detail => !detail.bankName);
-    
+    const missingBanks = fileDetails.some((detail) => !detail.bankName);
+
     if (missingBanks) {
       toast({
         title: "Error",
@@ -375,7 +372,7 @@ const GenerateReportForm = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("Inside handleSubmit..", caseName);
-    
+
     if (!validateForm()) {
       return;
     }
@@ -421,9 +418,7 @@ const GenerateReportForm = ({
         progressIntervalRef,
         simulateProgress,
         convertDateFormat,
-        "CASE_1",
-        caseName,
-        financialYear
+        caseName
       );
     } catch (error) {
       console.error("Error checking report name:", error);

@@ -164,3 +164,4 @@ local_settings.py
 /venv/
 build/
 /backend/local_model/
+new_ouptut.json

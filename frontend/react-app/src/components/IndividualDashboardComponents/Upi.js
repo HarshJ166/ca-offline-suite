@@ -4,42 +4,27 @@ import BarLineChart from "../charts/BarLineChart";
 import DataTable from "./TableData";
 import { useParams } from "react-router-dom";
 
-const Cash = () => {
-  const [withdrawalData, setWithdrawalData] = useState([]);
-  const [depositData, setDepositData] = useState([]);
+const Upi = () => {
+  const [upiCrData, setUpiCrData] = useState([]);
+  const [upiDrData, setUpiDrData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const { caseId, individualId } = useParams();
-  console.log("in cash", caseId, individualId);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const withdrawalResponse =
-          await window.electron.getTransactionsByCashWithdrawal(
-            caseId,
-            parseInt(individualId)
-          );
-        const depositResponse =
-          await window.electron.getTransactionsByCashDeposit(
-            caseId,
-            parseInt(individualId)
-          );
+        const crResponse = await window.electron.getTransactionsByUpiCr(
+          caseId,
+          parseInt(individualId)
+        );
+        const drResponse = await window.electron.getTransactionsByUpiDr(
+          caseId,
+          parseInt(individualId)
+        );
 
-        // Transform withdrawal data
-        const transformedWithdrawalData = withdrawalResponse.map((item) => ({
-          date: new Date(item.date).toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          }),
-          Description: item.description,
-          Debit: Math.abs(item.amount) || 0, // Ensure positive value
-          Balance: item.balance || 0,
-        }));
-
-        // Transform deposit data
-        const transformedDepositData = depositResponse.map((item) => ({
+        // Transform UPI-Cr data
+        const transformedUpiCrData = crResponse.map((item) => ({
           date: new Date(item.date).toLocaleDateString("en-GB", {
             day: "2-digit",
             month: "2-digit",
@@ -50,21 +35,30 @@ const Cash = () => {
           Balance: item.balance || 0,
         }));
 
-        setWithdrawalData(transformedWithdrawalData);
-        setDepositData(transformedDepositData);
+        // Transform UPI-Dr data
+        const transformedUpiDrData = drResponse.map((item) => ({
+          date: new Date(item.date).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          }),
+          Description: item.description,
+          Debit: Math.abs(item.amount) || 0, // Ensure positive value
+          Balance: item.balance || 0,
+        }));
+
+        setUpiCrData(transformedUpiCrData);
+        setUpiDrData(transformedUpiDrData);
         setIsLoading(false);
       } catch (err) {
-        console.error("Error fetching cash transactions:", err);
-        setError("Failed to fetch transaction data");
+        console.error("Error fetching UPI transactions:", err);
+        setError("Failed to fetch UPI transaction data");
         setIsLoading(false);
       }
     };
 
     fetchData();
   }, []);
-
-  console.log("Withdrawal data:", withdrawalData);
-  console.log("Deposit data:", depositData);
 
   const chartConfig = {
     yAxis: {
@@ -106,14 +100,14 @@ const Cash = () => {
 
   return (
     <div className="rounded-xl shadow-sm m-8 mt-2 space-y-6">
-      <Tabs defaultValue="withdrawal">
+      <Tabs defaultValue="upi-cr">
         <TabsList className="grid w-[500px] grid-cols-2 pb-10">
-          <TabsTrigger value="withdrawal">Withdrawal</TabsTrigger>
-          <TabsTrigger value="deposit">Deposit</TabsTrigger>
+          <TabsTrigger value="upi-cr">UPI-Cr</TabsTrigger>
+          <TabsTrigger value="upi-dr">UPI-Dr</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="withdrawal">
-          {withdrawalData.length === 0 ? (
+        <TabsContent value="upi-cr">
+          {upiCrData.length === 0 ? (
             <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
               <p className="text-gray-800 text-center mt-3 font-medium text-lg">
                 No Data Available
@@ -123,24 +117,21 @@ const Cash = () => {
             <>
               <div className="mb-6 w-full h-[60vh]">
                 <BarLineChart
-                  data={withdrawalData}
+                  data={upiCrData}
                   xAxisKey="date"
                   columnTypes={columnTypes}
                   config={chartConfig}
                 />
               </div>
               <div>
-                <DataTable
-                  data={withdrawalData}
-                  title="Cash Widthdrawal Table"
-                />
+                <DataTable data={upiCrData} title="UPI-Cr Table" />
               </div>
             </>
           )}
         </TabsContent>
 
-        <TabsContent value="deposit">
-          {depositData.length === 0 ? (
+        <TabsContent value="upi-dr">
+          {upiDrData.length === 0 ? (
             <div className="bg-gray-100 p-4 rounded-md w-full h-[10vh]">
               <p className="text-gray-800 text-center mt-3 font-medium text-lg">
                 No Data Available
@@ -150,14 +141,14 @@ const Cash = () => {
             <>
               <div className="mb-6 w-full h-[60vh]">
                 <BarLineChart
-                  data={depositData}
+                  data={upiDrData}
                   xAxisKey="date"
                   columnTypes={columnTypes}
                   config={chartConfig}
                 />
               </div>
               <div>
-                <DataTable data={depositData} title="Cash Deposit Table" />
+                <DataTable data={upiDrData} title="UPI-Dr Table" />
               </div>
             </>
           )}
@@ -167,4 +158,4 @@ const Cash = () => {
   );
 };
 
-export default Cash;
+export default Upi;

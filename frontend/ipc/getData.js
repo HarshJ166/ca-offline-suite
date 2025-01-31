@@ -21,18 +21,20 @@ function getdata() {
     }
   });
 
-  ipcMain.handle("get-Customer-Name", async (event, caseId) => {
+  ipcMain.handle("get-Customer-Name", async (event, individualId) => {
     try {
-      const customerName = await db
+      const result = await db
         .select({
           customerName: statements.customerName,
         })
         .from(statements)
-        .where(eq(statements.caseId, caseId));
-      return customerName.map((entry) => entry.customerName);
+        .where(eq(statements.id, individualId))
+        .get(); // Use get() to fetch a single row instead of all matches
+
+      return result?.customerName || null; // Return just the name or null if not found
     } catch (error) {
-      log.error("Failed to get customer names:", error);
-      return [];
+      log.error("Failed to get customer name:", error);
+      return null;
     }
   });
 

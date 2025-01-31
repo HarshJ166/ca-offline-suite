@@ -42,6 +42,7 @@ const IndividualTable = ({ caseId }) => {
     const fetchStatements = async () => {
       setIsLoading(true);
       try {
+        console.log("Fetching statements for caseId:", caseId);
         // Call the IPC handler to get statements
         const result = await window.electron.getStatements(caseId);
         console.log("Statements fetched successfully:", result);
@@ -174,7 +175,7 @@ const IndividualTable = ({ caseId }) => {
             <TableHeader>
               <TableRow>
                 <TableHead>No.</TableHead>
-                <TableHead>File Location</TableHead>
+                <TableHead>File Name</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Account Number</TableHead>
               </TableRow>
@@ -201,11 +202,8 @@ const IndividualTable = ({ caseId }) => {
                   >
                     <TableCell>{startIndex + index + 1}</TableCell>
                     <TableCell>
-                      <div
-                        className="truncate max-w-96"
-                        title={item.filePath}
-                      >
-                        {item.filePath}
+                      <div className="truncate max-w-96" title={item.filePath}>
+                        {item.filePath.split("\\").pop()}
                       </div>
                     </TableCell>
                     <TableCell>{item.customerName}</TableCell>

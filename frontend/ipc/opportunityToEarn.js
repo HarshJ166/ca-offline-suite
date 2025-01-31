@@ -2,19 +2,32 @@ const { ipcMain } = require("electron");
 const log = require("electron-log");
 const db = require("../db/db");
 const { opportunityToEarn } = require("../db/schema/OpportunityToEarn");
-const { eq, and, inArray } = require("drizzle-orm"); // Add this import
+const { eq } = require("drizzle-orm");
+const { statements } = require("../db/schema/Statement");
+const { cases } = require("../db/schema/Cases");
 
 function registerOpportunityToEarnIpc() {
-  ipcMain.handle("getOpportunityToEarn", async (event, caseId) => {
+  ipcMain.handle("getOpportunityToEarn", async () => {
     try {
-      const opportunityToEarnData = await db
-        .select()
+      const data = await db
+        .select({
+          caseId: opportunityToEarn.caseId,
+          homeLoanValue: opportunityToEarn.homeLoanValue,
+          loanAgainstProperty: opportunityToEarn.loanAgainstProperty,
+          businessLoan: opportunityToEarn.businessLoan,
+          termPlan: opportunityToEarn.termPlan,
+          generalInsurance: opportunityToEarn.generalInsurance,
+          caseName: cases.name,
+          statementCustomerName: statements.customerName,
+        })
         .from(opportunityToEarn)
-        .where(eq(opportunityToEarn.caseId, caseId));
-      return opportunityToEarnData;
+        .leftJoin(cases, eq(cases.id, opportunityToEarn.caseId))
+        .leftJoin(statements, eq(statements.caseId, opportunityToEarn.caseId));
+
+      return { success: true, data };
     } catch (error) {
-      log.error(error);
-      return [];
+      console.error("Error fetching opportunity data:", error);
+      return { success: false, message: error.message };
     }
   });
 }

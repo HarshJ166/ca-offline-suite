@@ -5,7 +5,8 @@ const log = require("electron-log");
 // Expose a secure API for opening files to the renderer process
 contextBridge.exposeInMainWorld("electron", {
   openFile: (filePath) => ipcRenderer.invoke("open-file", filePath),
-  fetchPdfContent: (filePath) => ipcRenderer.invoke("fetch-pdf-content", filePath),
+  fetchPdfContent: (filePath) =>
+    ipcRenderer.invoke("fetch-pdf-content", filePath),
 
   getReportsProcessed: () => ipcRenderer.invoke("get-reports-processed"),
   getStatementsProcessed: () => ipcRenderer.invoke("get-statements-processed"),
@@ -31,6 +32,12 @@ contextBridge.exposeInMainWorld("electron", {
 
   getTransactionsByCashDeposit: (caseId, individualId) =>
     ipcRenderer.invoke("get-transactions-by-cashdeposit", caseId, individualId),
+
+  getTransactionsByUpiCr: (caseId, individualId) =>
+    ipcRenderer.invoke("get-transactions-by-upi-cr", caseId, individualId),
+
+  getTransactionsByUpiDr: (caseId, individualId) =>
+    ipcRenderer.invoke("get-transactions-by-upi-dr", caseId, individualId),
 
   getTransactionsBySuspenseCredit: (caseId, individualId) =>
     ipcRenderer.invoke(
@@ -67,8 +74,7 @@ contextBridge.exposeInMainWorld("electron", {
   generateReportIpc: (result, reportName) =>
     ipcRenderer.invoke("generate-report", result, reportName),
 
-  getOpportunityToEarn: (caseId) =>
-    ipcRenderer.invoke("getOpportunityToEarn", caseId),
+  getOpportunityToEarn: () => ipcRenderer.invoke("getOpportunityToEarn"),
 
   addPdfIpc: (data, caseId) => ipcRenderer.invoke("add-pdf", data, caseId),
 
@@ -76,7 +82,8 @@ contextBridge.exposeInMainWorld("electron", {
 
   getReportName: (caseId) => ipcRenderer.invoke("get-Report-Name", caseId),
 
-  getCustomerName: (caseId) => ipcRenderer.invoke("get-Customer-Name", caseId),
+  getCustomerName: (individualId) =>
+    ipcRenderer.invoke("get-Customer-Name", individualId),
 
   getReportNameExists: (reportName) =>
     ipcRenderer.invoke("check-Report-Name-Exists", reportName),
@@ -110,8 +117,9 @@ contextBridge.exposeInMainWorld("electron", {
   getFailedStatements: (referenceId) =>
     ipcRenderer.invoke("get-failed-statements", referenceId),
 
-  onLicenseExpired: (callback) => ipcRenderer.on('navigateToLogin', callback),
-  removeLicenseExpiredListener: () => ipcRenderer.removeAllListeners('navigateToLogin'),
+  onLicenseExpired: (callback) => ipcRenderer.on("navigateToLogin", callback),
+  removeLicenseExpiredListener: () =>
+    ipcRenderer.removeAllListeners("navigateToLogin"),
   editPdf: (result, reportName) =>
     ipcRenderer.invoke("edit-pdf", result, reportName),
   // // Add auto-update related methods
