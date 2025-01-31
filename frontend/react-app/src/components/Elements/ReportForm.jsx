@@ -216,7 +216,6 @@ const GenerateReportForm = ({
     </Select>
   );
 
-  console.log("Financial Year: ", financialYear);
 
   // Load the last case number from localStorage on component mount
   useEffect(() => {
@@ -351,7 +350,7 @@ const GenerateReportForm = ({
     return `${day}-${month}-${year}`;
   };
 
-  console.log("Current Case Name: ", caseName);
+  // console.log("Current Case Name: ", caseName);
 
   
   const validateForm = () => {
@@ -421,7 +420,6 @@ const GenerateReportForm = ({
         progressIntervalRef,
         simulateProgress,
         convertDateFormat,
-        caseIdRef.current.value,
         caseName,
       );
     } catch (error) {

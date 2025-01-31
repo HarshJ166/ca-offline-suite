@@ -7,7 +7,6 @@ const CategoryEditModal = ({ open, onOpenChange, caseId }) => {
   const [transactionData, setTransactionData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  console.log("djksf : ", caseId);
 
   // Sample entity options
   const categoryOptionsfixed = [
@@ -100,7 +99,6 @@ const CategoryEditModal = ({ open, onOpenChange, caseId }) => {
     }
   }, [caseId]); // Add caseId to dependency array
 
-  console.log("transactionDatacs", transactionData);
 
   // process epoch date to human readable date in format dd-mm-yyyy
   //   const processDate = (epochDate) => {

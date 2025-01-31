@@ -46,7 +46,7 @@ import { CircularProgress } from "../ui/circularprogress";
 
 import PDFMarkerModal from "./PdfMarkerModal";
 
-const RecentReports = ({ key }) => {
+const RecentReports = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -58,13 +58,12 @@ const RecentReports = ({ key }) => {
   const [currentCaseName, setCurrentCaseName] = useState("");
   const [currentCaseId, setCurrentCaseId] = useState("");
   const [recentReports, setRecentReports] = useState([]);
-  const [failedDatasOfCurrentReport, setFailedDatasOfCurrentReport] =
-    useState(null);
+  const [failedDatasOfCurrentReport, setFailedDatasOfCurrentReport] = useState([]);
   const [selectedFailedFile, setSelectedFailedFile] = useState(null);
   const [isMarkerModalOpen, setIsMarkerModalOpen] = useState(false);
   const [pdfEditLoading, setPdfEditLoading] = useState(false);
 
-    const [reportToDelete, setReportToDelete] = useState(null);
+  const [reportToDelete, setReportToDelete] = useState(null);
 
   const handleSubmitEditPdf = async () => {
     setPdfEditLoading(true)
@@ -137,92 +136,10 @@ const RecentReports = ({ key }) => {
 
     fetchReports();
   }, []);
-  const handleDetails = async (reportId, reportName) => {
-    setIsLoading(true);
-    setCurrentCaseName(reportName);
 
-    try {
-      const failedStatements = await window.electron.getFailedStatements(
-        reportId
-      );
+  
 
-      console.log("failedStatements", failedStatements);
-
-      // Process failed statements with extensive error checking
-      const processedFailedData = failedStatements
-        .map((item) => {
-          if (!item || !item.data) {
-            return null;
-          }
-
-          try {
-            const parsedData = JSON.parse(item.data);
-            console.log("parsedData", parsedData);
-            return {
-              ...item,
-              parsedContent: {
-                paths: Array.isArray(parsedData.paths) ? parsedData.paths : [],
-
-                passwords: Array.isArray(parsedData.passwords)
-                  ? parsedData.passwords
-                  : [],
-                startDates: Array.isArray(parsedData.start_dates)
-                  ? parsedData.start_dates
-                  : [],
-                
-                bankName: Array.isArray(parsedData.bank_names)? parsedData.bank_names : [],
-                endDates: Array.isArray(parsedData.end_dates)
-                  ? parsedData.end_dates
-                  : [],
-                columns: Array.isArray(parsedData.respective_list_of_columns)
-                  ? parsedData.respective_list_of_columns
-                  : [],
-                  respectiveReasonsForError: Array.isArray(parsedData.respective_reasons_for_error) ? parsedData.respective_reasons_for_error : [],
-              },
-            };
-          } catch (parseError) {
-            console.error("Failed to parse data:", parseError);
-            return null;
-          }
-        })
-        .filter((item) => item !== null); // Remove null entries
-      
-        console.log({processedFailedData});
-      const tempFailedDataOfReport =[]
-      for(let i=0; i<processedFailedData[0].parsedContent.paths.length; i++) {
-        tempFailedDataOfReport.push({
-          caseId: processedFailedData[0].caseId,
-          id: processedFailedData[0].id,
-          columns:processedFailedData[0].parsedContent.columns[i],
-          endDate:processedFailedData[0].parsedContent.endDates[i],
-          bankName:processedFailedData[0].parsedContent.bankName[i],
-          startDate:processedFailedData[0].parsedContent.startDates[i],
-          path:processedFailedData[0].parsedContent.paths[i],
-          password:processedFailedData[0].parsedContent.passwords[i],
-          resolved: false,
-          pdfName: processedFailedData[0].parsedContent.paths[i].split('\\').pop(),
-        })
-      }
-
-      console.log("tempFailedDataOfReport", tempFailedDataOfReport);
-
-      // remove duplicate entries using pdfName
-      const uniqueFailedDataOfReport = tempFailedDataOfReport.filter(
-        (thing, index, self) =>
-          index === self.findIndex((t) => t.pdfName === thing.pdfName)
-      );
-
-      setFailedDatasOfCurrentReport(uniqueFailedDataOfReport);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: `Failed to load details: ${error.message}`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  
 
   // Filter reports based on search query
   const filteredReports = recentReports.filter(
@@ -461,6 +378,98 @@ const RecentReports = ({ key }) => {
     console.log("recent reports failed pdf handleSave data:", data);
     setIsMarkerModalOpen(false);
   };
+
+
+  
+  const handleDetails = async (reportId, reportName) => {
+    setIsLoading(true);
+    setCurrentCaseName(reportName);
+
+    console.log("Opening recitfy modal for caseId:", reportId,reportName);
+
+    try {
+      const failedStatements = await window.electron.getFailedStatements(
+        reportId
+      );
+
+      console.log("failedStatements", failedStatements);
+
+      // Process failed statements with extensive error checking
+      const processedFailedData = failedStatements
+        .map((item) => {
+          if (!item || !item.data) {
+            return null;
+          }
+
+          try {
+            const parsedData = JSON.parse(item.data);
+            console.log("parsedData", parsedData);
+            return {
+              ...item,
+              parsedContent: {
+                paths: Array.isArray(parsedData.paths) ? parsedData.paths : [],
+
+                passwords: Array.isArray(parsedData.passwords)
+                  ? parsedData.passwords
+                  : [],
+                startDates: Array.isArray(parsedData.start_dates)
+                  ? parsedData.start_dates
+                  : [],
+                
+                bankName: Array.isArray(parsedData.bank_names)? parsedData.bank_names : [],
+                endDates: Array.isArray(parsedData.end_dates)
+                  ? parsedData.end_dates
+                  : [],
+                columns: Array.isArray(parsedData.respective_list_of_columns)
+                  ? parsedData.respective_list_of_columns
+                  : [],
+                  respectiveReasonsForError: Array.isArray(parsedData.respective_reasons_for_error) ? parsedData.respective_reasons_for_error : [],
+              },
+            };
+          } catch (parseError) {
+            console.error("Failed to parse data:", parseError);
+            return null;
+          }
+        })
+        .filter((item) => item !== null); // Remove null entries
+      
+        console.log({processedFailedData});
+      const tempFailedDataOfReport =[]
+      for(let i=0; i<processedFailedData[0].parsedContent.paths.length; i++) {
+        tempFailedDataOfReport.push({
+          caseId: processedFailedData[0].caseId,
+          id: processedFailedData[0].id,
+          columns:processedFailedData[0].parsedContent.columns[i],
+          endDate:processedFailedData[0].parsedContent.endDates[i],
+          bankName:processedFailedData[0].parsedContent.bankName[i],
+          startDate:processedFailedData[0].parsedContent.startDates[i],
+          path:processedFailedData[0].parsedContent.paths[i],
+          password:processedFailedData[0].parsedContent.passwords[i],
+          resolved: false,
+          pdfName: processedFailedData[0].parsedContent.paths[i].split('\\').pop(),
+        })
+      }
+
+      console.log("tempFailedDataOfReport", tempFailedDataOfReport);
+
+      // remove duplicate entries using pdfName
+      const uniqueFailedDataOfReport = tempFailedDataOfReport.filter(
+        (thing, index, self) =>
+          index === self.findIndex((t) => t.pdfName === thing.pdfName)
+      );
+
+      setFailedDatasOfCurrentReport(uniqueFailedDataOfReport);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to load details: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   return (
     <Card>

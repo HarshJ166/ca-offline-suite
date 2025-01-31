@@ -17,8 +17,12 @@ export default function GenerateReport() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false); // State to control Dialog visibility
   const [failedStatements, setFailedStatements] = useState([]); // State to store failed statements
-  const [caseId, setCaseId] = useState(null); // State to store caseId
+  const [currentCaseId, setCurrentCaseId] = useState(null); // State to store caseId
+  const [showAnalsisButton, setShowAnalysisButton] = useState(false); // State to show Analysis button
+  const [showRectifyButton, setShowRectifyButton] = useState(false); // State to show Rectify button
+  const [currentCaseName, setCurrentCaseName] = useState(""); // State to store current case name
   const navigate = useNavigate(); // Hook for navigation
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleSubmit = async (
     setProgress,
@@ -33,7 +37,6 @@ export default function GenerateReport() {
     progressIntervalRef,
     simulateProgress,
     convertDateFormat,
-    caseId,
     caseName
   ) => {
     if (caseName === "") {
@@ -45,6 +48,7 @@ export default function GenerateReport() {
       });
       return;
     }
+    setCurrentCaseName(caseName);
 
     if (selectedFiles.length === 0) {
       toast({
@@ -60,7 +64,7 @@ export default function GenerateReport() {
     const newToastId = toast({
       title: "Initializing Report Generation",
       description: (
-        <div className="mt-2 w-full flex flex-col gap-2">
+        <div className="mt-2 w-full flex items-center gap-2">
           <div className="flex items-center gap-4">
             <CircularProgress className="w-full" />
           </div>
@@ -92,7 +96,7 @@ export default function GenerateReport() {
             passwords: detail.password || "",
             start_date: convertDateFormat(detail.start_date), // Convert date format
             end_date: convertDateFormat(detail.end_date), // Convert date format
-            ca_id: caseId,
+            ca_id: currentCaseId,
           };
         })
       );
@@ -105,7 +109,9 @@ export default function GenerateReport() {
         },
         caseName
       );
-      // console.log("result", result.ca_id);
+
+      console.log("Report generation result:", result.data);
+      setCurrentCaseId(result.data.caseId); // Store caseId
 
       if (result.success) {
         clearInterval(progressIntervalRef.current);
@@ -116,9 +122,19 @@ export default function GenerateReport() {
           description: "Report generated successfully!",
           duration: 3000,
         });
+        if(result.data.failedFiles.length>0){
+          setShowRectifyButton(true);
+          const failedFiles = result.data.failedFiles.map((file_path)=>{
+            return file_path.split('\\').pop();
+          })
+          setFailedStatements(failedFiles || []); // Store failed
+        }
+        
+        if(result.data.totalTransactions)
+          setShowAnalysisButton(true);
+        
+        // setFailedStatements(result.pdf_paths_not_extracted || []); // Store failed
 
-        setFailedStatements(result.pdf_paths_not_extracted || []); // Store failed
-        setCaseId(result.caseId); // Store caseId
         setDialogOpen(true); // Open the Dialog
 
         setSelectedFiles([]);
@@ -136,7 +152,7 @@ export default function GenerateReport() {
         throw new Error(errorMessage);
       }
     } catch (error) {
-      console.error("Report generation failed:", error.message);
+      console.log("Report generation failed:", {error:error.stack});
 
       if (typeof error === "object" && error !== null) {
         console.error("Detailed error:", JSON.stringify(error, null, 2));
@@ -153,6 +169,7 @@ export default function GenerateReport() {
       clearInterval(progressIntervalRef.current);
       toast.dismiss(newToastId);
       setProgress(0);
+      setDialogOpen(true);
       toast({
         title: "Error",
         description: "Failed to generate report",
@@ -166,11 +183,15 @@ export default function GenerateReport() {
       progressIntervalRef.current = null;
     }
   };
-  const viewAnalysis = (caseId) => {
+  const viewAnalysis = () => {
     console.log("View Analysis clicked");
-    navigate(`/case-dashboard/${caseId}/defaultTab`);
+    navigate(`/case-dashboard/${currentCaseId}/defaultTab`);
   };
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const handleRectify = () => {
+    console.log("Rectify clicked ", currentCaseId, currentCaseName);
+  }
+
 
   const notifications = [
     { id: 1, message: "You have a new message." },
@@ -182,6 +203,8 @@ export default function GenerateReport() {
   const refreshPage = useCallback(() => {
     setRefreshTrigger((prev) => prev + 1);
   }, []);
+
+
 
   return (
     <div className="p-8 pt-0 space-y-8 bg-white dark:bg-black min-h-screen">
@@ -228,30 +251,38 @@ export default function GenerateReport() {
         />
       </div>
 
-      <RecentReports key={refreshTrigger} />
+      <RecentReports/>
 
       {/* Dialog for successful report generation */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Report Generated Successfully!</DialogTitle>
-            <DialogDescription className="flex items-center gap-x-4">
+            <DialogDescription className="flex items-end gap-x-4 pt-4 ">
+              {console.log("failedStatements from alert box ", failedStatements)}
               {failedStatements.length === 0 ? (
+                <div className="flex items-center gap-x-4">
                 <CheckCircle className="text-green-500 w-6 h-6 mt-2" />
+                <p>
+                Your report has been generated successfully.
+              </p>
+                </div>
               ) : failedStatements.length > 0 ? (
+                <div className="flex items-end gap-x-4">
+
                 <AlertTriangle className="text-yellow-500 w-6 h-6 mt-2" />
+                <p>
+                Below Statements had some errors.
+              </p>
+                </div >
               ) : (
                 <XCircle className="text-red-500 w-6 h-6 mt-2" />
               )}
-              <p>
-              Your report has been generated successfully.
-
-              </p>
+            
             </DialogDescription>
           </DialogHeader>
           {failedStatements.length > 0 && (
             <div className="mb-4">
-              <h3 className="font-bold">Failed Statements:</h3>
               <ul className="list-disc pl-5">
                 {failedStatements.map((statement, index) => (
                   <li key={index}>{statement}</li>
@@ -259,9 +290,16 @@ export default function GenerateReport() {
               </ul>
             </div>
           )}
-          <Button onClick={() => viewAnalysis(caseId)} className="w-full">
+        <div className="flex gap-4">
+         {showAnalsisButton&& <Button onClick={() => viewAnalysis()} className="flex-1">
             View Analysis
-          </Button>
+          </Button>}
+
+          {showRectifyButton&& <Button onClick={handleRectify} className="flex-1">
+            Rectify Now
+          </Button>}
+          </div>
+
         </DialogContent>
       </Dialog>
     </div>

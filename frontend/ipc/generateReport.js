@@ -14,6 +14,9 @@ const { eq, and, inArray } = require("drizzle-orm");
 const { opportunityToEarn } = require("../db/schema/OpportunityToEarn");
 
 const sanitizeJSONString = (jsonString) => {
+  if(!jsonString) return jsonString;
+  if(typeof jsonString !== "string") return jsonString;
+
   return jsonString
     .replace(/: *NaN/g, ": null")
     .replace(/: *undefined/g, ": null")
@@ -606,6 +609,11 @@ function generateReportIpc(tmpdir_path) {
   ipcMain.handle("generate-report", async (event, receivedResult, caseName) => {
     log.info({event,receivedResult,caseName})
     let caseId = null;
+    // Track files status
+    const successfulFiles = new Set();
+    const failedFiles = new Set();
+    const allProcessedFiles = new Set();
+    const uploadedFiles = new Map(); // Track original filenames and their temp paths
     try {
       log.info("IPC handler invoked for generate-report", caseName);
       
@@ -617,11 +625,7 @@ function generateReportIpc(tmpdir_path) {
         throw new Error("Invalid or empty files array received");
       }
   
-      // Track files status
-      const successfulFiles = new Set();
-      const failedFiles = new Set();
-      const allProcessedFiles = new Set();
-      const uploadedFiles = new Map(); // Track original filenames and their temp paths
+      
   
       // First, save all uploaded files and track them
       const fileDetails = receivedResult.files.map((fileDetail, index) => {
@@ -630,7 +634,8 @@ function generateReportIpc(tmpdir_path) {
         }
   
         const originalFilename = fileDetail.pdf_paths;
-        const tempFilename = `${Date.now()}-${originalFilename}`;
+        // add a random string at the end to the filename to prevent overwriting
+        const tempFilename = `${Date.now()}-${path.basename(originalFilename)}`;
         const filePath = path.join(tempDir, tempFilename);
         
         allProcessedFiles.add(filePath);
@@ -700,6 +705,27 @@ function generateReportIpc(tmpdir_path) {
   
       // Process transactions
       const parsedData = JSON.parse(sanitizeJSONString(response.data.data));
+      log.info({parsedDataFromGenerateReport:parsedData});
+      
+      if( parsedData == null) {
+        await updateCaseStatus(caseId, "Failed");
+        const failedPDFsDir = path.join(tempDir, 'failed_pdfs', caseName);
+        fs.mkdirSync(failedPDFsDir, { recursive: true });
+        return {
+          success: true,
+          data: {
+            caseId: caseId,
+            processed: null,
+            totalTransactions: 0,
+            eodProcessed: false,
+            summaryProcessed: false,
+            failedStatements: response.data["pdf_paths_not_extracted"] || null,
+            failedFiles: Array.from(failedFiles),
+            successfulFiles: Array.from(successfulFiles),
+            nerResults: response.data?.ner_results || { Name: [], "Acc Number": [] },
+          },
+        };
+      }
       const transactions = (parsedData.Transactions || []).filter((transaction) => {
         if (typeof transaction.Credit === "number" && isNaN(transaction.Credit)) {
           transaction.Credit = null;
@@ -811,6 +837,7 @@ function generateReportIpc(tmpdir_path) {
       return {
         success: true,
         data: {
+          caseId: caseId,
           processed: processedData,
           totalTransactions: processedData.reduce(
             (sum, d) => sum + d.transactionCount,
@@ -1031,7 +1058,7 @@ function generateReportIpc(tmpdir_path) {
       try {
         await processOpportunityToEarnData(
           parsedData["Opportunity to Earn"] || [],
-          payload.ca_id
+          caseName
         );
       } catch (error) {
         log.error("Error processing opportunity to earn data:", error);
