@@ -3359,8 +3359,7 @@ def another_method(df):
     NEW_DF.update(Debtor_list)
     # NEW_DF.loc[(NEW_DF["Description"].str.contains("UPI", case=False)) & (NEW_DF["Debit"] > 0),"Category"] = "UPI-Dr"
     # NEW_DF.loc[(NEW_DF["Description"].str.contains("UPI", case=False)) & (NEW_DF["Credit"] > 0),"Category",] = "UPI-Cr"
-    print("another_method")
-    print(NEW_DF)
+    
     return NEW_DF
 
 

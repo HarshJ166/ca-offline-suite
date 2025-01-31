@@ -732,7 +732,7 @@ function generateReportIpc(tmpdir_path) {
 
       // Handle failed extractions from API response
       if (response.data?.["pdf_paths_not_extracted"]) {
-        const failedPdfPaths = response.data["pdf_paths_not_extracted"].paths || [];
+        // const failedPdfPaths = response.data["pdf_paths_not_extracted"].paths || [];
 
         const failedPdfPaths =
           response.data["pdf_paths_not_extracted"].paths || [];
@@ -746,8 +746,8 @@ function generateReportIpc(tmpdir_path) {
         // Mark files as failed based on API response
         for (const failedPath of failedPdfPaths) {
           // Find the corresponding full path in our processed files
-          const fullPath = fileDetails.find(detail =>
-            detail.pdf_paths.includes(path.basename(failedPath)))?.pdf_paths;
+          // const fullPath = fileDetails.find(detail =>
+          // detail.pdf_paths.includes(path.basename(failedPath)))?.pdf_paths;
 
           const fullPath = fileDetails.find((detail) =>
             detail.pdf_paths.includes(path.basename(failedPath))
@@ -764,47 +764,47 @@ function generateReportIpc(tmpdir_path) {
 
       // Process transactions
       const parsedData = JSON.parse(sanitizeJSONString(response.data.data));
-      const transactions = (parsedData.Transactions || []).filter((transaction) => {
-        if (typeof transaction.Credit === "number" && isNaN(transaction.Credit)) {
-          transaction.Credit = null;
-        }
-        if (typeof transaction.Debit === "number" && isNaN(transaction.Debit)) {
-          transaction.Debit = null;
-        }
-        if (typeof transaction.Balance === "number" && isNaN(transaction.Balance)) {
-          transaction.Balance = 0;
-        }
+      // const transactions = (parsedData.Transactions || []).filter((transaction) => {
+      //   if (typeof transaction.Credit === "number" && isNaN(transaction.Credit)) {
+      //     transaction.Credit = null;
+      //   }
+      //   if (typeof transaction.Debit === "number" && isNaN(transaction.Debit)) {
+      //     transaction.Debit = null;
+      //   }
+      //   if (typeof transaction.Balance === "number" && isNaN(transaction.Balance)) {
+      //     transaction.Balance = 0;
+      //   }
 
-        return (
-          (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
-          (transaction.Debit !== null && !isNaN(transaction.Debit))
-        );
-      });
+      //   return (
+      //     (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
+      //     (transaction.Debit !== null && !isNaN(transaction.Debit))
+      //   );
+      // });
 
-      log.info({ parsedDataFromGenerateReport: parsedData });
+      // log.info({ parsedDataFromGenerateReport: parsedData });
 
-      if (parsedData == null) {
-        await updateCaseStatus(caseId, "Failed");
-        const failedPDFsDir = path.join(tempDir, "failed_pdfs", caseName);
-        fs.mkdirSync(failedPDFsDir, { recursive: true });
-        return {
-          success: true,
-          data: {
-            caseId: caseId,
-            processed: null,
-            totalTransactions: 0,
-            eodProcessed: false,
-            summaryProcessed: false,
-            failedStatements: response.data["pdf_paths_not_extracted"] || null,
-            failedFiles: Array.from(failedFiles),
-            successfulFiles: Array.from(successfulFiles),
-            nerResults: response.data?.ner_results || {
-              Name: [],
-              "Acc Number": [],
-            },
-          },
-        };
-      }
+      // if (parsedData == null) {
+      //   await updateCaseStatus(caseId, "Failed");
+      //   const failedPDFsDir = path.join(tempDir, "failed_pdfs", caseName);
+      //   fs.mkdirSync(failedPDFsDir, { recursive: true });
+      //   return {
+      //     success: true,
+      //     data: {
+      //       caseId: caseId,
+      //       processed: null,
+      //       totalTransactions: 0,
+      //       eodProcessed: false,
+      //       summaryProcessed: false,
+      //       failedStatements: response.data["pdf_paths_not_extracted"] || null,
+      //       failedFiles: Array.from(failedFiles),
+      //       successfulFiles: Array.from(successfulFiles),
+      //       nerResults: response.data?.ner_results || {
+      //         Name: [],
+      //         "Acc Number": [],
+      //       },
+      //     },
+      //   };
+      // }
       const transactions = (parsedData.Transactions || []).filter(
         (transaction) => {
           if (
