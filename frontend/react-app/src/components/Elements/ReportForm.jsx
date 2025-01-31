@@ -264,7 +264,7 @@ const GenerateReportForm = ({
         const increment = Math.max(1, Math.floor((90 - prev) / 10));
         return Math.min(90, prev + increment);
       });
-    }, 300);
+    }, 3000);
     return interval;
   };
 
@@ -274,7 +274,7 @@ const GenerateReportForm = ({
         id: toastId,
         title: "Generating Report",
         description: (
-          <div className="mt-2 w-full flex flex-col gap-2">
+          <div className="mt-2 w-full flex items-center gap-2">
             <div className="flex items-center gap-4">
               <CircularProgress value={progress} className="w-full" />
               {/* <span className="text-sm font-medium">{progress}%</span> */}
@@ -421,9 +421,8 @@ const GenerateReportForm = ({
         progressIntervalRef,
         simulateProgress,
         convertDateFormat,
-        "CASE_1",
+        caseIdRef.current.value,
         caseName,
-        financialYear
       );
     } catch (error) {
       console.error("Error checking report name:", error);
