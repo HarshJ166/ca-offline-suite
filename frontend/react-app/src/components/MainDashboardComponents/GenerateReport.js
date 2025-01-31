@@ -63,8 +63,6 @@ export default function GenerateReport() {
         <div className="mt-2 w-full flex flex-col gap-2">
           <div className="flex items-center gap-4">
             <CircularProgress className="w-full" />
-            {/* <span className="text-sm font-medium">0%</span> */}
-            // <CircularProgress value={0} className="w-full" />
           </div>
           <p className="text-sm text-gray-500">Preparing to process files...</p>
         </div>
@@ -168,7 +166,7 @@ export default function GenerateReport() {
   };
   const viewAnalysis = (caseId) => {
     console.log("View Analysis clicked");
-    navigate(`/case-dashboard/${caseId}/:defaultTab`);
+    navigate(`/case-dashboard/${caseId}/defaultTab`);
   };
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -235,8 +233,7 @@ export default function GenerateReport() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Report Generated Successfully!</DialogTitle>
-            <DialogDescription>
-              Your report has been generated successfully.
+            <DialogDescription className="flex items-center gap-x-4">
               {failedStatements.length === 0 ? (
                 <CheckCircle className="text-green-500 w-6 h-6 mt-2" />
               ) : failedStatements.length > 0 ? (
@@ -244,6 +241,10 @@ export default function GenerateReport() {
               ) : (
                 <XCircle className="text-red-500 w-6 h-6 mt-2" />
               )}
+              <p>
+              Your report has been generated successfully.
+
+              </p>
             </DialogDescription>
           </DialogHeader>
           {failedStatements.length > 0 && (
