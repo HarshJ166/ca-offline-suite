@@ -14,7 +14,7 @@ from backend.utils import get_saved_pdf_dir
 TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
 
 # If you have other custom imports:
-from backend.tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf,start_extraction_edit_pdf
+from backend.tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf, start_extraction_edit_pdf, refresh_category_all_sheets
 from backend.account_number_ifsc_extraction import extract_accno_ifsc
 from backend.pdf_to_name import extract_entities
 
@@ -41,6 +41,11 @@ class EditPdfRequest(BaseModel):
     aiyaz_array_of_array: List[List[int]]
     whole_transaction_sheet: bool
     ca_id: str
+
+class EditCategoryRequest(BaseModel):
+    transaction_data: List[dict]
+    new_categories: List[dict]
+    eod_data: List[dict]
 
 class DummyRequest(BaseModel):
     data: str
@@ -219,14 +224,22 @@ async def edit_category(request: EditCategoryRequest):
     try:
         transaction_data = request.transaction_data
         new_categories = request.new_categories
+        eod_data = request.eod_data
         logger.info(f"Received request with new categories: {new_categories}")
         logger.info(f"Received request with transaction data: {transaction_data[0]}")
+        logger.info(f"Received request with eod data: {eod_data}")
 
         # convert transaction_data to df
         transaction_df = pd.DataFrame(transaction_data)
-        print(transaction_df.head())
+        transaction_df["Value Date"] = pd.to_datetime(transaction_df["Value Date"], format="%d-%m-%Y")
+        eod_df = pd.DataFrame(eod_data)
+        print("Transactions : ", transaction_df.head())
+        # print(eod_df.head())
 
-        refresh_category_all_sheets(transaction_df, )
+        data = refresh_category_all_sheets(transaction_df, eod_df, new_categories)
+        print(data)
+
+        return data
 
     except Exception as e:
         logger.error(f"Error processing bank statements: {str(e)}")
@@ -253,4 +266,4 @@ if __name__ == "__main__":
     # IMPORTANT: reload=False for production usage
     # import time
     # time.sleep(8)
-    uvicorn.run("backend.main:app", host=host, port=port, reload=True)
+    uvicorn.run("backend.main:app", host=host, port=port, reload=False)
