@@ -301,6 +301,90 @@ function registerIndividualDashboardIpc() {
     }
   );
 
+  ipcMain.handle(
+    "get-transactions-by-upi-cr",
+    async (event, caseId, individualId) => {
+      try {
+        if (individualId) {
+          const result = await db
+            .select()
+            .from(transactions)
+            .where(
+              and(
+                eq(transactions.statementId, individualId.toString()),
+                eq(transactions.category, "UPI-Cr")
+              )
+            );
+          return result;
+        } else {
+          const allStatements = await db
+            .select()
+            .from(statements)
+            .where(eq(statements.caseId, caseId));
+
+          const statementIds = allStatements.map((stmt) => stmt.id.toString());
+
+          const result = await db
+            .select()
+            .from(transactions)
+            .where(
+              and(
+                inArray(transactions.statementId, statementIds),
+                eq(transactions.category, "UPI-Cr")
+              )
+            );
+          log.info("UPI-Cr transactions fetched successfully:", result);
+          return result;
+        }
+      } catch (error) {
+        log.error("Error fetching transactions with category 'UPI-Cr':", error);
+        throw error;
+      }
+    }
+  );
+
+  ipcMain.handle(
+    "get-transactions-by-upi-dr",
+    async (event, caseId, individualId) => {
+      try {
+        if (individualId) {
+          const result = await db
+            .select()
+            .from(transactions)
+            .where(
+              and(
+                eq(transactions.statementId, individualId.toString()),
+                eq(transactions.category, "UPI-Dr")
+              )
+            );
+          return result;
+        } else {
+          const allStatements = await db
+            .select()
+            .from(statements)
+            .where(eq(statements.caseId, caseId));
+
+          const statementIds = allStatements.map((stmt) => stmt.id.toString());
+
+          const result = await db
+            .select()
+            .from(transactions)
+            .where(
+              and(
+                inArray(transactions.statementId, statementIds),
+                eq(transactions.category, "UPI-Dr")
+              )
+            );
+          log.info("UPI-Dr transactions fetched successfully:", result);
+          return result;
+        }
+      } catch (error) {
+        log.error("Error fetching transactions with category 'UPI-Dr':", error);
+        throw error;
+      }
+    }
+  );
+
   // Handler for getting Suspense Credit transactions
   ipcMain.handle(
     "get-transactions-by-suspensecredit",

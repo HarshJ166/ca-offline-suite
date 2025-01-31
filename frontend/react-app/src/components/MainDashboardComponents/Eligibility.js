@@ -46,7 +46,8 @@ export default function Eligibility() {
             type: "Home Loan / Balance Transfer",
             amount: item.homeLoanValue || 0,
             rate: "0.45%",
-            value: (item.homeLoanValue || 0) * 0.0045  ,
+            value: (item.homeLoanValue || 0) * 0.0045,
+
           },
           loanAgainstProperty: {
             type: "Loan Against Property / Balance Transfer",

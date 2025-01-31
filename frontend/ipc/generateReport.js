@@ -530,7 +530,7 @@ const processOpportunityToEarnData = async (
     log.error("Error processing opportunity to earn data:", error);
     throw error;
   }
-}
+};
 
 function preprocessPayload(payload) {
   // 1) Rename or handle the ColumnData "type" field
