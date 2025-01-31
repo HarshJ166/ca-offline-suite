@@ -84,7 +84,22 @@ const CategoryEditModal = ({ open, onOpenChange, caseId }) => {
         const data = await window.electron.getTransactions(caseId);
         console.log("After electron call, received data:", data);
 
-        setTransactionData(data);
+        // Transform the data to only include required fields
+        const formattedData = data.map((transaction) => ({
+          date: new Date(transaction.date).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          }),
+          description: transaction.description,
+          amount: transaction.amount,
+          category: transaction.category,
+          type: transaction.type,
+          balance: transaction.balance,
+          bank: transaction.bank,
+        }));
+
+        setTransactionData(formattedData);
       } catch (err) {
         setError("Failed to fetch transactions");
         console.error("Error fetching transactions:", err);

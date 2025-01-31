@@ -16,6 +16,7 @@ import Investment from "../components/IndividualDashboardComponents/Investment";
 import EodBalance from "../components/IndividualDashboardComponents/EodBalance";
 import Reversal from "../components/IndividualDashboardComponents/Reversal";
 import ForeignTransactions from "../components/IndividualDashboardComponents/ForeignTransactions";
+import Upi from "../components/IndividualDashboardComponents/Upi";
 import {
   ArrowDownWideNarrow,
   ArrowRightLeft,
@@ -26,6 +27,7 @@ import {
   History,
   IndianRupee,
   MessageSquareText,
+  ScanLine,
   Undo2,
 } from "lucide-react";
 
@@ -54,16 +56,23 @@ const IndividualDashboard = () => {
   useEffect(() => {
     const fetchCustomerName = async () => {
       try {
-        const result = await window.electron.getCustomerName(caseId);
-        console.log("customer Name fetched successfully:", result[0]);
-        setCustomerName(result);
+        const customerName = await window.electron.getCustomerName(
+          individualId
+        );
+        console.log("Customer name fetched successfully:", customerName);
+        if (customerName) {
+          setCustomerName(customerName);
+        }
       } catch (error) {
         console.error("Error fetching customer name:", error);
       }
     };
 
-    fetchCustomerName();
-  }, [caseId]);
+    if (individualId) {
+      // Only fetch if we have an ID
+      fetchCustomerName();
+    }
+  }, [individualId]);
 
   useEffect(() => {
     console.log({ caseId, individualId, defaultTab });
@@ -90,6 +99,10 @@ const IndividualDashboard = () => {
     {
       title: "Cash",
       icon: IndianRupee,
+    },
+    {
+      title: "UPI",
+      icon: ScanLine,
     },
     {
       title: "Debtors",
@@ -165,6 +178,9 @@ const IndividualDashboard = () => {
               )}
               {activeTab === "Cash" && (
                 <Cash caseId={caseId} individualId={individualId} />
+              )}
+              {activeTab === "UPI" && (
+                <Upi caseId={caseId} individualId={individualId} />
               )}
               {activeTab === "Suspense" && (
                 <Suspense caseId={caseId} individualId={individualId} />
