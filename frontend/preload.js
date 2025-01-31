@@ -34,6 +34,12 @@ contextBridge.exposeInMainWorld("electron", {
   getTransactionsByCashDeposit: (caseId, individualId) =>
     ipcRenderer.invoke("get-transactions-by-cashdeposit", caseId, individualId),
 
+  getTransactionsByUpiCr: (caseId, individualId) =>
+    ipcRenderer.invoke("get-transactions-by-upi-cr", caseId, individualId),
+
+  getTransactionsByUpiDr: (caseId, individualId) =>
+    ipcRenderer.invoke("get-transactions-by-upi-dr", caseId, individualId),
+
   getTransactionsBySuspenseCredit: (caseId, individualId) =>
     ipcRenderer.invoke(
       "get-transactions-by-suspensecredit",
@@ -77,7 +83,8 @@ contextBridge.exposeInMainWorld("electron", {
 
   getReportName: (caseId) => ipcRenderer.invoke("get-Report-Name", caseId),
 
-  getCustomerName: (caseId) => ipcRenderer.invoke("get-Customer-Name", caseId),
+  getCustomerName: (individualId) =>
+    ipcRenderer.invoke("get-Customer-Name", individualId),
 
   getReportNameExists: (reportName) =>
     ipcRenderer.invoke("check-Report-Name-Exists", reportName),
