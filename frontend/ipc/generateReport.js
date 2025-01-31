@@ -455,14 +455,18 @@ const updateCaseStatus = async (caseId, status) => {
   }
 };
 
-async function processOpportunityToEarnData(opportunityToEarnData, CaseId) {
+const processOpportunityToEarnData = async (
+  opportunityToEarnData,
+  caseName
+) => {
+  log.info("Processing opportunity to earn data for case:", caseName);
   try {
     console.log(
       "Full Opportunity to Earn Data:",
       JSON.stringify(opportunityToEarnData)
     );
 
-    // Check if the data is an array with at least one element
+    // Extract the array from the object
     const opportunityToEarnArray = Array.isArray(opportunityToEarnData)
       ? opportunityToEarnData
       : opportunityToEarnData["Opportunity to Earn"];
@@ -472,58 +476,53 @@ async function processOpportunityToEarnData(opportunityToEarnData, CaseId) {
       return false;
     }
 
-    const opportunityToEarnValues = Array.isArray(opportunityToEarnArray)
-      ? opportunityToEarnArray[0]
-      : opportunityToEarnArray;
+    // Get the case ID for this specific report
+    const validCaseId = await getOrCreateCase(caseName);
 
-    const validCaseId = await getOrCreateCase(CaseId);
+    // Initialize sums for each category
+    let homeLoanValue = 0;
+    let loanAgainstProperty = 0;
+    let businessLoan = 0;
+    let termPlan = 0;
+    let generalInsurance = 0;
 
-    // Extract values with default fallbacks of 0
-    const homeLoanValue =
-      opportunityToEarnValues?.["Maximum Home Loan Value"] || 0;
-    const loanAgainstProperty =
-      opportunityToEarnValues?.["Maximum LAP Value"] || 0;
-    const businessLoan = opportunityToEarnValues?.["Maximum BL Value"] || 0;
-    const termPlan = opportunityToEarnValues?.["Maximum TP Value"] || 0;
-    const generalInsurance = opportunityToEarnValues?.["Maximum GI Value"] || 0;
+    // Loop through each product and categorize the amount correctly
+    for (const item of opportunityToEarnArray) {
+      const product = item["Product"];
+      const amount = parseFloat(item["Amount"]) || 0;
 
-    const existingOpportunityToEarn = await db
-      .select()
-      .from(opportunityToEarn)
-      .where(eq(opportunityToEarn.caseId, validCaseId));
-
-    if (existingOpportunityToEarn.length > 0) {
-      // Update the existing opportunity to earn record
-      await db
-        .update(opportunityToEarn)
-        .set({
-          homeLoanValue,
-          loanAgainstProperty,
-          businessLoan,
-          termPlan,
-          generalInsurance,
-        })
-        .where(eq(opportunityToEarn.caseId, validCaseId));
-    } else {
-      // Insert new opportunity to earn record
-      await db.insert(opportunityToEarn).values({
-        caseId: validCaseId,
-        homeLoanValue,
-        loanAgainstProperty,
-        businessLoan,
-        termPlan,
-        generalInsurance,
-        createdAt: new Date(),
-      });
+      if (!isNaN(amount)) {
+        if (product.includes("Home Loan")) {
+          homeLoanValue += amount;
+        } else if (product.includes("Loan Against Property")) {
+          loanAgainstProperty += amount;
+        } else if (product.includes("Business Loan")) {
+          businessLoan += amount;
+        } else if (product.includes("Term Plan")) {
+          termPlan += amount;
+        } else if (product.includes("General Insurance")) {
+          generalInsurance += amount;
+        }
+      }
     }
 
-    log.info(`Opportunity to earn data processed for case ${validCaseId}`);
+    // Always insert a new record to append the data
+    await db.insert(opportunityToEarn).values({
+      caseId: validCaseId,
+      homeLoanValue,
+      loanAgainstProperty,
+      businessLoan,
+      termPlan,
+      generalInsurance,
+    });
+
+    log.info(`New opportunity to earn data appended for case ${validCaseId}`);
     return true;
   } catch (error) {
     log.error("Error processing opportunity to earn data:", error);
     throw error;
   }
-}
+};
 
 function generateReportIpc(tmpdir_path) {
   const baseUrl = `http://localhost:7500`;
@@ -715,7 +714,7 @@ function generateReportIpc(tmpdir_path) {
       try {
         await processOpportunityToEarnData(
           parsedData["Opportunity to Earn"] || [],
-          payload.ca_id
+          caseName
         );
       } catch (error) {
         log.error("Error processing opportunity to earn data:", error);
