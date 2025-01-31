@@ -300,6 +300,7 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
         start_date = start_dates[i]
         end_date = end_dates[i]
         aiyaz_array_of_array = aiyazs_array_of_array[i]
+        print("aiyaz_array_of_array from ca statement anal - ", aiyaz_array_of_array)
 
         explicit_lines = []
         labels = []
@@ -309,7 +310,7 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
         explicit_lines = list(
             {coord for item in aiyaz_array_of_array for coord in (item["bounds"]["start"], item["bounds"]["end"])}
         )
-        labels = [[entry["index"], entry["type"]] for entry in aiyaz_array_of_array]
+        labels = [[entry["index"], entry["column_type"]] for entry in aiyaz_array_of_array]
 
 
         dfs[bank], name_dfs[bank], errorz[bank] = extraction_process_explicit_lines(bank, pdf_path, pdf_password, start_date, end_date, explicit_lines, labels)
@@ -351,6 +352,7 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
             bank_name = key
             acc_name = value[0]
             acc_num = value[1]
+
             if str(acc_num) == "None":
                 masked_acc_num = "None"
             else:
@@ -365,7 +367,9 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
         list_of_dataframes = list(dfs.values())
 
         if whole_transaction_sheet is not None:
-            list_of_dataframes.append(transaction_sheet)
+            list_of_dataframes.append(whole_transaction_sheet)
+
+        # print("list_of_dataframes - ", list_of_dataframes)
 
         # arrange dfs
         initial_df = pd.concat(sort_dataframes_by_date(list_of_dataframes)).fillna("").reset_index(drop=True)
