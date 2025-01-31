@@ -71,6 +71,7 @@ const RecentReports = ({ key }) => {
     useState(null);
   const [selectedFailedFile, setSelectedFailedFile] = useState(null);
   const [isMarkerModalOpen, setIsMarkerModalOpen] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState(null);
 
   const handleSubmitEditPdf = async () => {
     const allRectified = failedDatasOfCurrentReport.every(
@@ -299,29 +300,24 @@ const RecentReports = ({ key }) => {
 
   const handleDeleteReport = async (reportId) => {
     try {
-      // Optimistically update the state before confirming deletion
-      const updatedReports = recentReports.filter(
-        (report) => report.id !== reportId
-      );
-      setRecentReports(updatedReports);
-
-      // Call the API to delete the report
       await window.electron.deleteReport(reportId);
+      setRecentReports((prev) =>
+        prev.filter((report) => report.id !== reportId)
+      );
 
       toast({
         title: "Success",
         description: "Report deleted successfully.",
         variant: "success",
+        className: "bg-white text-black opacity-100 shadow-lg",
       });
     } catch (error) {
-      // Roll back the state if the deletion fails
-      setRecentReports((prev) => [
-        ...prev,
-        recentReports.find((r) => r.id === reportId),
-      ]);
+      console.error("Error deleting report:", error);
       toast({
         title: "Error",
-        description: `Failed to delete the report: ${error.message}`,
+        description: `Failed to delete the report: ${
+          error.message || "Unknown error"
+        }`,
         variant: "destructive",
       });
     }
@@ -545,14 +541,39 @@ const RecentReports = ({ key }) => {
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleDeleteReport(report.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => setReportToDelete(report.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-white dark:bg-slate-950">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Report</AlertDialogTitle>
+                        </AlertDialogHeader>
+                        <div className="py-4">
+                          Are you sure you want to delete this report? This
+                          action cannot be undone.
+                        </div>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <Button
+                            variant="destructive"
+                            onClick={() => {
+                              handleDeleteReport(report.id);
+                              setReportToDelete(null);
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </TableCell>
                 <TableCell>

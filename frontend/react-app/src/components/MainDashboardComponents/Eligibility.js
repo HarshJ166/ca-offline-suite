@@ -16,19 +16,10 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import { Card } from "../ui/card";
 
-export default function Eligibility({ caseId }) {
+export default function Eligibility() {
   const [opportunityData, setOpportunityData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [transformedData, setTransformedData] = useState([]);
-
-  const labelMap = {
-    businessLoan: "Business Loan",
-    homeLoanValue: "Home Loan / Balance Transfer",
-    loanAgainstProperty: "Loan Against Property / Balance Transfer",
-    termPlan: "Term Plan",
-    generalInsurance: "General Insurance",
-  };
 
   const commissionMap = {
     "Business Loan": 1.0,
@@ -41,59 +32,59 @@ export default function Eligibility({ caseId }) {
   useEffect(() => {
     async function fetchOpportunityData() {
       try {
-        // Use Electron's ipcRenderer to call the backend method
-        const data = await window.electron.getOpportunityToEarn(caseId);
-        setOpportunityData(data);
+        const response = await window.electron.getOpportunityToEarn();
 
-        console.log("Opportunity data:", data);
+        if (!response.success) {
+          throw new Error(response.message);
+        }
 
-        const transformedData = data.map((item) => {
-          const newObj = {};
-          for (const [key, value] of Object.entries(item)) {
-            if (key === "caseId" || key === "id") continue;
-            newObj[labelMap[key]] = value;
-          }
+        const transformedData = response.data.map((item) => ({
+          caseName: item.caseName || "Unknown Client",
+          statementCustomerName:
+            item.statementCustomerName || "No Statement Data",
+          homeLoanValue: {
+            type: "Home Loan / Balance Transfer",
+            amount: item.homeLoanValue || 0,
+            rate: "0.45%",
+            value: (item.homeLoanValue || 0) * 0.45,
+          },
+          loanAgainstProperty: {
+            type: "Loan Against Property / Balance Transfer",
+            amount: item.loanAgainstProperty || 0,
+            rate: "0.65%",
+            value: (item.loanAgainstProperty || 0) * 0.65,
+          },
+          businessLoan: {
+            type: "Business Loan",
+            amount: item.businessLoan || 0,
+            rate: "1.00%",
+            value: (item.businessLoan || 0) * 1.0,
+          },
+          termPlan: {
+            type: "Term Plan",
+            amount: item.termPlan || 0,
+            rate: "1% - 30%",
+            value: item.termPlan || 0,
+          },
+          generalInsurance: {
+            type: "General Insurance",
+            amount: item.generalInsurance || 0,
+            rate: "upto 10%",
+            value: item.generalInsurance || 0,
+          },
+        }));
 
-          return newObj;
-        });
-
-        setTransformedData(transformedData);
-
-        console.log("Transformed data:", transformedData);
-
+        setOpportunityData(transformedData);
         setLoading(false);
       } catch (err) {
-        console.log(err);
-        setError(err);
+        console.error("Error fetching opportunity data:", err);
+        setError(err.message);
         setLoading(false);
       }
     }
 
     fetchOpportunityData();
-  }, [caseId]);
-
-  const defaultData = [
-    {
-      type: "Home Loan / Balance Transfer",
-      amount: 905000,
-      rate: "0.45%",
-      value: 4072.5,
-    },
-    {
-      type: "Loan Against Property / Balance Transfer",
-      amount: 763000,
-      rate: "0.65%",
-      value: 4959.5,
-    },
-    { type: "Business Loan", amount: 205000, rate: "1.00 %", value: 2050 },
-    { type: "Term Plan", amount: "-", rate: "1 % -30 %", value: 4072.5 },
-    {
-      type: "General Insurance",
-      amount: "-",
-      rate: "upto 10 %",
-      value: 4072.5,
-    },
-  ];
+  }, []);
 
   const note = [
     {
@@ -117,7 +108,9 @@ export default function Eligibility({ caseId }) {
   ];
 
   if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error loading data: {error.message}</div>;
+  if (error) return <div>Error loading data: {error}</div>;
+  if (!opportunityData || opportunityData.length === 0)
+    return <div>No data available</div>;
 
   return (
     <ScrollArea className="h-full">
@@ -133,11 +126,17 @@ export default function Eligibility({ caseId }) {
         </div>
         <Card className="p-4 rounded-lg">
           <Accordion type="single" collapsible className="w-full">
-            {/* Replace with actual names from fetched data if available */}
-            {["Aiyaz Qureshi", "Poojan vig"].map((name, index) => (
+            {opportunityData.map((data, index) => (
               <AccordionItem key={index} value={`item-${index + 1}`}>
-                <AccordionTrigger className="font-bold">
-                  {name}
+                <AccordionTrigger className="from-neutral-500">
+                  <div className="flex flex-col items-start ">
+                    <span className="text-[18px] font-semibold">
+                      {data.statementCustomerName}
+                    </span>
+                    <span className="text-[15px] font-normal text-gray-600">
+                      Report Name: {data.caseName}
+                    </span>
+                  </div>
                 </AccordionTrigger>
                 <AccordionContent>
                   <Table>
@@ -154,34 +153,31 @@ export default function Eligibility({ caseId }) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {transformedData.map((item, idx) => (
-                        <>
-                          {Object.keys(item).map((key) => (
-                            <TableRow key={idx}>
-                              <TableCell className="font-medium">
-                                {key}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                {item[key]
-                                  ? parseFloat(item[key]).toFixed(1)
-                                  : 0}
-                                {/* {item[key]} */}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                {commissionMap[key]}%
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {item[key]
-                                  ? Math.floor(
-                                      item[key] * commissionMap[key] * 10
-                                    ) / 10
-                                  : 0}
-                                {/* {(item[key] * commissionMap[key]) / 100} */}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </>
-                      ))}
+                      {Object.entries(data)
+                        .filter(
+                          ([key]) =>
+                            !["caseName", "statementCustomerName"].includes(key)
+                        )
+                        .map(([key, item]) => (
+                          <TableRow key={key}>
+                            <TableCell className="font-medium">
+                              {item.type}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {item.amount.toLocaleString(undefined, {
+                                maximumFractionDigits: 2,
+                              })}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {item.rate}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {item.value.toLocaleString(undefined, {
+                                maximumFractionDigits: 2,
+                              })}
+                            </TableCell>
+                          </TableRow>
+                        ))}
                     </TableBody>
                   </Table>
                 </AccordionContent>
