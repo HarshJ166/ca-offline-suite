@@ -224,23 +224,23 @@ def refresh_category_all_sheets(df, eod_sheet_df, new_categories):
     other_expenses_df = summary_df_list[3]
 
     df['Value Date'] = pd.to_datetime(df['Value Date']).dt.strftime('%d-%m-%Y')
-    transaction_sheet_df = transaction_sheet(df)
-    investment_df = total_investment(df)
-    creditor_df = creditor_list(df)
-    debtor_df = debtor_list(transaction_sheet_df)
+    # transaction_sheet_df = transaction_sheet(df)
+    # investment_df = total_investment(df)
+    # creditor_df = creditor_list(df)
+    # debtor_df = debtor_list(transaction_sheet_df)
 
-    upi_cr_df = df[(df["Description"].str.contains("UPI", case=False)) & (df["Credit"] > 0)]
-    upi_dr_df = df[(df["Description"].str.contains("UPI", case=False)) & (df["Debit"] > 0)]
+    # upi_cr_df = df[(df["Description"].str.contains("UPI", case=False)) & (df["Credit"] > 0)]
+    # upi_dr_df = df[(df["Description"].str.contains("UPI", case=False)) & (df["Debit"] > 0)]
 
-    cash_withdrawal_df = cash_withdraw(df)
-    cash_deposit_df = cash_depo(df)
-    dividend_int_df = div_int(df)
-    emi_df = emi(df)
-    refund_df = refund_reversal(df)
-    suspense_credit_df = suspense_credit(df)
-    suspense_debit_df = suspense_debit(df)
-    payment_df = payment(df)
-    receipt_df = receipt(df)
+    # cash_withdrawal_df = cash_withdraw(df)
+    # cash_deposit_df = cash_depo(df)
+    # dividend_int_df = div_int(df)
+    # emi_df = emi(df)
+    # refund_df = refund_reversal(df)
+    # suspense_credit_df = suspense_credit(df)
+    # suspense_debit_df = suspense_debit(df)
+    # payment_df = payment(df)
+    # receipt_df = receipt(df)
 
     bank_avg_balance_df = calculate_fixed_day_average(eod_sheet_df)
     loan_value_df = process_avg_last_6_months(bank_avg_balance_df, eod_sheet_df)
@@ -253,22 +253,22 @@ def refresh_category_all_sheets(df, eod_sheet_df, new_categories):
         "Important Expenses": imp_expenses_payments_df.to_dict(orient="records"),
         "Other Expenses": other_expenses_df.to_dict(orient="records"),
         "Opportunity to Earn": loan_value_df.to_dict(orient="records"),
-        "Transactions": transaction_sheet_df.to_dict(orient="records"),
-        "EOD": eod_sheet_df.to_dict(orient="records"),
-        "Investment": investment_df.to_dict(orient="records"),
-        "Creditors": creditor_df.to_dict(orient="records"),
-        "Debtors": debtor_df.to_dict(orient="records"),
-        "UPI-CR": upi_cr_df.to_dict(orient="records"),
-        "UPI-DR": upi_dr_df.to_dict(orient="records"),
-        "Cash Withdrawal": cash_withdrawal_df.to_dict(orient="records"),
-        "Cash Deposit": cash_deposit_df.to_dict(orient="records"),
-        "Redemption, Dividend & Interest": dividend_int_df.to_dict(orient="records"),
-        "Probable EMI": emi_df.to_dict(orient="records"),
-        "Refund-Reversal": refund_df.to_dict(orient="records"),
-        "Suspense Credit": suspense_credit_df.to_dict(orient="records"),
-        "Suspense Debit": suspense_debit_df.to_dict(orient="records"),
-        "Payment Voucher": payment_df.to_dict(orient="records"),
-        "Receipt Voucher": receipt_df.to_dict(orient="records"),
+        # "Transactions": transaction_sheet_df.to_dict(orient="records"),
+        # "EOD": eod_sheet_df.to_dict(orient="records"),
+        # "Investment": investment_df.to_dict(orient="records"),
+        # "Creditors": creditor_df.to_dict(orient="records"),
+        # "Debtors": debtor_df.to_dict(orient="records"),
+        # "UPI-CR": upi_cr_df.to_dict(orient="records"),
+        # "UPI-DR": upi_dr_df.to_dict(orient="records"),
+        # "Cash Withdrawal": cash_withdrawal_df.to_dict(orient="records"),
+        # "Cash Deposit": cash_deposit_df.to_dict(orient="records"),
+        # "Redemption, Dividend & Interest": dividend_int_df.to_dict(orient="records"),
+        # "Probable EMI": emi_df.to_dict(orient="records"),
+        # "Refund-Reversal": refund_df.to_dict(orient="records"),
+        # "Suspense Credit": suspense_credit_df.to_dict(orient="records"),
+        # "Suspense Debit": suspense_debit_df.to_dict(orient="records"),
+        # "Payment Voucher": payment_df.to_dict(orient="records"),
+        # "Receipt Voucher": receipt_df.to_dict(orient="records"),
     }
 
     # Convert the entire dictionary to JSON
