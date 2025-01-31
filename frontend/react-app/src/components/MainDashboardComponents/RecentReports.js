@@ -20,7 +20,7 @@ import { useToast } from "../../hooks/use-toast";
 import { Badge } from "../ui/badge";
 import { cn } from "../../lib/utils";
 import { useNavigate } from "react-router-dom";
-import { Eye, Plus, Trash2, Info, Search, Edit2, X,CheckCircle  } from "lucide-react";
+import { Eye, Plus, Trash2, Info, Search, Edit2, X,CheckCircle, Loader2  } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -62,11 +62,15 @@ const RecentReports = ({ key }) => {
     useState(null);
   const [selectedFailedFile, setSelectedFailedFile] = useState(null);
   const [isMarkerModalOpen, setIsMarkerModalOpen] = useState(false);
+  const [pdfEditLoading, setPdfEditLoading] = useState(false);
 
+  
   const handleSubmitEditPdf = async () => {
+    setPdfEditLoading(true)
     const allRectified = failedDatasOfCurrentReport.every(
       (statement) => statement.resolved
     );
+    
     if (allRectified) {
 
       // Call the API to update the statements
@@ -78,19 +82,22 @@ const RecentReports = ({ key }) => {
         description: "All statements have been rectified.",
         variant: "success",
       });
+      setPdfEditLoading(false);
     } else {
       toast({
         title: "Error",
         description: "Please rectify all statements before submitting.",
         variant: "destructive",
       });
-    };
+      setPdfEditLoading(false);
+    }
   }
 
   useEffect(() => {
     const fetchReports = async () => {
       try {
         const result = await window.electron.getRecentReports();
+        console.log({ recentReports:result });
         const formattedReports = result
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
           .map((report) => ({
@@ -152,12 +159,15 @@ const RecentReports = ({ key }) => {
               ...item,
               parsedContent: {
                 paths: Array.isArray(parsedData.paths) ? parsedData.paths : [],
+
                 passwords: Array.isArray(parsedData.passwords)
                   ? parsedData.passwords
                   : [],
                 startDates: Array.isArray(parsedData.start_dates)
                   ? parsedData.start_dates
                   : [],
+                
+                bankName: Array.isArray(parsedData.bank_names)? parsedData.bank_names : [],
                 endDates: Array.isArray(parsedData.end_dates)
                   ? parsedData.end_dates
                   : [],
@@ -172,7 +182,8 @@ const RecentReports = ({ key }) => {
           }
         })
         .filter((item) => item !== null); // Remove null entries
-
+      
+        console.log({processedFailedData});
       const tempFailedDataOfReport =[]
       for(let i=0; i<processedFailedData[0].parsedContent.paths.length; i++) {
         tempFailedDataOfReport.push({
@@ -180,7 +191,7 @@ const RecentReports = ({ key }) => {
           id: processedFailedData[0].id,
           columns:processedFailedData[0].parsedContent.columns[i],
           endDate:processedFailedData[0].parsedContent.endDates[i],
-          bankName:processedFailedData[0].bankName,
+          bankName:processedFailedData[0].parsedContent.bankName[i],
           startDate:processedFailedData[0].parsedContent.startDates[i],
           path:processedFailedData[0].parsedContent.paths[i],
           password:processedFailedData[0].parsedContent.passwords[i],
@@ -188,6 +199,8 @@ const RecentReports = ({ key }) => {
           pdfName: processedFailedData[0].parsedContent.paths[i].split('\\').pop(),
         })
       }
+
+      console.log("tempFailedDataOfReport", tempFailedDataOfReport);
 
       // remove duplicate entries using pdfName
       const uniqueFailedDataOfReport = tempFailedDataOfReport.filter(
@@ -463,7 +476,7 @@ const RecentReports = ({ key }) => {
       <PDFMarkerModal
         isOpen={isMarkerModalOpen}
         onClose={() => setIsMarkerModalOpen(false)}
-        onSave={handleSaveMarkerData}
+        // onSave={handleSaveMarkerData}
         selectedFailedFile={selectedFailedFile}
         setFailedDatasOfCurrentReport={setFailedDatasOfCurrentReport}
       />
@@ -493,7 +506,7 @@ const RecentReports = ({ key }) => {
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
+      {recentReports.length>0?  <Table>
           <TableHeader>
             <TableRow className="align-">
               <TableHead>Date</TableHead>
@@ -569,49 +582,49 @@ const RecentReports = ({ key }) => {
                       </AlertDialogHeader>
                       <div className="p-6 overflow-auto max-h-[400px]">
                         {failedDatasOfCurrentReport && failedDatasOfCurrentReport.length>0 ?(
- <div>
- {failedDatasOfCurrentReport.map((statement, index) => {
-   const isDone = statement.resolved;
+                            <div>
+                            {failedDatasOfCurrentReport.map((statement, index) => {
+                              const isDone = statement.resolved;
 
-   return (
-     <div key={index} className="mb-4 border-b pb-4">
-       <h3 className="font-semibold mb-2">
-         Failed Statement {index + 1}
-       </h3>
-       <div className="flex gap-2 items-center">
-         <p className="flex-[4.5]">
-           <strong>File Name:</strong> {statement.pdfName}
-         </p>
+                              return (
+                                <div key={index} className="mb-4 border-b pb-4">
+                                  <h3 className="font-semibold mb-2">
+                                    Failed Statement {index + 1}
+                                  </h3>
+                                  <div className="flex gap-2 items-center">
+                                    <p className="flex-[4.5]">
+                                      <strong>File Name:</strong> {statement.pdfName}
+                                    </p>
 
-         {/* Conditionally render the Rectify or Done button */}
-         {isDone ? (
-           <Button
-             size="sm"
-             disabled
-             className="flex-1 bg-green-600 hover:bg-green-700 text-white transition-colors"
-           >
-             <CheckCircle className="w-4 h-4 mr-2" />
-             Done
-           </Button>
-         ) : (
-           <Button
-             variant="secondary"
-             size="sm"
-             className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors"
-             onClick={() => {
-               setIsMarkerModalOpen(true);
-               setSelectedFailedFile(statement);
-             }}
-           >
-             Rectify
-           </Button>
-         )}
-       </div>
-     </div>
-   );
- })}
-</div>
-): (
+                                    {/* Conditionally render the Rectify or Done button */}
+                                    {isDone ? (
+                                      <Button
+                                        size="sm"
+                                        disabled
+                                        className="flex-1 bg-green-600 hover:bg-green-700 text-white transition-colors"
+                                      >
+                                        <CheckCircle className="w-4 h-4 mr-2" />
+                                        Done
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors"
+                                        onClick={() => {
+                                          setIsMarkerModalOpen(true);
+                                          setSelectedFailedFile(statement);
+                                        }}
+                                      >
+                                        Rectify
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            </div>
+                            ): (
                           <div className="text-center text-green-600 font-semibold">
                             Report Processed Successfully
                           </div>
@@ -619,13 +632,24 @@ const RecentReports = ({ key }) => {
                       </div>
                       <AlertDialogFooter className="border-t border-black/10 pt-6">
                       {/* create a submit button */}
-                        <Button
-                          variant="primary"
-                          onClick={() => handleSubmitEditPdf()}
-                          className="px-8 bg-black text-white hover:bg-black/90 hover:text-white dark:bg-white dark:text-black"
-                        >
-                          Submit
-                        </Button>
+                        {failedDatasOfCurrentReport && failedDatasOfCurrentReport.length>0 && 
+                          <div className="flex justify-center ">
+                          <Button
+                            type="submit"
+                            disabled={pdfEditLoading}
+                            onClick={handleSubmitEditPdf}
+                            className="relative inline-flex items-center px-4 py-2"
+                          >
+                            {pdfEditLoading ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                <span>Processing...</span>
+                              </>
+                            ) : (
+                              "Submit"
+                            )}
+                          </Button>
+                        </div>}
 
                         <AlertDialogCancel className="px-8 bg-black text-white hover:bg-black/90 hover:text-white dark:bg-white dark:text-black">
                           Close
@@ -637,7 +661,9 @@ const RecentReports = ({ key }) => {
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+        </Table>: <div className="text-center text-grey-600 opacity-70 font-semibold">
+          No Reports Found
+          </div>}
         {totalPages > 1 && (
           <div className="mt-6">
             <Pagination>

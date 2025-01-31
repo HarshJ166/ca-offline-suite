@@ -11,9 +11,11 @@ from fastapi import Body
 # from findaddy.exceptions import ExtractionError
 from backend.utils import get_saved_pdf_dir
 TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
-
+from pydantic import Field
 # If you have other custom imports:
 from backend.tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf,start_extraction_edit_pdf
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,14 +31,37 @@ class BankStatementRequest(BaseModel):
     end_date: List[str]
     ca_id: str
 
+class Transaction(BaseModel):
+    id: int
+    statementId:  Optional[str] = None
+    date:  Optional[str] = None
+    description:  Optional[str] = None
+    amount: Optional[float] = None
+    category: Optional[str] = None
+    transaction_type: Optional[str] = None     
+    balance: Optional[float] = None
+    bank: Optional[str] = None
+    entity: Optional[str] = None
+
+class Bounds(BaseModel):
+    start: float
+    end: float
+
+class ColumnData(BaseModel):
+    index: int
+    bounds: Bounds
+    column_type:  Optional[str] = Field(None, alias="type")
+    
+
+
 class EditPdfRequest(BaseModel):
     bank_names: List[str]
     pdf_paths: List[str]
     passwords: Optional[List[str]] = []  # Optional field, defaults to empty list
     start_dates: List[str]
     end_dates: List[str]
-    aiyaz_array_of_array: List[List[int]]
-    whole_transaction_sheet: bool
+    aiyazs_array_of_array: List[List[ColumnData]]
+    whole_transaction_sheet: Optional[List[Transaction]] = None
     ca_id: str
 
 class DummyRequest(BaseModel):
@@ -114,43 +139,63 @@ async def analyze_bank_statements(request: BankStatementRequest):
 
 @app.post("/column-rectify-add-pdf/")
 async def column_rectify_add_pdf(request:EditPdfRequest):
-    data = await request.json()  # This parses the request body as JSON
-    print("Received request data:", data)
+    print("Received request data:", request)
     try:
 
         # # Create a progress tracking function
-        # def progress_tracker(current: int, total: int, info: str) -> None:
-        #     logger.info(f"{info} ({current}/{total})")
+        def progress_tracker(current: int, total: int, info: str) -> None:
+            logger.info(f"{info} ({current}/{total})")
 
-        # progress_data = {
-        # "progress_func": progress_tracker,
-        # "current_progress": 10,
-        # "total_progress": 100,
-        # }
+        progress_data = {
+        "progress_func": progress_tracker,
+        "current_progress": 10,
+        "total_progress": 100,
+        }
 
-        # # Validate passwords length if provided
-        # if request.passwords and len(request.passwords) != len(request.pdf_paths):
-        #     raise HTTPException(
-        #         status_code=400,
-        #         detail=(
-        #             f"Number of passwords ({len(request.passwords)}) "
-        #             f"must match number of PDFs ({len(request.pdf_paths)})"
-        #         ),
-        #     )
+        # Validate passwords length if provided
+        if request.passwords and len(request.passwords) != len(request.pdf_paths):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Number of passwords ({len(request.passwords)}) "
+                    f"must match number of PDFs ({len(request.pdf_paths)})"
+                ),
+            )
         
-        # bank_names = request.bank_names 
-        # pdf_paths = request.pdf_paths
-        # passwords =  request.passwords if request.passwords else []
-        # start_date = request.start_date if request.start_date else []
-        # end_date = request.end_date if request.end_date else []
-        # CA_ID = request.ca_id
-        # progress_data = progress_data
-        # column_coordinates = request.columns
-        # whole_transaction_sheet = request.whole_transaction_sheet
-        # result = start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_date, end_date, CA_ID, progress_data,aiyaz_array_of_array=column_coordinates,whole_transaction_sheet=whole_transaction_sheet)
+        temp_aiyaz_array_of_array = []
+        for statement in request.aiyazs_array_of_array:
+            temp_aiyaz_array = []
+            for col in statement:
+                temp_aiyaz_array.append(col.model_dump())
+            temp_aiyaz_array_of_array.append(temp_aiyaz_array)
 
-        return {"success": True, "message": "PDF rectification done (mocked)."}
+
+        
+        bank_names = request.bank_names 
+        pdf_paths = request.pdf_paths
+        passwords =  request.passwords if request.passwords else []
+        start_date = request.start_dates if request.start_dates else []
+        end_date = request.end_dates if request.end_dates else []
+        CA_ID = request.ca_id
+        progress_data = progress_data
+        aiyazs_array_of_array = temp_aiyaz_array_of_array
+        whole_transaction_sheet = request.whole_transaction_sheet
+        result = start_extraction_edit_pdf(bank_names=bank_names,pdf_paths= pdf_paths,passwords= passwords,start_dates= start_date,end_dates= end_date,CA_ID= CA_ID, progress_data=progress_data,aiyazs_array_of_array=aiyazs_array_of_array,whole_transaction_sheet=whole_transaction_sheet)
+
+        print("RESULT GENERATED")
+        logger.info("Result = ", result["sheets_in_json"])
+        logger.info("Result pdf_paths_not_extracted= ", result["pdf_paths_not_extracted"])
+        logger.info("Extraction completed successfully")
+        return {
+            "status": "success",
+            "message": "Bank statements analyzed successfully",
+            "data": result["sheets_in_json"],
+            "pdf_paths_not_extracted": result["pdf_paths_not_extracted"],
+        }
+
     except Exception as e:
+
+        print(e)
         logger.error(f"Error processing bank statements: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"Error processing bank statements: {str(e)}"
@@ -191,3 +236,12 @@ if __name__ == "__main__":
     import time
     time.sleep(8)
     uvicorn.run(app, host=host, port=port, reload=False)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    print("Validation Error:", exc.errors())
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
+    )

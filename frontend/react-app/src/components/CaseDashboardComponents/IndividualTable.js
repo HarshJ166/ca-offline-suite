@@ -42,6 +42,7 @@ const IndividualTable = ({ caseId }) => {
     const fetchStatements = async () => {
       setIsLoading(true);
       try {
+        console.log("Fetching statements for caseId:", caseId);
         // Call the IPC handler to get statements
         const result = await window.electron.getStatements(caseId);
         console.log("Statements fetched successfully:", result);

@@ -4717,7 +4717,10 @@ def sort_dataframes_by_date(dataframes):
     """
     # Extract ranges and sort the dataframes
     ranges = []
+
     for i, df in enumerate(dataframes):
+        if type(df) != pd.DataFrame:
+            continue
         # Ensure 'Value Date' is of datetime type
         df['Value Date'] = pd.to_datetime(df['Value Date'], format='%d-%m-%Y', errors='coerce')
 
@@ -4727,6 +4730,7 @@ def sort_dataframes_by_date(dataframes):
 
         # Store the index and range
         ranges.append((i, start_date, end_date))
+
 
     # Sort ranges by start_date
     sorted_ranges = sorted(ranges, key=lambda x: x[1])
