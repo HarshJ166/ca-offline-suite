@@ -386,47 +386,53 @@ const RecentReports = () => {
     console.log("recent reports failed pdf handleSave data:", data);
     setIsMarkerModalOpen(false);
   };
-
+  // Function to handle opening the modal and fetching the failed statements
   const handleDetails = async (reportId, reportName) => {
     setIsLoading(true);
     setCurrentCaseName(reportName);
 
-    console.log("Opening recitfy modal for caseId:", reportId, reportName);
+    console.log("Opening rectify modal for caseId:", reportId, reportName);
 
     try {
       const failedStatements = await window.electron.getFailedStatements(
         reportId
       );
 
-      console.log("failedStatements", failedStatements);
+      console.log("Raw failedStatements from DB:", failedStatements);
+
+      if (!Array.isArray(failedStatements) || failedStatements.length === 0) {
+        console.warn("No failed statements found for this report.");
+        setFailedDatasOfCurrentReport([]); // Ensure UI doesn't break
+        return;
+      }
 
       // Process failed statements with extensive error checking
       const processedFailedData = failedStatements
         .map((item) => {
           if (!item || !item.data) {
+            console.warn("Skipping invalid failed statement record:", item);
             return null;
           }
 
           try {
             const parsedData = JSON.parse(item.data);
-            console.log("parsedData", parsedData);
+            console.log("Parsed failed statement data:", parsedData);
+
             return {
               ...item,
               parsedContent: {
                 paths: Array.isArray(parsedData.paths) ? parsedData.paths : [],
-
                 passwords: Array.isArray(parsedData.passwords)
                   ? parsedData.passwords
                   : [],
                 startDates: Array.isArray(parsedData.start_dates)
                   ? parsedData.start_dates
                   : [],
-
-                bankName: Array.isArray(parsedData.bank_names)
-                  ? parsedData.bank_names
-                  : [],
                 endDates: Array.isArray(parsedData.end_dates)
                   ? parsedData.end_dates
+                  : [],
+                bankNames: Array.isArray(parsedData.bank_names)
+                  ? parsedData.bank_names
                   : [],
                 columns: Array.isArray(parsedData.respective_list_of_columns)
                   ? parsedData.respective_list_of_columns
@@ -439,45 +445,54 @@ const RecentReports = () => {
               },
             };
           } catch (parseError) {
-            console.error("Failed to parse data:", parseError);
+            console.error("Failed to parse failed statement JSON:", parseError);
             return null;
           }
         })
-        .filter((item) => item !== null); // Remove null entries
+        .filter((item) => item !== null); // Remove invalid entries
 
-      console.log({ processedFailedData });
-      const tempFailedDataOfReport = [];
-      for (
-        let i = 0;
-        i < processedFailedData[0].parsedContent.paths.length;
-        i++
-      ) {
-        tempFailedDataOfReport.push({
-          caseId: processedFailedData[0].caseId,
-          id: processedFailedData[0].id,
-          columns: processedFailedData[0].parsedContent.columns[i],
-          endDate: processedFailedData[0].parsedContent.endDates[i],
-          bankName: processedFailedData[0].parsedContent.bankName[i],
-          startDate: processedFailedData[0].parsedContent.startDates[i],
-          path: processedFailedData[0].parsedContent.paths[i],
-          password: processedFailedData[0].parsedContent.passwords[i],
-          resolved: false,
-          pdfName: processedFailedData[0].parsedContent.paths[i]
-            .split("\\")
-            .pop(),
-        });
+      if (processedFailedData.length === 0) {
+        console.warn("No valid failed statement data found after processing.");
+        setFailedDatasOfCurrentReport([]);
+        return;
       }
 
-      console.log("tempFailedDataOfReport", tempFailedDataOfReport);
+      // Extract first valid failed statement (assuming one caseId per report)
+      const firstFailedEntry = processedFailedData[0];
 
-      // remove duplicate entries using pdfName
+      if (!firstFailedEntry?.parsedContent?.paths?.length) {
+        console.warn("No valid failed PDF paths found.");
+        setFailedDatasOfCurrentReport([]);
+        return;
+      }
+
+      const tempFailedDataOfReport = firstFailedEntry.parsedContent.paths.map(
+        (pdfPath, index) => ({
+          caseId: firstFailedEntry.caseId,
+          id: firstFailedEntry.id,
+          columns: firstFailedEntry.parsedContent.columns[index] || "",
+          endDate: firstFailedEntry.parsedContent.endDates[index] || "",
+          bankName: firstFailedEntry.parsedContent.bankNames[index] || "",
+          startDate: firstFailedEntry.parsedContent.startDates[index] || "",
+          path: pdfPath,
+          password: firstFailedEntry.parsedContent.passwords[index] || "",
+          resolved: false,
+          pdfName: pdfPath.split("\\").pop(),
+        })
+      );
+
+      console.log("Processed failed data for UI:", tempFailedDataOfReport);
+
+      // Remove duplicate entries using pdfName
       const uniqueFailedDataOfReport = tempFailedDataOfReport.filter(
-        (thing, index, self) =>
-          index === self.findIndex((t) => t.pdfName === thing.pdfName)
+        (item, index, self) =>
+          index === self.findIndex((t) => t.pdfName === item.pdfName)
       );
 
       setFailedDatasOfCurrentReport(uniqueFailedDataOfReport);
     } catch (error) {
+      console.error("Error fetching failed statements:", error);
+
       toast({
         title: "Error",
         description: `Failed to load details: ${error.message}`,

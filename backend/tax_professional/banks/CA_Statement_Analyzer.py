@@ -19,7 +19,7 @@ from ...utils import get_saved_pdf_dir
 TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
 
 from ...common_functions import (process_excel_to_json,process_name_n_num_df,category_add_ca,
-                              another_method,eod,opening_and_closing_bal,summary_sheet,
+                              another_method,Upi,eod,opening_and_closing_bal,summary_sheet,
                               transaction_sheet,total_investment,redemption_investment,
                               creditor_list,debtor_list, cash_withdraw, cash_depo, div_int, emi,
                               refund_reversal, suspense_credit, suspense_debit, payment,receipt,
@@ -224,23 +224,23 @@ def refresh_category_all_sheets(df, eod_sheet_df, new_categories):
     other_expenses_df = summary_df_list[3]
 
     df['Value Date'] = pd.to_datetime(df['Value Date']).dt.strftime('%d-%m-%Y')
-    transaction_sheet_df = transaction_sheet(df)
-    investment_df = total_investment(df)
-    creditor_df = creditor_list(df)
-    debtor_df = debtor_list(transaction_sheet_df)
+    # transaction_sheet_df = transaction_sheet(df)
+    # investment_df = total_investment(df)
+    # creditor_df = creditor_list(df)
+    # debtor_df = debtor_list(transaction_sheet_df)
 
-    upi_cr_df = df[(df["Description"].str.contains("UPI", case=False)) & (df["Credit"] > 0)]
-    upi_dr_df = df[(df["Description"].str.contains("UPI", case=False)) & (df["Debit"] > 0)]
+    # upi_cr_df = df[(df["Description"].str.contains("UPI", case=False)) & (df["Credit"] > 0)]
+    # upi_dr_df = df[(df["Description"].str.contains("UPI", case=False)) & (df["Debit"] > 0)]
 
-    cash_withdrawal_df = cash_withdraw(df)
-    cash_deposit_df = cash_depo(df)
-    dividend_int_df = div_int(df)
-    emi_df = emi(df)
-    refund_df = refund_reversal(df)
-    suspense_credit_df = suspense_credit(df)
-    suspense_debit_df = suspense_debit(df)
-    payment_df = payment(df)
-    receipt_df = receipt(df)
+    # cash_withdrawal_df = cash_withdraw(df)
+    # cash_deposit_df = cash_depo(df)
+    # dividend_int_df = div_int(df)
+    # emi_df = emi(df)
+    # refund_df = refund_reversal(df)
+    # suspense_credit_df = suspense_credit(df)
+    # suspense_debit_df = suspense_debit(df)
+    # payment_df = payment(df)
+    # receipt_df = receipt(df)
 
     bank_avg_balance_df = calculate_fixed_day_average(eod_sheet_df)
     loan_value_df = process_avg_last_6_months(bank_avg_balance_df, eod_sheet_df)
@@ -253,22 +253,22 @@ def refresh_category_all_sheets(df, eod_sheet_df, new_categories):
         "Important Expenses": imp_expenses_payments_df.to_dict(orient="records"),
         "Other Expenses": other_expenses_df.to_dict(orient="records"),
         "Opportunity to Earn": loan_value_df.to_dict(orient="records"),
-        "Transactions": transaction_sheet_df.to_dict(orient="records"),
-        "EOD": eod_sheet_df.to_dict(orient="records"),
-        "Investment": investment_df.to_dict(orient="records"),
-        "Creditors": creditor_df.to_dict(orient="records"),
-        "Debtors": debtor_df.to_dict(orient="records"),
-        "UPI-CR": upi_cr_df.to_dict(orient="records"),
-        "UPI-DR": upi_dr_df.to_dict(orient="records"),
-        "Cash Withdrawal": cash_withdrawal_df.to_dict(orient="records"),
-        "Cash Deposit": cash_deposit_df.to_dict(orient="records"),
-        "Redemption, Dividend & Interest": dividend_int_df.to_dict(orient="records"),
-        "Probable EMI": emi_df.to_dict(orient="records"),
-        "Refund-Reversal": refund_df.to_dict(orient="records"),
-        "Suspense Credit": suspense_credit_df.to_dict(orient="records"),
-        "Suspense Debit": suspense_debit_df.to_dict(orient="records"),
-        "Payment Voucher": payment_df.to_dict(orient="records"),
-        "Receipt Voucher": receipt_df.to_dict(orient="records"),
+        # "Transactions": transaction_sheet_df.to_dict(orient="records"),
+        # "EOD": eod_sheet_df.to_dict(orient="records"),
+        # "Investment": investment_df.to_dict(orient="records"),
+        # "Creditors": creditor_df.to_dict(orient="records"),
+        # "Debtors": debtor_df.to_dict(orient="records"),
+        # "UPI-CR": upi_cr_df.to_dict(orient="records"),
+        # "UPI-DR": upi_dr_df.to_dict(orient="records"),
+        # "Cash Withdrawal": cash_withdrawal_df.to_dict(orient="records"),
+        # "Cash Deposit": cash_deposit_df.to_dict(orient="records"),
+        # "Redemption, Dividend & Interest": dividend_int_df.to_dict(orient="records"),
+        # "Probable EMI": emi_df.to_dict(orient="records"),
+        # "Refund-Reversal": refund_df.to_dict(orient="records"),
+        # "Suspense Credit": suspense_credit_df.to_dict(orient="records"),
+        # "Suspense Debit": suspense_debit_df.to_dict(orient="records"),
+        # "Payment Voucher": payment_df.to_dict(orient="records"),
+        # "Receipt Voucher": receipt_df.to_dict(orient="records"),
     }
 
     # Convert the entire dictionary to JSON
@@ -376,6 +376,8 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
 
         df = category_add_ca(initial_df)
         new_tran_df = another_method(df)
+        new_tran_df = Upi(new_tran_df)
+        # print(new_tran_df)
 
         #############################------------------------#######################################
 
@@ -442,6 +444,7 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
     print("|------------------------------|")
 
     if not dfs:
+        print("|-------------xxx---------------|")
         folder_path = "saved_pdf"
         try:
             shutil.rmtree(folder_path)
@@ -480,13 +483,15 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
 
         df = category_add_ca(initial_df)
         new_tran_df = another_method(df)
-
+        new_tran_df = Upi(new_tran_df)
+        # print("transaction")
+        # print(new_tran_df)
         #############################------------------------#######################################
 
         json_lists_of_df = returns_json_output_of_all_sheets(new_tran_df, name_n_num_df)
 
         # excel_file_path = reconstruct_dict_from_json_save_to_excel(json_lists_of_df, account_number, CA_ID)
-
+        # print(excel_file_path)
 
         folder_path = "saved_pdf"
         try:

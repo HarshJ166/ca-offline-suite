@@ -103,6 +103,8 @@ export default function GenerateReport() {
 
       console.log({ caseName, filesWithContent });
 
+      console.log({ caseName, filesWithContent });
+
       const result = await window.electron.generateReportIpc(
         {
           files: filesWithContent,
@@ -202,12 +204,17 @@ export default function GenerateReport() {
     setRefreshTrigger((prev) => prev + 1);
   }, []);
 
+  const handleTestEdit = () => {
+    window.electron.editCategory({});
+  };
+
   return (
     <div className="p-8 pt-0 space-y-8 bg-white dark:bg-black min-h-screen">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight dark:text-slate-300">
           Report Generator
         </h2>
+        <button onClick={handleTestEdit}>Test Edit</button>
         <div className="flex items-center space-x-4">
           <button
             onClick={() => setNotificationsOpen(!notificationsOpen)}

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from fastapi.responses import HTMLResponse
 from fastapi import Body
+import pandas as pd
 # import matplotlib
 # matplotlib.use('Agg')
 # from findaddy.exceptions import ExtractionError
@@ -13,11 +14,12 @@ from backend.utils import get_saved_pdf_dir
 TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
 from pydantic import Field
 # If you have other custom imports:
-from backend.tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf,start_extraction_edit_pdf
+from backend.tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf,start_extraction_edit_pdf, refresh_category_all_sheets
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from backend.account_number_ifsc_extraction import extract_accno_ifsc
 from backend.pdf_to_name import extract_entities
+import time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -65,6 +67,11 @@ class EditPdfRequest(BaseModel):
     aiyazs_array_of_array: List[List[ColumnData]]
     whole_transaction_sheet: Optional[List[Transaction]] = None
     ca_id: str
+
+class EditCategoryRequest(BaseModel):
+    transaction_data: List[dict]
+    new_categories: List[dict]
+    eod_data: List[dict]
 
 class DummyRequest(BaseModel):
     data: str
@@ -258,6 +265,34 @@ async def add_pdf(request: BankStatementRequest):
 async def health_check():
     return {"status": "healthy"}
 
+@app.post("/edit-category/")
+async def edit_category(request: EditCategoryRequest):
+    try:
+        transaction_data = request.transaction_data
+        new_categories = request.new_categories
+        eod_data = request.eod_data
+        logger.info(f"Received request with new categories: {new_categories}")
+        logger.info(f"Received request with transaction data: {transaction_data[0]}")
+        logger.info(f"Received request with eod data: {eod_data}")
+
+        # convert transaction_data to df
+        transaction_df = pd.DataFrame(transaction_data)
+        transaction_df["Value Date"] = pd.to_datetime(transaction_df["Value Date"], format="%d-%m-%Y")
+        eod_df = pd.DataFrame(eod_data)
+        print("Transactions : ", transaction_df.head())
+        # print(eod_df.head())
+
+        data = refresh_category_all_sheets(transaction_df, eod_df, new_categories)
+        print(data)
+
+        return data
+
+    except Exception as e:
+        logger.error(f"Error processing bank statements: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error processing bank statements: {str(e)}"
+        )
+
 
 if __name__ == "__main__":
     # Optionally use environment variables for host/port. Falls back to "127.0.0.1" and 7500 if none provided.
@@ -275,8 +310,8 @@ if __name__ == "__main__":
 
 
     # IMPORTANT: reload=False for production usage
-    import time
-    time.sleep(8)
+    # import time
+    # time.sleep(8)
     uvicorn.run(app, host=host, port=port, reload=False)
 
 
