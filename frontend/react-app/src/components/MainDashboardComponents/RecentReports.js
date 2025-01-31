@@ -64,7 +64,8 @@ const RecentReports = ({ key }) => {
   const [isMarkerModalOpen, setIsMarkerModalOpen] = useState(false);
   const [pdfEditLoading, setPdfEditLoading] = useState(false);
 
-  
+    const [reportToDelete, setReportToDelete] = useState(null);
+
   const handleSubmitEditPdf = async () => {
     setPdfEditLoading(true)
     const allRectified = failedDatasOfCurrentReport.every(
@@ -72,9 +73,11 @@ const RecentReports = ({ key }) => {
     );
     
     if (allRectified) {
-
       // Call the API to update the statements
-      const result = await window.electron.editPdf(failedDatasOfCurrentReport, currentCaseName);
+      const result = await window.electron.editPdf(
+        failedDatasOfCurrentReport,
+        currentCaseName
+      );
       console.log("aiyaz react result", result);
 
       toast({
@@ -134,7 +137,7 @@ const RecentReports = ({ key }) => {
 
     fetchReports();
   }, []);
-  const handleDetails = async (reportId,reportName) => {
+  const handleDetails = async (reportId, reportName) => {
     setIsLoading(true);
     setCurrentCaseName(reportName);
 
@@ -174,6 +177,7 @@ const RecentReports = ({ key }) => {
                 columns: Array.isArray(parsedData.respective_list_of_columns)
                   ? parsedData.respective_list_of_columns
                   : [],
+                  respectiveReasonsForError: Array.isArray(parsedData.respective_reasons_for_error) ? parsedData.respective_reasons_for_error : [],
               },
             };
           } catch (parseError) {
@@ -205,10 +209,7 @@ const RecentReports = ({ key }) => {
       // remove duplicate entries using pdfName
       const uniqueFailedDataOfReport = tempFailedDataOfReport.filter(
         (thing, index, self) =>
-          index ===
-          self.findIndex(
-            (t) => t.pdfName === thing.pdfName
-          )
+          index === self.findIndex((t) => t.pdfName === thing.pdfName)
       );
 
       setFailedDatasOfCurrentReport(uniqueFailedDataOfReport);
@@ -217,13 +218,11 @@ const RecentReports = ({ key }) => {
         title: "Error",
         description: `Failed to load details: ${error.message}`,
         variant: "destructive",
-
       });
     } finally {
       setIsLoading(false);
     }
   };
-
 
   // Filter reports based on search query
   const filteredReports = recentReports.filter(
@@ -303,29 +302,24 @@ const RecentReports = ({ key }) => {
 
   const handleDeleteReport = async (reportId) => {
     try {
-      // Optimistically update the state before confirming deletion
-      const updatedReports = recentReports.filter(
-        (report) => report.id !== reportId
-      );
-      setRecentReports(updatedReports);
-
-      // Call the API to delete the report
       await window.electron.deleteReport(reportId);
+      setRecentReports((prev) =>
+        prev.filter((report) => report.id !== reportId)
+      );
 
       toast({
         title: "Success",
         description: "Report deleted successfully.",
         variant: "success",
+        className: "bg-white text-black opacity-100 shadow-lg",
       });
     } catch (error) {
-      // Roll back the state if the deletion fails
-      setRecentReports((prev) => [
-        ...prev,
-        recentReports.find((r) => r.id === reportId),
-      ]);
+      console.error("Error deleting report:", error);
       toast({
         title: "Error",
-        description: `Failed to delete the report: ${error.message}`,
+        description: `Failed to delete the report: ${
+          error.message || "Unknown error"
+        }`,
         variant: "destructive",
       });
     }
@@ -369,14 +363,13 @@ const RecentReports = ({ key }) => {
         <div className="mt-2 w-full flex flex-col gap-2">
           <div className="flex items-center gap-4">
             <CircularProgress className="w-full" />
-             <CircularProgress value={0} className="w-full" />
+            <CircularProgress value={0} className="w-full" />
             {/* <span className="text-sm font-medium">0%</span> */}
           </div>
           <p className="text-sm text-gray-500">Preparing to process files...</p>
         </div>
       ),
       duration: Infinity,
-      
     });
     setToastId(newToastId);
 
@@ -462,8 +455,6 @@ const RecentReports = ({ key }) => {
   const closeModal = () => {
     setIsAddPdfModalOpen(false);
   };
-
-
 
   const handleSaveMarkerData = (data) => {
     // Handle saving marker data here
@@ -552,14 +543,39 @@ const RecentReports = ({ key }) => {
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleDeleteReport(report.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => setReportToDelete(report.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-white dark:bg-slate-950">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Report</AlertDialogTitle>
+                        </AlertDialogHeader>
+                        <div className="py-4">
+                          Are you sure you want to delete this report? This
+                          action cannot be undone.
+                        </div>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <Button
+                            variant="destructive"
+                            onClick={() => {
+                              handleDeleteReport(report.id);
+                              setReportToDelete(null);
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -569,7 +585,7 @@ const RecentReports = ({ key }) => {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 hover:bg-black/5"
-                        onClick={() => handleDetails(report.id,report.name)}
+                        onClick={() => handleDetails(report.id, report.name)}
                       >
                         <Info className="h-4 w-4" />
                       </Button>
@@ -581,10 +597,18 @@ const RecentReports = ({ key }) => {
                         </AlertDialogTitle>
                       </AlertDialogHeader>
                       <div className="p-6 overflow-auto max-h-[400px]">
-                        {failedDatasOfCurrentReport && failedDatasOfCurrentReport.length>0 ?(
-                            <div>
-                            {failedDatasOfCurrentReport.map((statement, index) => {
-                              const isDone = statement.resolved;
+  {failedDatasOfCurrentReport && failedDatasOfCurrentReport.length > 0 ? (
+                               <div>
+                                 {[...failedDatasOfCurrentReport]
+        .sort((a, b) => {
+          // Sort by hasError (false comes first)
+          const aHasError = a.respectiveReasonsForError && a.respectiveReasonsForError.length > 0;
+          const bHasError = b.respectiveReasonsForError && b.respectiveReasonsForError.length > 0;
+          return aHasError === bHasError ? 0 : aHasError ? 1 : -1;
+        })
+        .map((statement, index) => {
+                                     const isDone = statement.resolved;
+          const hasError = statement.respectiveReasonsForError && statement.respectiveReasonsForError.length > 0;
 
                               return (
                                 <div key={index} className="mb-4 border-b pb-4">

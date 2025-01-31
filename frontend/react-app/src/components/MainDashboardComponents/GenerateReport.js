@@ -96,6 +96,8 @@ export default function GenerateReport() {
           };
         })
       );
+      
+      console.log({caseName, filesWithContent});
 
       const result = await window.electron.generateReportIpc(
         {

@@ -209,11 +209,14 @@ def returns_json_output_of_all_sheets(df, name_n_num_df):
     return json_output
 
 
-def refresh_category_all_sheets(df, eod_sheet_df):
+def refresh_category_all_sheets(df, eod_sheet_df, new_categories):
 
     opening_bal, closing_bal = opening_and_closing_bal(eod_sheet_df, df)
 
-    summary_df_list = summary_sheet(df, opening_bal, closing_bal, df)
+    if not new_categories:
+        summary_df_list = summary_sheet(df, opening_bal, closing_bal, df)
+    else:
+        summary_df_list = summary_sheet(df, opening_bal, closing_bal, df, new_categories)
 
     particulars_df = summary_df_list[0]
     income_receipts_df = summary_df_list[1]
@@ -491,7 +494,7 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
             print(f"Removed all contents in '{folder_path}'")
         except Exception as e:
             print(f"Failed to remove '{folder_path}': {e}")
-
+        # print(name_n_num_df)
         return {"sheets_in_json": json_lists_of_df, 'pdf_paths_not_extracted': pdf_paths_not_extracted}
 
 
@@ -621,11 +624,11 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
 #
 
 #
-# bank_names = ["IDFC", "BOB", "HDFC", "IDBI"]
-# pdf_paths = ["V V Mehtai.pdf", "V V Mehta.pdf", "Copy of BOB AUG - NOV 22 PASSWORD - 9920192292 .pdf", "Leena BOB-2019 1-04-2023 To 30-09-2023 - Pass- 078344809_unlocked.pdf"]
-# passwords = ["", "", "", ""]
-# start_dates = ["01-09-2020", "01-10-2020", "01-09-2020", "01-01-2023"]
-# end_dates = ["03-03-2025", "31-03-2025", "03-03-2025", "31-03-2023"]
+# bank_names = ["BOB"]
+# pdf_paths = ["Leena BOB-2019 1-04-2023 To 30-09-2023 - Pass- 078344809_unlocked.pdf"]
+# passwords = [""]
+# start_dates = ["01-09-2020"]
+# end_dates = ["03-03-2025"]
 # CA_ID = "CA_ID_4321"
 # progress_data = {}
 # null = "null"

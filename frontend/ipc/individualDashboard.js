@@ -51,7 +51,6 @@ function registerIndividualDashboardIpc() {
           .select()
           .from(transactions)
           .where(and(eq(transactions.statementId, individualId.toString())));
-        log.info("Transactions fetched successfully:", allTransactions.length);
         return allTransactions;
       } else {
         const allStatements = await db
@@ -74,7 +73,7 @@ function registerIndividualDashboardIpc() {
               allStatements.map((stmt) => stmt.id.toString()) // Convert integer ID to string
             )
           );
-        log.info("Transactions fetched successfully:", allTransactions.length);
+        // log.info("Transactions fetched successfully:", allTransactions.length);
         return allTransactions;
       }
     } catch (error) {
