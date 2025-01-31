@@ -19,7 +19,7 @@ from ...utils import get_saved_pdf_dir
 TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
 
 from ...common_functions import (process_excel_to_json,process_name_n_num_df,category_add_ca,
-                              another_method,eod,opening_and_closing_bal,summary_sheet,
+                              another_method,Upi,eod,opening_and_closing_bal,summary_sheet,
                               transaction_sheet,total_investment,redemption_investment,
                               creditor_list,debtor_list, cash_withdraw, cash_depo, div_int, emi,
                               refund_reversal, suspense_credit, suspense_debit, payment,receipt,
@@ -377,7 +377,8 @@ def start_extraction_edit_pdf(bank_names, pdf_paths, passwords, start_dates, end
         df = category_add_ca(initial_df)
         new_tran_df = another_method(df)
         new_tran_df = Upi(new_tran_df)
-        print(new_tran_df)
+        # print(new_tran_df)
+
         #############################------------------------#######################################
 
         json_lists_of_df = returns_json_output_of_all_sheets(new_tran_df, name_n_num_df)
@@ -483,14 +484,14 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
         df = category_add_ca(initial_df)
         new_tran_df = another_method(df)
         new_tran_df = Upi(new_tran_df)
-        print("transaction")
-        print(new_tran_df)
+        # print("transaction")
+        # print(new_tran_df)
         #############################------------------------#######################################
 
         json_lists_of_df = returns_json_output_of_all_sheets(new_tran_df, name_n_num_df)
 
-        excel_file_path = reconstruct_dict_from_json_save_to_excel(json_lists_of_df, account_number, CA_ID)
-        print(excel_file_path)
+        # excel_file_path = reconstruct_dict_from_json_save_to_excel(json_lists_of_df, account_number, CA_ID)
+        # print(excel_file_path)
 
         folder_path = "saved_pdf"
         try:

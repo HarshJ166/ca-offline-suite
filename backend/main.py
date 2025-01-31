@@ -19,6 +19,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from backend.account_number_ifsc_extraction import extract_accno_ifsc
 from backend.pdf_to_name import extract_entities
+import time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
