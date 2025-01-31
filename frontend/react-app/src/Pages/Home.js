@@ -144,9 +144,7 @@ const Dashboard = () => {
             <main className="flex-1">
               {activeTab === "Dashboard" && <MainDashboard />}
               {activeTab === "Generate Report" && <ReportGenerator />}
-              {activeTab === "Opportunity to Earn" && (
-                <Eligibility caseId={28} />
-              )}
+              {activeTab === "Opportunity to Earn" && <Eligibility />}
               {activeTab === "Billing" && <Billing />}
 
               {activeTab === "Analytics" && <Analytics />}

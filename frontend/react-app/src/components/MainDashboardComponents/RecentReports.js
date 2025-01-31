@@ -71,6 +71,7 @@ const RecentReports = ({ key }) => {
     useState(null);
   const [selectedFailedFile, setSelectedFailedFile] = useState(null);
   const [isMarkerModalOpen, setIsMarkerModalOpen] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState(null);
 
   const handleSubmitEditPdf = async () => {
     const allRectified = failedDatasOfCurrentReport.every(
@@ -175,6 +176,7 @@ const RecentReports = ({ key }) => {
                 columns: Array.isArray(parsedData.respective_list_of_columns)
                   ? parsedData.respective_list_of_columns
                   : [],
+                  respectiveReasonsForError: Array.isArray(parsedData.respective_reasons_for_error) ? parsedData.respective_reasons_for_error : [],
               },
             };
           } catch (parseError) {
@@ -184,27 +186,23 @@ const RecentReports = ({ key }) => {
         })
         .filter((item) => item !== null); // Remove null entries
 
-      const tempFailedDataOfReport = [];
-      for (
-        let i = 0;
-        i < processedFailedData[0].parsedContent.paths.length;
-        i++
-      ) {
-        tempFailedDataOfReport.push({
-          caseId: processedFailedData[0].caseId,
-          id: processedFailedData[0].id,
-          columns: processedFailedData[0].parsedContent.columns[i],
-          endDate: processedFailedData[0].parsedContent.endDates[i],
-          bankName: processedFailedData[0].bankName,
-          startDate: processedFailedData[0].parsedContent.startDates[i],
-          path: processedFailedData[0].parsedContent.paths[i],
-          password: processedFailedData[0].parsedContent.passwords[i],
-          resolved: false,
-          pdfName: processedFailedData[0].parsedContent.paths[i]
-            .split("\\")
-            .pop(),
-        });
-      }
+        const tempFailedDataOfReport = []
+        for(let i=0; i<processedFailedData[0].parsedContent.paths.length; i++) {
+          tempFailedDataOfReport.push({
+            caseId: processedFailedData[0].caseId,
+            id: processedFailedData[0].id,
+            columns: processedFailedData[0].parsedContent.columns[i],
+            endDate: processedFailedData[0].parsedContent.endDates[i],
+            bankName: processedFailedData[0].bankName,
+            startDate: processedFailedData[0].parsedContent.startDates[i],
+            path: processedFailedData[0].parsedContent.paths[i],
+            password: processedFailedData[0].parsedContent.passwords[i],
+            resolved: false,
+            pdfName: processedFailedData[0].parsedContent.paths[i].split('\\').pop(),
+            respectiveReasonsForError: processedFailedData[0].parsedContent.respectiveReasonsForError[i] || null,
+          })
+        }
+        
 
       // remove duplicate entries using pdfName
       const uniqueFailedDataOfReport = tempFailedDataOfReport.filter(
@@ -302,29 +300,24 @@ const RecentReports = ({ key }) => {
 
   const handleDeleteReport = async (reportId) => {
     try {
-      // Optimistically update the state before confirming deletion
-      const updatedReports = recentReports.filter(
-        (report) => report.id !== reportId
-      );
-      setRecentReports(updatedReports);
-
-      // Call the API to delete the report
       await window.electron.deleteReport(reportId);
+      setRecentReports((prev) =>
+        prev.filter((report) => report.id !== reportId)
+      );
 
       toast({
         title: "Success",
         description: "Report deleted successfully.",
         variant: "success",
+        className: "bg-white text-black opacity-100 shadow-lg",
       });
     } catch (error) {
-      // Roll back the state if the deletion fails
-      setRecentReports((prev) => [
-        ...prev,
-        recentReports.find((r) => r.id === reportId),
-      ]);
+      console.error("Error deleting report:", error);
       toast({
         title: "Error",
-        description: `Failed to delete the report: ${error.message}`,
+        description: `Failed to delete the report: ${
+          error.message || "Unknown error"
+        }`,
         variant: "destructive",
       });
     }
@@ -548,14 +541,39 @@ const RecentReports = ({ key }) => {
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleDeleteReport(report.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => setReportToDelete(report.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-white dark:bg-slate-950">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Report</AlertDialogTitle>
+                        </AlertDialogHeader>
+                        <div className="py-4">
+                          Are you sure you want to delete this report? This
+                          action cannot be undone.
+                        </div>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <Button
+                            variant="destructive"
+                            onClick={() => {
+                              handleDeleteReport(report.id);
+                              setReportToDelete(null);
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -577,62 +595,74 @@ const RecentReports = ({ key }) => {
                         </AlertDialogTitle>
                       </AlertDialogHeader>
                       <div className="p-6 overflow-auto max-h-[400px]">
-                        {failedDatasOfCurrentReport &&
-                        failedDatasOfCurrentReport.length > 0 ? (
-                          <div>
-                            {failedDatasOfCurrentReport.map(
-                              (statement, index) => {
-                                const isDone = statement.resolved;
+  {failedDatasOfCurrentReport && failedDatasOfCurrentReport.length > 0 ? (
+    <div>
+      {[...failedDatasOfCurrentReport]
+        .sort((a, b) => {
+          // Sort by hasError (false comes first)
+          const aHasError = a.respectiveReasonsForError && a.respectiveReasonsForError.length > 0;
+          const bHasError = b.respectiveReasonsForError && b.respectiveReasonsForError.length > 0;
+          return aHasError === bHasError ? 0 : aHasError ? 1 : -1;
+        })
+        .map((statement, index) => {
+          const isDone = statement.resolved;
+          const hasError = statement.respectiveReasonsForError && statement.respectiveReasonsForError.length > 0;
 
-                                return (
-                                  <div
-                                    key={index}
-                                    className="mb-4 border-b pb-4"
-                                  >
-                                    <h3 className="font-semibold mb-2">
-                                      Failed Statement {index + 1}
-                                    </h3>
-                                    <div className="flex gap-2 items-center">
-                                      <p className="flex-[4.5]">
-                                        <strong>File Name:</strong>{" "}
-                                        {statement.pdfName}
-                                      </p>
-
-                                      {/* Conditionally render the Rectify or Done button */}
-                                      {isDone ? (
-                                        <Button
-                                          size="sm"
-                                          disabled
-                                          className="flex-1 bg-green-600 hover:bg-green-700 text-white transition-colors"
-                                        >
-                                          <CheckCircle className="w-4 h-4 mr-2" />
-                                          Done
-                                        </Button>
-                                      ) : (
-                                        <Button
-                                          variant="secondary"
-                                          size="sm"
-                                          className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors"
-                                          onClick={() => {
-                                            setIsMarkerModalOpen(true);
-                                            setSelectedFailedFile(statement);
-                                          }}
-                                        >
-                                          Rectify
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              }
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-center text-green-600 font-semibold">
-                            Report Processed Successfully
-                          </div>
-                        )}
-                      </div>
+          return (
+            <div key={index} className="mb-4 border-b pb-4">
+              <h3 className="font-semibold mb-2">
+                Failed Statement {index + 1}
+              </h3>
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2 items-center">
+                  <p className="flex-[4.5]">
+                    <strong>File Name:</strong> {statement.pdfName}
+                  </p>
+                  
+                  {!hasError && !isDone && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors"
+                      onClick={() => {
+                        setIsMarkerModalOpen(true);
+                        setSelectedFailedFile(statement);
+                      }}
+                    >
+                      Rectify
+                    </Button>
+                  )}
+                  
+                  {isDone && (
+                    <Button
+                      size="sm"
+                      disabled
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white transition-colors"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Done
+                    </Button>
+                  )}
+                </div>
+                
+                {hasError && (
+                  <div className="mt-2">
+                    <p className="text-red-600 mt-1">
+                      {statement.respectiveReasonsForError}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+    </div>
+  ) : (
+    <div className="text-center text-green-600 font-semibold">
+      Report Processed Successfully
+    </div>
+  )}
+</div>
                       <AlertDialogFooter className="border-t border-black/10 pt-6">
                         {/* create a submit button */}
                         <Button

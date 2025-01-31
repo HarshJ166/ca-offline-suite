@@ -455,14 +455,18 @@ const updateCaseStatus = async (caseId, status) => {
   }
 };
 
-async function processOpportunityToEarnData(opportunityToEarnData, CaseId) {
+const processOpportunityToEarnData = async (
+  opportunityToEarnData,
+  caseName
+) => {
+  log.info("Processing opportunity to earn data for case:", caseName);
   try {
     console.log(
       "Full Opportunity to Earn Data:",
       JSON.stringify(opportunityToEarnData)
     );
 
-    // Check if the data is an array with at least one element
+    // Extract the array from the object
     const opportunityToEarnArray = Array.isArray(opportunityToEarnData)
       ? opportunityToEarnData
       : opportunityToEarnData["Opportunity to Earn"];
@@ -472,58 +476,53 @@ async function processOpportunityToEarnData(opportunityToEarnData, CaseId) {
       return false;
     }
 
-    const opportunityToEarnValues = Array.isArray(opportunityToEarnArray)
-      ? opportunityToEarnArray[0]
-      : opportunityToEarnArray;
+    // Get the case ID for this specific report
+    const validCaseId = await getOrCreateCase(caseName);
 
-    const validCaseId = await getOrCreateCase(CaseId);
+    // Initialize sums for each category
+    let homeLoanValue = 0;
+    let loanAgainstProperty = 0;
+    let businessLoan = 0;
+    let termPlan = 0;
+    let generalInsurance = 0;
 
-    // Extract values with default fallbacks of 0
-    const homeLoanValue =
-      opportunityToEarnValues?.["Maximum Home Loan Value"] || 0;
-    const loanAgainstProperty =
-      opportunityToEarnValues?.["Maximum LAP Value"] || 0;
-    const businessLoan = opportunityToEarnValues?.["Maximum BL Value"] || 0;
-    const termPlan = opportunityToEarnValues?.["Maximum TP Value"] || 0;
-    const generalInsurance = opportunityToEarnValues?.["Maximum GI Value"] || 0;
+    // Loop through each product and categorize the amount correctly
+    for (const item of opportunityToEarnArray) {
+      const product = item["Product"];
+      const amount = parseFloat(item["Amount"]) || 0;
 
-    const existingOpportunityToEarn = await db
-      .select()
-      .from(opportunityToEarn)
-      .where(eq(opportunityToEarn.caseId, validCaseId));
-
-    if (existingOpportunityToEarn.length > 0) {
-      // Update the existing opportunity to earn record
-      await db
-        .update(opportunityToEarn)
-        .set({
-          homeLoanValue,
-          loanAgainstProperty,
-          businessLoan,
-          termPlan,
-          generalInsurance,
-        })
-        .where(eq(opportunityToEarn.caseId, validCaseId));
-    } else {
-      // Insert new opportunity to earn record
-      await db.insert(opportunityToEarn).values({
-        caseId: validCaseId,
-        homeLoanValue,
-        loanAgainstProperty,
-        businessLoan,
-        termPlan,
-        generalInsurance,
-        createdAt: new Date(),
-      });
+      if (!isNaN(amount)) {
+        if (product.includes("Home Loan")) {
+          homeLoanValue += amount;
+        } else if (product.includes("Loan Against Property")) {
+          loanAgainstProperty += amount;
+        } else if (product.includes("Business Loan")) {
+          businessLoan += amount;
+        } else if (product.includes("Term Plan")) {
+          termPlan += amount;
+        } else if (product.includes("General Insurance")) {
+          generalInsurance += amount;
+        }
+      }
     }
 
-    log.info(`Opportunity to earn data processed for case ${validCaseId}`);
+    // Always insert a new record to append the data
+    await db.insert(opportunityToEarn).values({
+      caseId: validCaseId,
+      homeLoanValue,
+      loanAgainstProperty,
+      businessLoan,
+      termPlan,
+      generalInsurance,
+    });
+
+    log.info(`New opportunity to earn data appended for case ${validCaseId}`);
     return true;
   } catch (error) {
     log.error("Error processing opportunity to earn data:", error);
     throw error;
   }
-}
+};
 
 function generateReportIpc(tmpdir_path) {
   const baseUrl = `http://localhost:7500`;
@@ -551,38 +550,50 @@ function generateReportIpc(tmpdir_path) {
   //   console.error(err.message);
   //   console.error(err.response.data.detail[0].loc);
   // });
-
   ipcMain.handle("generate-report", async (event, receivedResult, caseName) => {
-    log.info("IPC handler invoked for generate-report", caseName);
-    const tempDir = tmpdir_path;
-    log.info("Temp Directory : ", tempDir);
-    let caseId = null;
-
-    const successfulFiles = [];
-    const failedFiles = [];
-
     try {
-      caseId = await getOrCreateCase(caseName);
+      log.info("IPC handler invoked for generate-report", caseName);
+      
+      const tempDir = tmpdir_path;
+      log.info("Temp Directory : ", tempDir);
+  
+      const caseId = await getOrCreateCase(caseName);
       if (!receivedResult?.files?.length) {
-        await updateCaseStatus(caseId, "Failed");
         throw new Error("Invalid or empty files array received");
       }
-
+  
+      // Track files status
+      const successfulFiles = new Set();
+      const failedFiles = new Set();
+      const allProcessedFiles = new Set();
+      const uploadedFiles = new Map(); // Track original filenames and their temp paths
+  
+      // First, save all uploaded files and track them
       const fileDetails = receivedResult.files.map((fileDetail, index) => {
         if (!fileDetail.pdf_paths || !fileDetail.bankName) {
           throw new Error(`Missing required fields for file at index ${index}`);
         }
-
-        const filePath = path.join(tempDir, fileDetail.pdf_paths);
-
+  
+        const originalFilename = fileDetail.pdf_paths;
+        const tempFilename = `${Date.now()}-${originalFilename}`;
+        const filePath = path.join(tempDir, tempFilename);
+        
+        allProcessedFiles.add(filePath);
+        uploadedFiles.set(filePath, {
+          originalName: originalFilename,
+          bankName: fileDetail.bankName
+        });
+  
         console.log(`Saving file to ${filePath}`);
-
+  
         if (fileDetail.fileContent) {
           fs.writeFileSync(filePath, fileDetail.fileContent, "binary");
+          successfulFiles.add(filePath); // Initially mark as successful
         } else {
           log.warn(`No file content for ${fileDetail.bankName}`);
+          failedFiles.add(filePath);
         }
-
+  
         return {
           ...fileDetail,
           pdf_paths: filePath,
@@ -590,7 +601,8 @@ function generateReportIpc(tmpdir_path) {
           end_date: fileDetail.end_date || "",
         };
       });
-
+  
+      // Rest of the API call setup
       const payload = {
         bank_names: fileDetails.map((d) => d.bankName),
         pdf_paths: fileDetails.map((d) => d.pdf_paths),
@@ -599,101 +611,85 @@ function generateReportIpc(tmpdir_path) {
         end_date: fileDetails.map((d) => d.end_date || ""),
         ca_id: fileDetails[0]?.ca_id || "DEFAULT_CASE",
       };
-
+  
       const response = await axios.post(generateReportEndpoint, payload, {
         headers: { "Content-Type": "application/json" },
         timeout: 300000,
         validateStatus: (status) => status === 200,
       });
-
-      // Extract NER results from response
-      const nerResults = response.data?.ner_results || {
-        Name: [],
-        "Acc Number": [],
-      };
-
-      let failedPdfPaths = [];
-
+  
+      // Handle failed extractions from API response
       if (response.data?.["pdf_paths_not_extracted"]) {
-        await updateCaseStatus(caseId, "Failed");
-        const validCaseId = await getOrCreateCase(caseName);
-
+        const failedPdfPaths = response.data["pdf_paths_not_extracted"].paths || [];
+        
+        // Store failed statements in database
         await db.insert(failedStatements).values({
-          caseId: validCaseId,
+          caseId: caseId,
           data: JSON.stringify(response.data["pdf_paths_not_extracted"]),
         });
-
-        failedPdfPaths = response.data["pdf_paths_not_extracted"].paths || [];
-        log.warn("Some PDF paths were not extracted", failedPdfPaths);
-      }
-
-      if (!response.data || !response.data.data) {
-        throw new Error(
-          "Empty or invalid response received from analysis server"
-        );
-      }
-
-      let parsedData;
-      try {
-        const sanitizedJsonString = sanitizeJSONString(response.data.data);
-        parsedData = JSON.parse(sanitizedJsonString);
-      } catch (error) {
-        log.error("JSON parsing error:", error);
-        throw error;
-      }
-
-      const transactions = (parsedData.Transactions || []).filter(
-        (transaction) => {
-          if (
-            typeof transaction.Credit === "number" &&
-            isNaN(transaction.Credit)
-          ) {
-            transaction.Credit = null;
+  
+        // Mark files as failed based on API response
+        for (const failedPath of failedPdfPaths) {
+          // Find the corresponding full path in our processed files
+          const fullPath = fileDetails.find(detail => 
+            detail.pdf_paths.includes(path.basename(failedPath)))?.pdf_paths;
+          
+          if (fullPath) {
+            failedFiles.add(fullPath);
+            successfulFiles.delete(fullPath);
           }
-          if (
-            typeof transaction.Debit === "number" &&
-            isNaN(transaction.Debit)
-          ) {
-            transaction.Debit = null;
-          }
-          if (
-            typeof transaction.Balance === "number" &&
-            isNaN(transaction.Balance)
-          ) {
-            transaction.Balance = 0;
-          }
-
-          return (
-            (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
-            (transaction.Debit !== null && !isNaN(transaction.Debit))
-          );
         }
-      );
-
+  
+        log.warn("Some PDF paths were not extracted", Array.from(failedFiles));
+      }
+  
+      // Process transactions
+      const parsedData = JSON.parse(sanitizeJSONString(response.data.data));
+      const transactions = (parsedData.Transactions || []).filter((transaction) => {
+        if (typeof transaction.Credit === "number" && isNaN(transaction.Credit)) {
+          transaction.Credit = null;
+        }
+        if (typeof transaction.Debit === "number" && isNaN(transaction.Debit)) {
+          transaction.Debit = null;
+        }
+        if (typeof transaction.Balance === "number" && isNaN(transaction.Balance)) {
+          transaction.Balance = 0;
+        }
+  
+        return (
+          (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
+          (transaction.Debit !== null && !isNaN(transaction.Debit))
+        );
+      });
+  
+      // Process each file and update status
       const processedData = [];
-      for (let i = 0; i < fileDetails.length; i++) {
+      for (const fileDetail of fileDetails) {
         try {
           const result = await processStatementAndEOD(
-            fileDetails[i],
+            fileDetail,
             transactions,
             parsedData.EOD,
             caseName,
-            nerResults,
-            i // Pass the index to match with NER results
+            response.data?.ner_results || { Name: [], "Acc Number": [] },
+            fileDetails.indexOf(fileDetail)
           );
           processedData.push(result);
-          successfulFiles.push(fileDetails[i].pdf_paths);
+          
+          if (!failedFiles.has(fileDetail.pdf_paths)) {
+            successfulFiles.add(fileDetail.pdf_paths);
+          }
         } catch (error) {
-          failedFiles.push(fileDetails[i].pdf_paths);
+          failedFiles.add(fileDetail.pdf_paths);
+          successfulFiles.delete(fileDetail.pdf_paths);
           log.error(
-            `Error processing file detail for ${fileDetails[i].bankName}:`,
+            `Error processing file detail for ${fileDetail.bankName}:`,
             error
           );
-          throw error;
         }
       }
-
-      // Process Summary Data
+  
+      // Process summary data
       try {
         await processSummaryData(
           {
@@ -704,35 +700,59 @@ function generateReportIpc(tmpdir_path) {
           },
           caseName
         );
+  
+        log.info("Summary Data : ", parsedData["Particulars"]);
+        log.info("Income Receipts : ", parsedData["Income Receipts"]);
+        log.info("Important Expenses : ", parsedData["Important Expenses"]);
+        log.info("Other Expenses : ", parsedData["Other Expenses"]);
       } catch (error) {
         log.error("Error processing summary data:", error);
         throw error;
       }
-
+  
       // Process Opportunity to Earn Data
       try {
         await processOpportunityToEarnData(
           parsedData["Opportunity to Earn"] || [],
-          payload.ca_id
+          caseName
         );
       } catch (error) {
         log.error("Error processing opportunity to earn data:", error);
         throw error;
       }
-
-      // Cleanup
-      fileDetails.forEach((detail) => {
+  
+      // Update case status
+      if (failedFiles.size === 0) {
+        await updateCaseStatus(caseId, "Success");
+      } else {
+        await updateCaseStatus(caseId, "Failed");
+      }
+  
+      // Create directory for failed PDFs
+      const failedPDFsDir = path.join(tempDir, 'failed_pdfs', caseName);
+      fs.mkdirSync(failedPDFsDir, { recursive: true });
+  
+      // Handle failed and successful files
+      for (const filePath of allProcessedFiles) {
         try {
-          if (fs.existsSync(detail.pdf_paths)) {
-            fs.unlinkSync(detail.pdf_paths);
+          if (fs.existsSync(filePath)) {
+            if (failedFiles.has(filePath)) {
+              // Move failed file to its specific directory
+              const newPath = path.join(failedPDFsDir, path.basename(filePath));
+              fs.copyFileSync(filePath, newPath); // Copy first to prevent any move errors
+              fs.unlinkSync(filePath); // Then remove the original
+              log.info(`Moved failed PDF to: ${newPath}`);
+            } else if (successfulFiles.has(filePath)) {
+              // Remove successful files
+              fs.unlinkSync(filePath);
+              log.info(`Successfully deleted processed file: ${filePath}`);
+            }
           }
         } catch (error) {
-          log.warn(`Failed to cleanup temp file: ${detail.pdf_paths}`, error);
+          log.error(`Error handling file ${filePath}:`, error);
         }
-      });
-
-      await updateCaseStatus(caseId, "Success");
-
+      }
+  
       return {
         success: true,
         data: {
@@ -744,50 +764,34 @@ function generateReportIpc(tmpdir_path) {
           eodProcessed: true,
           summaryProcessed: true,
           failedStatements: response.data["pdf_paths_not_extracted"] || null,
-          failedFiles: failedFiles,
-          successfulFiles: successfulFiles,
-          nerResults: nerResults,
+          failedFiles: Array.from(failedFiles),
+          successfulFiles: Array.from(successfulFiles),
+          nerResults: response.data?.ner_results || { Name: [], "Acc Number": [] },
         },
       };
     } catch (error) {
-      if (caseId) {
-        await updateCaseStatus(caseId, "Failed");
-      }
       log.error("Error in report generation:", {
         message: error.message,
         stack: error.stack,
-        response: error.response?.data,
-        status: error.response?.status,
       });
-
-      if (error.response?.data?.["pdf_paths_not_extracted"]) {
-        try {
-          const validCaseId = await getOrCreateCase(caseName);
-
-          await db.insert(failedStatements).values({
-            caseId: validCaseId,
-            data: JSON.stringify(
-              error.response.data["pdf_paths_not_extracted"]
-            ),
-          });
-
-          const failedPdfPaths =
-            error.response.data["pdf_paths_not_extracted"].paths || [];
-          failedFiles.push(...failedPdfPaths);
-        } catch (dbError) {
-          log.error("Failed to store failed statements:", dbError);
-        }
-      }
-
+  
+      await updateCaseStatus(caseId, "Failed");
+  
       throw {
         message: error.message || "Failed to generate report",
-        code: error.response?.status || 500,
-        details: error.response?.data || error.toString(),
+        code: 500,
+        details: error.toString(),
         timestamp: new Date().toISOString(),
-        failedFiles: failedFiles,
+        failedFiles: Array.from(failedFiles || []),
+        successfulFiles: Array.from(successfulFiles || []),
+        nerResults: {},
       };
     }
   });
+
+  
+    
+  
 }
 
 module.exports = { generateReportIpc };

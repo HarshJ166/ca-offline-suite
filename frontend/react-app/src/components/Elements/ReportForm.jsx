@@ -353,11 +353,32 @@ const GenerateReportForm = ({
 
   console.log("Current Case Name: ", caseName);
 
+  
+  const validateForm = () => {
+    // Check if any file is missing bank selection
+    const missingBanks = fileDetails.some(detail => !detail.bankName);
+    
+    if (missingBanks) {
+      toast({
+        title: "Error",
+        description: "Please select a bank for all files",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return false;
+    }
+    return true;
+  };
+
   // In GenerateReportForm.js, modify the handleSubmit function:
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("Inside handleSubmit..", caseName);
+    
+    if (!validateForm()) {
+      return;
+    }
 
     if (!caseName) {
       toast({
