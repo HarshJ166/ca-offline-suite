@@ -16,6 +16,8 @@ from pydantic import Field
 from backend.tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf,start_extraction_edit_pdf
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from backend.account_number_ifsc_extraction import extract_accno_ifsc
+from backend.pdf_to_name import extract_entities
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -115,6 +117,45 @@ async def analyze_bank_statements(request: BankStatementRequest):
         CA_ID = request.ca_id
         progress_data = progress_data
 
+        ner_results = {
+                "Name": [],
+                "Acc Number": []
+            }
+
+        # Process PDFs with NER
+        start_ner = time.time()
+        person_count = 0
+        for pdf in pdf_paths:
+            person_count+=1
+            # result = pdf_to_name_and_accno(pdf)
+            fetched_name = None
+            fetched_acc_num = None
+
+            name_entities = extract_entities(pdf)
+            acc_number_ifsc = extract_accno_ifsc(pdf)
+
+            print("name_entities:- ",name_entities)
+
+            fetched_acc_num=acc_number_ifsc["acc"]
+
+            if name_entities:
+                for entity in name_entities:
+                    if fetched_name==None:
+                        fetched_name=entity
+
+            if fetched_name:
+                ner_results["Name"].append(fetched_name)
+            else:
+                ner_results["Name"].append(f"Statement {person_count}")
+                
+            if fetched_acc_num:
+                ner_results["Acc Number"].append(fetched_acc_num)
+            else:
+                ner_results["Acc Number"].append("XXXXXXXXXXX")
+        print("Ner results", ner_results)
+        end_ner = time.time()
+        print("Time taken to process NER", end_ner-start_ner)
+        
 
 
         logger.info("Starting extraction")
@@ -127,6 +168,7 @@ async def analyze_bank_statements(request: BankStatementRequest):
             "message": "Bank statements analyzed successfully",
             "data": result["sheets_in_json"],
             "pdf_paths_not_extracted": result["pdf_paths_not_extracted"],
+            "ner_results": ner_results, 
         }
 
     except Exception as e:
