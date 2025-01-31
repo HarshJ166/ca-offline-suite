@@ -20,7 +20,17 @@ import { useToast } from "../../hooks/use-toast";
 import { Badge } from "../ui/badge";
 import { cn } from "../../lib/utils";
 import { useNavigate } from "react-router-dom";
-import { Eye, Plus, Trash2, Info, Search, Edit2, X,CheckCircle, Loader2  } from "lucide-react";
+import {
+  Eye,
+  Plus,
+  Trash2,
+  Info,
+  Search,
+  Edit2,
+  X,
+  CheckCircle,
+  Loader2,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -58,7 +68,9 @@ const RecentReports = () => {
   const [currentCaseName, setCurrentCaseName] = useState("");
   const [currentCaseId, setCurrentCaseId] = useState("");
   const [recentReports, setRecentReports] = useState([]);
-  const [failedDatasOfCurrentReport, setFailedDatasOfCurrentReport] = useState([]);
+  const [failedDatasOfCurrentReport, setFailedDatasOfCurrentReport] = useState(
+    []
+  );
   const [selectedFailedFile, setSelectedFailedFile] = useState(null);
   const [isMarkerModalOpen, setIsMarkerModalOpen] = useState(false);
   const [pdfEditLoading, setPdfEditLoading] = useState(false);
@@ -66,11 +78,11 @@ const RecentReports = () => {
   const [reportToDelete, setReportToDelete] = useState(null);
 
   const handleSubmitEditPdf = async () => {
-    setPdfEditLoading(true)
+    setPdfEditLoading(true);
     const allRectified = failedDatasOfCurrentReport.every(
       (statement) => statement.resolved
     );
-    
+
     if (allRectified) {
       // Call the API to update the statements
       const result = await window.electron.editPdf(
@@ -93,13 +105,13 @@ const RecentReports = () => {
       });
       setPdfEditLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
     const fetchReports = async () => {
       try {
         const result = await window.electron.getRecentReports();
-        console.log({ recentReports:result });
+        console.log({ recentReports: result });
         const formattedReports = result
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
           .map((report) => ({
@@ -136,10 +148,6 @@ const RecentReports = () => {
 
     fetchReports();
   }, []);
-
-  
-
-  
 
   // Filter reports based on search query
   const filteredReports = recentReports.filter(
@@ -379,13 +387,11 @@ const RecentReports = () => {
     setIsMarkerModalOpen(false);
   };
 
-
-  
   const handleDetails = async (reportId, reportName) => {
     setIsLoading(true);
     setCurrentCaseName(reportName);
 
-    console.log("Opening recitfy modal for caseId:", reportId,reportName);
+    console.log("Opening recitfy modal for caseId:", reportId, reportName);
 
     try {
       const failedStatements = await window.electron.getFailedStatements(
@@ -415,15 +421,21 @@ const RecentReports = () => {
                 startDates: Array.isArray(parsedData.start_dates)
                   ? parsedData.start_dates
                   : [],
-                
-                bankName: Array.isArray(parsedData.bank_names)? parsedData.bank_names : [],
+
+                bankName: Array.isArray(parsedData.bank_names)
+                  ? parsedData.bank_names
+                  : [],
                 endDates: Array.isArray(parsedData.end_dates)
                   ? parsedData.end_dates
                   : [],
                 columns: Array.isArray(parsedData.respective_list_of_columns)
                   ? parsedData.respective_list_of_columns
                   : [],
-                  respectiveReasonsForError: Array.isArray(parsedData.respective_reasons_for_error) ? parsedData.respective_reasons_for_error : [],
+                respectiveReasonsForError: Array.isArray(
+                  parsedData.respective_reasons_for_error
+                )
+                  ? parsedData.respective_reasons_for_error
+                  : [],
               },
             };
           } catch (parseError) {
@@ -432,22 +444,28 @@ const RecentReports = () => {
           }
         })
         .filter((item) => item !== null); // Remove null entries
-      
-        console.log({processedFailedData});
-      const tempFailedDataOfReport =[]
-      for(let i=0; i<processedFailedData[0].parsedContent.paths.length; i++) {
+
+      console.log({ processedFailedData });
+      const tempFailedDataOfReport = [];
+      for (
+        let i = 0;
+        i < processedFailedData[0].parsedContent.paths.length;
+        i++
+      ) {
         tempFailedDataOfReport.push({
           caseId: processedFailedData[0].caseId,
           id: processedFailedData[0].id,
-          columns:processedFailedData[0].parsedContent.columns[i],
-          endDate:processedFailedData[0].parsedContent.endDates[i],
-          bankName:processedFailedData[0].parsedContent.bankName[i],
-          startDate:processedFailedData[0].parsedContent.startDates[i],
-          path:processedFailedData[0].parsedContent.paths[i],
-          password:processedFailedData[0].parsedContent.passwords[i],
+          columns: processedFailedData[0].parsedContent.columns[i],
+          endDate: processedFailedData[0].parsedContent.endDates[i],
+          bankName: processedFailedData[0].parsedContent.bankName[i],
+          startDate: processedFailedData[0].parsedContent.startDates[i],
+          path: processedFailedData[0].parsedContent.paths[i],
+          password: processedFailedData[0].parsedContent.passwords[i],
           resolved: false,
-          pdfName: processedFailedData[0].parsedContent.paths[i].split('\\').pop(),
-        })
+          pdfName: processedFailedData[0].parsedContent.paths[i]
+            .split("\\")
+            .pop(),
+        });
       }
 
       console.log("tempFailedDataOfReport", tempFailedDataOfReport);
@@ -469,7 +487,6 @@ const RecentReports = () => {
       setIsLoading(false);
     }
   };
-
 
   return (
     <Card>
@@ -506,197 +523,219 @@ const RecentReports = () => {
         </div>
       </CardHeader>
       <CardContent>
-      {recentReports.length>0?  <Table>
-          <TableHeader>
-            <TableRow className="align-">
-              <TableHead>Date</TableHead>
-              <TableHead>Report Name</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-              <TableHead>Details</TableHead>
-              {/* <TableHead>Details</TableHead> */}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {currentReports.map((report, index) => (
-              <TableRow key={report.id}>
-                <TableCell>{report.createdAt}</TableCell>
-                <TableCell>{report.name}</TableCell>
-                <TableCell>
-                  <StatusBadge status={report.status} />
-                </TableCell>
-                <TableCell>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleView(report.id)}
-                      className="h-8 w-8"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
+        {recentReports.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow className="align-">
+                <TableHead>Date</TableHead>
+                <TableHead>Report Name</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+                <TableHead>Details</TableHead>
+                {/* <TableHead>Details</TableHead> */}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {currentReports.map((report, index) => (
+                <TableRow key={report.id}>
+                  <TableCell>{report.createdAt}</TableCell>
+                  <TableCell>{report.name}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={report.status} />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleView(report.id)}
+                        className="h-8 w-8"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
 
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleAddReport(report.name, report.id)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => toggleEdit(report.id)}
-                      className="h-8 w-8"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleAddReport(report.name, report.id)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => toggleEdit(report.id)}
+                        className="h-8 w-8"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setReportToDelete(report.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-white dark:bg-slate-950">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Report</AlertDialogTitle>
+                          </AlertDialogHeader>
+                          <div className="py-4">
+                            Are you sure you want to delete this report? This
+                            action cannot be undone.
+                          </div>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <Button
+                              variant="destructive"
+                              onClick={() => {
+                                handleDeleteReport(report.id);
+                                setReportToDelete(null);
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </TableCell>
+                  <TableCell>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
-                          onClick={() => setReportToDelete(report.id)}
+                          className="h-8 w-8 hover:bg-black/5"
+                          onClick={() => handleDetails(report.id, report.name)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Info className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent className="bg-white dark:bg-slate-950">
+                      <AlertDialogContent className="max-w-2xl bg-white shadow-lg border-0 dark:bg-slate-950">
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Report</AlertDialogTitle>
+                          <AlertDialogTitle className="text-xl font-medium text-black bg-black/[0.03] -mx-6 -mt-6 p-4 border-b border-black/10 dark:bg-slate-900 dark:text-slate-300">
+                            Report Details
+                          </AlertDialogTitle>
                         </AlertDialogHeader>
-                        <div className="py-4">
-                          Are you sure you want to delete this report? This
-                          action cannot be undone.
+                        <div className="p-6 overflow-auto max-h-[400px]">
+                          {failedDatasOfCurrentReport &&
+                          failedDatasOfCurrentReport.length > 0 ? (
+                            <div>
+                              {[...failedDatasOfCurrentReport]
+                                .sort((a, b) => {
+                                  // Sort by hasError (false comes first)
+                                  const aHasError =
+                                    a.respectiveReasonsForError &&
+                                    a.respectiveReasonsForError.length > 0;
+                                  const bHasError =
+                                    b.respectiveReasonsForError &&
+                                    b.respectiveReasonsForError.length > 0;
+                                  return aHasError === bHasError
+                                    ? 0
+                                    : aHasError
+                                    ? 1
+                                    : -1;
+                                })
+                                .map((statement, index) => {
+                                  const isDone = statement.resolved;
+                                  const hasError =
+                                    statement.respectiveReasonsForError &&
+                                    statement.respectiveReasonsForError.length >
+                                      0;
+
+                                  return (
+                                    <div
+                                      key={index}
+                                      className="mb-4 border-b pb-4"
+                                    >
+                                      <h3 className="font-semibold mb-2">
+                                        Failed Statement {index + 1}
+                                      </h3>
+                                      <div className="flex gap-2 items-center">
+                                        <p className="flex-[4.5]">
+                                          <strong>File Name:</strong>{" "}
+                                          {statement.pdfName}
+                                        </p>
+
+                                        {/* Conditionally render the Rectify or Done button */}
+                                        {isDone ? (
+                                          <Button
+                                            size="sm"
+                                            disabled
+                                            className="flex-1 bg-green-600 hover:bg-green-700 text-white transition-colors"
+                                          >
+                                            <CheckCircle className="w-4 h-4 mr-2" />
+                                            Done
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors"
+                                            onClick={() => {
+                                              setIsMarkerModalOpen(true);
+                                              setSelectedFailedFile(statement);
+                                            }}
+                                          >
+                                            Rectify
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          ) : (
+                            <div className="text-center text-green-600 font-semibold">
+                              Report Processed Successfully
+                            </div>
+                          )}
                         </div>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <Button
-                            variant="destructive"
-                            onClick={() => {
-                              handleDeleteReport(report.id);
-                              setReportToDelete(null);
-                            }}
-                          >
-                            Delete
-                          </Button>
+                        <AlertDialogFooter className="border-t border-black/10 pt-6">
+                          {/* create a submit button */}
+                          {failedDatasOfCurrentReport &&
+                            failedDatasOfCurrentReport.length > 0 && (
+                              <div className="flex justify-center ">
+                                <Button
+                                  type="submit"
+                                  disabled={pdfEditLoading}
+                                  onClick={handleSubmitEditPdf}
+                                  className="relative inline-flex items-center px-4 py-2"
+                                >
+                                  {pdfEditLoading ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                      <span>Processing...</span>
+                                    </>
+                                  ) : (
+                                    "Submit"
+                                  )}
+                                </Button>
+                              </div>
+                            )}
+
+                          <AlertDialogCancel className="px-8 bg-black text-white hover:bg-black/90 hover:text-white dark:bg-white dark:text-black">
+                            Close
+                          </AlertDialogCancel>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 hover:bg-black/5"
-                        onClick={() => handleDetails(report.id, report.name)}
-                      >
-                        <Info className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="max-w-2xl bg-white shadow-lg border-0 dark:bg-slate-950">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="text-xl font-medium text-black bg-black/[0.03] -mx-6 -mt-6 p-4 border-b border-black/10 dark:bg-slate-900 dark:text-slate-300">
-                          Report Details
-                        </AlertDialogTitle>
-                      </AlertDialogHeader>
-                      <div className="p-6 overflow-auto max-h-[400px]">
-  {failedDatasOfCurrentReport && failedDatasOfCurrentReport.length > 0 ? (
-                               <div>
-                                 {[...failedDatasOfCurrentReport]
-        .sort((a, b) => {
-          // Sort by hasError (false comes first)
-          const aHasError = a.respectiveReasonsForError && a.respectiveReasonsForError.length > 0;
-          const bHasError = b.respectiveReasonsForError && b.respectiveReasonsForError.length > 0;
-          return aHasError === bHasError ? 0 : aHasError ? 1 : -1;
-        })
-        .map((statement, index) => {
-                                     const isDone = statement.resolved;
-          const hasError = statement.respectiveReasonsForError && statement.respectiveReasonsForError.length > 0;
-
-                              return (
-                                <div key={index} className="mb-4 border-b pb-4">
-                                  <h3 className="font-semibold mb-2">
-                                    Failed Statement {index + 1}
-                                  </h3>
-                                  <div className="flex gap-2 items-center">
-                                    <p className="flex-[4.5]">
-                                      <strong>File Name:</strong> {statement.pdfName}
-                                    </p>
-
-                                    {/* Conditionally render the Rectify or Done button */}
-                                    {isDone ? (
-                                      <Button
-                                        size="sm"
-                                        disabled
-                                        className="flex-1 bg-green-600 hover:bg-green-700 text-white transition-colors"
-                                      >
-                                        <CheckCircle className="w-4 h-4 mr-2" />
-                                        Done
-                                      </Button>
-                                    ) : (
-                                      <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors"
-                                        onClick={() => {
-                                          setIsMarkerModalOpen(true);
-                                          setSelectedFailedFile(statement);
-                                        }}
-                                      >
-                                        Rectify
-                                      </Button>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                            </div>
-                            ): (
-                          <div className="text-center text-green-600 font-semibold">
-                            Report Processed Successfully
-                          </div>
-                        )}
-                      </div>
-                      <AlertDialogFooter className="border-t border-black/10 pt-6">
-                      {/* create a submit button */}
-                        {failedDatasOfCurrentReport && failedDatasOfCurrentReport.length>0 && 
-                          <div className="flex justify-center ">
-                          <Button
-                            type="submit"
-                            disabled={pdfEditLoading}
-                            onClick={handleSubmitEditPdf}
-                            className="relative inline-flex items-center px-4 py-2"
-                          >
-                            {pdfEditLoading ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                <span>Processing...</span>
-                              </>
-                            ) : (
-                              "Submit"
-                            )}
-                          </Button>
-                        </div>}
-
-                        <AlertDialogCancel className="px-8 bg-black text-white hover:bg-black/90 hover:text-white dark:bg-white dark:text-black">
-                          Close
-                        </AlertDialogCancel>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>: <div className="text-center text-grey-600 opacity-70 font-semibold">
-          No Reports Found
-          </div>}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="text-center text-grey-600 opacity-70 font-semibold">
+            No Reports Found
+          </div>
+        )}
         {totalPages > 1 && (
           <div className="mt-6">
             <Pagination>

@@ -100,8 +100,8 @@ export default function GenerateReport() {
           };
         })
       );
-      
-      console.log({caseName, filesWithContent});
+
+      console.log({ caseName, filesWithContent });
 
       const result = await window.electron.generateReportIpc(
         {
@@ -122,17 +122,16 @@ export default function GenerateReport() {
           description: "Report generated successfully!",
           duration: 3000,
         });
-        if(result.data.failedFiles.length>0){
+        if (result.data.failedFiles.length > 0) {
           setShowRectifyButton(true);
-          const failedFiles = result.data.failedFiles.map((file_path)=>{
-            return file_path.split('\\').pop();
-          })
+          const failedFiles = result.data.failedFiles.map((file_path) => {
+            return file_path.split("\\").pop();
+          });
           setFailedStatements(failedFiles || []); // Store failed
         }
-        
-        if(result.data.totalTransactions)
-          setShowAnalysisButton(true);
-        
+
+        if (result.data.totalTransactions) setShowAnalysisButton(true);
+
         // setFailedStatements(result.pdf_paths_not_extracted || []); // Store failed
 
         setDialogOpen(true); // Open the Dialog
@@ -152,7 +151,7 @@ export default function GenerateReport() {
         throw new Error(errorMessage);
       }
     } catch (error) {
-      console.log("Report generation failed:", {error:error.stack});
+      console.log("Report generation failed:", { error: error.stack });
 
       if (typeof error === "object" && error !== null) {
         console.error("Detailed error:", JSON.stringify(error, null, 2));
@@ -190,8 +189,7 @@ export default function GenerateReport() {
 
   const handleRectify = () => {
     console.log("Rectify clicked ", currentCaseId, currentCaseName);
-  }
-
+  };
 
   const notifications = [
     { id: 1, message: "You have a new message." },
@@ -203,8 +201,6 @@ export default function GenerateReport() {
   const refreshPage = useCallback(() => {
     setRefreshTrigger((prev) => prev + 1);
   }, []);
-
-
 
   return (
     <div className="p-8 pt-0 space-y-8 bg-white dark:bg-black min-h-screen">
@@ -251,7 +247,7 @@ export default function GenerateReport() {
         />
       </div>
 
-      <RecentReports/>
+      <RecentReports />
 
       {/* Dialog for successful report generation */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -259,26 +255,23 @@ export default function GenerateReport() {
           <DialogHeader>
             <DialogTitle>Report Generated Successfully!</DialogTitle>
             <DialogDescription className="flex items-end gap-x-4 pt-4 ">
-              {console.log("failedStatements from alert box ", failedStatements)}
+              {console.log(
+                "failedStatements from alert box ",
+                failedStatements
+              )}
               {failedStatements.length === 0 ? (
                 <div className="flex items-center gap-x-4">
-                <CheckCircle className="text-green-500 w-6 h-6 mt-2" />
-                <p>
-                Your report has been generated successfully.
-              </p>
+                  <CheckCircle className="text-green-500 w-6 h-6 mt-2" />
+                  <p>Your report has been generated successfully.</p>
                 </div>
               ) : failedStatements.length > 0 ? (
                 <div className="flex items-end gap-x-4">
-
-                <AlertTriangle className="text-yellow-500 w-6 h-6 mt-2" />
-                <p>
-                Below Statements had some errors.
-              </p>
-                </div >
+                  <AlertTriangle className="text-yellow-500 w-6 h-6 mt-2" />
+                  <p>Below Statements had some errors.</p>
+                </div>
               ) : (
                 <XCircle className="text-red-500 w-6 h-6 mt-2" />
               )}
-            
             </DialogDescription>
           </DialogHeader>
           {failedStatements.length > 0 && (
@@ -290,16 +283,19 @@ export default function GenerateReport() {
               </ul>
             </div>
           )}
-        <div className="flex gap-4">
-         {showAnalsisButton&& <Button onClick={() => viewAnalysis()} className="flex-1">
-            View Analysis
-          </Button>}
+          <div className="flex gap-4">
+            {showAnalsisButton && (
+              <Button onClick={() => viewAnalysis()} className="flex-1">
+                View Analysis
+              </Button>
+            )}
 
-          {showRectifyButton&& <Button onClick={handleRectify} className="flex-1">
-            Rectify Now
-          </Button>}
+            {showRectifyButton && (
+              <Button onClick={handleRectify} className="flex-1">
+                Rectify Now
+              </Button>
+            )}
           </div>
-
         </DialogContent>
       </Dialog>
     </div>
