@@ -42,13 +42,13 @@ const IndividualTable = ({ caseId }) => {
     const fetchStatements = async () => {
       setIsLoading(true);
       try {
-        console.log("Fetching statements for caseId:", caseId);
+        // console.log("Fetching statements for caseId:", caseId);
         // Call the IPC handler to get statements
         const result = await window.electron.getStatements(caseId);
-        console.log("Statements fetched successfully:", result);
+        // console.log("Statements fetched successfully:", result);
         setStatements(result);
       } catch (error) {
-        console.error("Error fetching statements:", error);
+        // console.error("Error fetching statements:", error);
       } finally {
         setIsLoading(false);
       }
@@ -80,11 +80,11 @@ const IndividualTable = ({ caseId }) => {
     startIndex + ITEMS_PER_PAGE
   );
 
-  console.log("currentData", currentData);
+  // console.log("currentData", currentData);
 
   const handleRowClick = async (name, accountNumber, individualId) => {
     // console.log("name", name);
-    console.log("indivivdual table", individualId);
+    // console.log("indivivdual table", individualId);
     setIsLoading(true);
     try {
       navigate(`/individual-dashboard/${caseId}/${individualId}/defaultTab`);
@@ -93,7 +93,7 @@ const IndividualTable = ({ caseId }) => {
     }
   };
 
-  console.log("caseId", caseId);
+  // console.log("caseId", caseId);
 
   const getPageNumbers = () => {
     const pageNumbers = [];

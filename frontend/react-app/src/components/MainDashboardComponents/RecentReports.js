@@ -56,7 +56,7 @@ import { CircularProgress } from "../ui/circularprogress";
 
 import PDFMarkerModal from "./PdfMarkerModal";
 
-const RecentReports = () => {
+const RecentReports = ({key,setShowRectifyButton,setFailedStatements,setShowAnalysisButton,setDialogOpen,showAnalsisButton,showRectifyButton,}) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -251,122 +251,291 @@ const RecentReports = () => {
   };
 
   const handleView = (caseId) => {
+    console.log("clicked handle view for caseId - ", caseId);
     setIsLoading(true);
     navigate(`/case-dashboard/${caseId}/defaultTab`);
     setIsLoading(false);
   };
 
-  const handleAddPdfSubmit = async (
-    setProgress,
-    setLoading,
-    setToastId,
-    selectedFiles,
-    fileDetails,
-    setSelectedFiles,
-    setFileDetails,
-    setCaseId,
-    toast,
-    progressIntervalRef,
-    simulateProgress,
-    convertDateFormat,
-    caseId,
-    caseName
-  ) => {
-    if (selectedFiles.length === 0) {
-      toast({
-        title: "Error",
-        description: "Please select at least one file",
-        variant: "destructive",
-        duration: 3000,
-      });
-      return;
-    }
-    setLoading(true);
-    const newToastId = toast({
-      title: "Initializing Report Generation",
-      description: (
-        <div className="mt-2 w-full flex items-center gap-2">
-          <div className="flex items-center gap-4">
-            <CircularProgress className="w-full" />
-            {/* <CircularProgress value={0} className="w-full" /> */}
-            {/* <span className="text-sm font-medium">0%</span> */}
-          </div>
-          <p className="text-sm text-gray-500">Preparing to process files...</p>
-        </div>
-      ),
-      duration: Infinity,
-    });
-    setToastId(newToastId);
+  // const handleAddPdfSubmit = async (
+  //   setProgress,
+  //   setLoading,
+  //   setToastId,
+  //   selectedFiles,
+  //   fileDetails,
+  //   setSelectedFiles,
+  //   setFileDetails,
+  //   toast,
+  //   progressIntervalRef,
+  //   simulateProgress,
+  //   convertDateFormat,
+  //   caseName
+  // ) => {
 
-    progressIntervalRef.current = simulateProgress();
+  //   if (caseName === "") {
+  //     toast({
+  //       title: "Error",
+  //       description: "Please enter a Case Name",
+  //       variant: "destructive",
+  //       duration: 3000,
+  //     });
+  //     return;
+  //   }
 
-    try {
-      const filesWithContent = await Promise.all(
-        selectedFiles.map(async (file, index) => {
-          const fileContent = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsBinaryString(file);
-          });
+  //   if (selectedFiles.length === 0) {
+  //     toast({
+  //       title: "Error",
+  //       description: "Please select at least one file",
+  //       variant: "destructive",
+  //       duration: 3000,
+  //     });
+  //     return;
+  //   }
+  //   setLoading(true);
+  //   const newToastId = toast({
+  //     title: "Initializing Report Generation",
+  //     description: (
+  //       <div className="mt-2 w-full flex items-center gap-2">
+  //         <div className="flex items-center gap-4">
+  //           <CircularProgress className="w-full" />
+  //           {/* <CircularProgress value={0} className="w-full" /> */}
+  //           {/* <span className="text-sm font-medium">0%</span> */}
+  //         </div>
+  //         <p className="text-sm text-gray-500">Preparing to process files...</p>
+  //       </div>
+  //     ),
+  //     duration: Infinity,
+  //   });
+  //   setToastId(newToastId);
 
-          const detail = fileDetails[index];
+  //   progressIntervalRef.current = simulateProgress();
 
-          return {
-            fileContent,
-            pdf_paths: file.name,
-            bankName: detail.bankName,
-            passwords: detail.password || "",
-            start_date: convertDateFormat(detail.start_date), // Convert date format
-            end_date: convertDateFormat(detail.end_date), // Convert date format
-            ca_id: "test",
-          };
-        })
-      );
+  //   try {
+  //     const filesWithContent = await Promise.all(
+  //       selectedFiles.map(async (file, index) => {
+  //         const fileContent = await new Promise((resolve, reject) => {
+  //           const reader = new FileReader();
+  //           reader.onload = () => resolve(reader.result);
+  //           reader.onerror = reject;
+  //           reader.readAsBinaryString(file);
+  //         });
 
-      const result = await window.electron.addPdfIpc(
-        {
-          files: filesWithContent,
-        },
-        currentCaseId
-      );
+  //         const detail = fileDetails[index];
 
-      if (result.success) {
-        clearInterval(progressIntervalRef.current);
-        setProgress(100);
-        toast.dismiss(newToastId);
+  //         return {
+  //           fileContent,
+  //           pdf_paths: file.name,
+  //           bankName: detail.bankName,
+  //           passwords: detail.password || "",
+  //           start_date: convertDateFormat(detail.start_date), // Convert date format
+  //           end_date: convertDateFormat(detail.end_date), // Convert date format
+  //           ca_id: "test",
+  //         };
+  //       })
+  //     );
+
+  //     const result = await window.electron.addPdfIpc(
+  //       {
+  //         files: filesWithContent,
+  //       },
+  //       currentCaseId
+  //     );
+
+  //     if (result.success) {
+  //       clearInterval(progressIntervalRef.current);
+  //       setProgress(100);
+  //       toast.dismiss(newToastId);
+  //       toast({
+  //         title: "Success",
+  //         description: "Report generated successfully!",
+  //         duration: 3000,
+  //       });
+
+  //       // const newCaseId = generateNewCaseId();
+  //       // setCaseId(newCaseId);
+
+  //       setSelectedFiles([]);
+  //       setFileDetails([]);
+  //       setIsAddPdfModalOpen(false);
+  //     } else {
+  //       throw new Error(result.error);
+  //     }
+  //   } catch (error) {
+  //     console.error("Report generation failed:", error);
+  //     clearInterval(progressIntervalRef.current);
+  //     toast.dismiss(newToastId);
+  //     setProgress(0);
+  //     toast({
+  //       title: "Error",
+  //       description: error.message || "Failed to generate report",
+  //       variant: "destructive",
+  //       duration: 5000,
+  //     });
+  //   } finally {
+  //     setLoading(false);
+  //     progressIntervalRef.current = null;
+  //   }
+  // };
+
+
+  const handleAddPdfSubmit =  async (
+      setProgress,
+      setLoading,
+      setToastId,
+      selectedFiles,
+      fileDetails,
+      setSelectedFiles,
+      setFileDetails,
+      toast,
+      progressIntervalRef,
+      simulateProgress,
+      convertDateFormat,
+      caseName
+    ) => {
+      if (caseName === "") {
         toast({
-          title: "Success",
-          description: "Report generated successfully!",
+          title: "Error",
+          description: "Please enter a Case Name",
+          variant: "destructive",
           duration: 3000,
         });
-
-        // const newCaseId = generateNewCaseId();
-        // setCaseId(newCaseId);
-
-        setSelectedFiles([]);
-        setFileDetails([]);
-        setIsAddPdfModalOpen(false);
-      } else {
-        throw new Error(result.error);
+        return;
       }
-    } catch (error) {
-      console.error("Report generation failed:", error);
-      clearInterval(progressIntervalRef.current);
-      toast.dismiss(newToastId);
-      setProgress(0);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to generate report",
-        variant: "destructive",
-        duration: 5000,
+      setCurrentCaseName(caseName);
+  
+      if (selectedFiles.length === 0) {
+        toast({
+          title: "Error",
+          description: "Please select at least one file",
+          variant: "destructive",
+          duration: 3000,
+        });
+        return;
+      }
+  
+      setLoading(true);
+      const newToastId = toast({
+        title: "Initializing Report Generation",
+        description: (
+          <div className="mt-2 w-full flex items-center gap-2">
+            <div className="flex items-center gap-4">
+              <CircularProgress className="w-full" />
+            </div>
+            <p className="text-sm text-gray-500">Preparing to process files...</p>
+          </div>
+        ),
+        duration: Infinity,
       });
-    } finally {
-      setLoading(false);
-      progressIntervalRef.current = null;
-    }
-  };
-
+      setToastId(newToastId);
+  
+      progressIntervalRef.current = simulateProgress();
+  
+      try {
+        const filesWithContent = await Promise.all(
+          selectedFiles.map(async (file, index) => {
+            const fileContent = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsBinaryString(file);
+            });
+  
+            const detail = fileDetails[index];
+  
+            return {
+              fileContent,
+              pdf_paths: file.name,
+              bankName: detail.bankName,
+              passwords: detail.password || "",
+              start_date: convertDateFormat(detail.start_date), // Convert date format
+              end_date: convertDateFormat(detail.end_date), // Convert date format
+              ca_id: currentCaseId,
+            };
+          })
+        );
+  
+        console.log({ caseName, filesWithContent });
+  
+        console.log({ caseName, filesWithContent });
+  
+        const result = await window.electron.generateReportIpc(
+          {
+            files: filesWithContent,
+          },
+          caseName
+        );
+  
+        console.log("Report generation result:", result.data);
+        setCurrentCaseId(result.data.caseId); // Store caseId
+  
+        if (result.success) {
+          clearInterval(progressIntervalRef.current);
+          setProgress(100);
+          toast.dismiss(newToastId);
+          toast({
+            title: "Success",
+            description: "Report generated successfully!",
+            duration: 3000,
+          });
+          if (result.data.failedFiles.length > 0) {
+            setShowRectifyButton(true);
+            const failedFiles = result.data.failedFiles.map((file_path) => {
+              return file_path.split("\\").pop();
+            });
+            setFailedStatements(failedFiles || []); // Store failed
+          }
+  
+          if (result.data.totalTransactions) setShowAnalysisButton(true);
+  
+          // setFailedStatements(result.pdf_paths_not_extracted || []); // Store failed
+  
+          setDialogOpen(true); // Open the Dialog
+  
+          setSelectedFiles([]);
+          setFileDetails([]);
+  
+          // Trigger a page refresh
+        } else {
+          const errorMessage = result.error
+            ? typeof result.error === "object"
+              ? JSON.stringify(result.error, null, 2)
+              : result.error
+            : "Unknown error occurred";
+  
+          throw new Error(errorMessage);
+        }
+      } catch (error) {
+        console.log("Report generation failed:", { error: error.stack });
+  
+        if (typeof error === "object" && error !== null) {
+          console.error("Detailed error:", JSON.stringify(error, null, 2));
+        }
+  
+        if (error && error.message) {
+          console.error("Error message:", error.message);
+        }
+  
+        if (error && error.stack) {
+          console.error("Error stack trace:", error.stack);
+        }
+  
+        clearInterval(progressIntervalRef.current);
+        toast.dismiss(newToastId);
+        setProgress(0);
+        if(showAnalsisButton || showRectifyButton) {
+          setDialogOpen(true);
+        }
+        toast({
+          title: "Error",
+          description: "Failed to generate report",
+          variant: "destructive",
+          duration: 5000,
+        });
+      } finally {
+        setLoading(false);
+        progressIntervalRef.current = null;
+      }
+    };
   const toggleEdit = (id) => {
     setIsCategoryEditOpen(!isCategoryEditOpen);
     setCurrentCaseId(id);

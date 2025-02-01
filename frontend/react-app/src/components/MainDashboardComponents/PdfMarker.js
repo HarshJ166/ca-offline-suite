@@ -50,7 +50,7 @@ const initialConfigTest = {
   ],
   
 }
-const PDFColumnMarker = ({ addColsToStatementData, pdfName,initialConfig = initialConfigTest }) => {
+const PDFColumnMarker = ({ addColsToStatementData, pdfPath,initialConfig = initialConfigTest }) => {
   const [columnLines, setColumnLines] = useState([])
   const [columnLabels, setColumnLabels] = useState([])
   const [pdfFile, setPdfFile] = useState(null)
@@ -100,7 +100,8 @@ const PDFColumnMarker = ({ addColsToStatementData, pdfName,initialConfig = initi
   }, [initialConfig, pdfBlob])
 
   useEffect(() => {
-    window.electron.fetchPdfContent(pdfName)
+    console.log({OpeningPDf:pdfPath})
+    window.electron.fetchPdfContent(pdfPath)
       .then(base64 => {
         const blob = base64StringToBlob(base64, 'application/pdf');
         setPdfBlob(URL.createObjectURL(blob));
@@ -339,8 +340,8 @@ const PDFColumnMarker = ({ addColsToStatementData, pdfName,initialConfig = initi
       columns,
     }
 
-    console.log({pdfName,config})
-    addColsToStatementData(pdfName,config.columns)
+    console.log({pdfPath,config})
+    addColsToStatementData(pdfPath,config.columns)
   }
 
   const updateHistory = (lines, labels) => {
