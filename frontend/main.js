@@ -22,6 +22,7 @@ const sessionManager = require("./SessionManager");
 const licenseManager = require("./LicenseManager");
 const { generateReportIpc } = require("./ipc/generateReport");
 const { registerOpportunityToEarnIpc } = require("./ipc/opportunityToEarn");
+const { registerExcelDownloadHandlers } = require("./ipc/excelDownloadHandler")
 const db = require("./db/db");
 const { spawn, execFile } = require("child_process");
 const log = require("electron-log");
@@ -375,6 +376,7 @@ async function createWindow() {
   registerOpportunityToEarnIpc();
   getdata();
   registerCategoryHandlers();
+  registerExcelDownloadHandlers();
 
   // Auto-update IPC handlers with detailed logging
   ipcMain.handle('check-for-updates', async () => {

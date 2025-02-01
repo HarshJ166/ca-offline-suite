@@ -73,6 +73,10 @@ class EditCategoryRequest(BaseModel):
     new_categories: List[dict]
     eod_data: List[dict]
 
+class ExcelDownloadRequest(BaseModel):
+    transaction_data: List[dict]
+    case_name = str
+
 class DummyRequest(BaseModel):
     data: str
 
@@ -287,6 +291,29 @@ async def edit_category(request: EditCategoryRequest):
 
         return data
 
+    except Exception as e:
+        logger.error(f"Error processing bank statements: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error processing bank statements: {str(e)}"
+        )
+
+
+@app.post("/excel-download/")
+async def excel_download(request: ExcelDownloadRequest):
+
+    try:
+        transaction_data = request.transaction_data
+        case_name = request.case_name
+        logger.info(f"Received request with transaction data: {transaction_data[0]}")
+        logger.info(f"Received request with case name: {case_name}")
+
+        # convert transaction_data to df
+        transaction_df = pd.DataFrame(transaction_data)
+        # transaction_df["Value Date"] = pd.to_datetime(transaction_df["Value Date"], format="%d-%m-%Y")
+        print("Transactions : ", transaction_df.head())
+
+        # data = download_excel(transaction_df, case_name)
+        # print(data)
     except Exception as e:
         logger.error(f"Error processing bank statements: {str(e)}")
         raise HTTPException(

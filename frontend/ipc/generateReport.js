@@ -182,6 +182,7 @@ const getOrCreateCase = async (caseName, userId = 1) => {
 
     if (newCase.length > 0) {
       log.info(`Created new case with ID: ${(newCase[0].id, caseName)}`);
+      log.info(`Case id: ${newCase[0].id}`);
       return newCase[0].id;
     }
 
@@ -629,10 +630,16 @@ function generateReportIpc(tmpdir_path) {
   //   console.error(err.response.data.detail[0].loc);
   // });
   ipcMain.handle("generate-report", async (event, receivedResult, caseName) => {
+    let caseId = "";
+    let successfulFiles = new Set();
+    let failedFiles = new Set();
+    let allProcessedFiles = new Set();
+    let uploadedFiles = new Map();
     try {
       log.info("IPC handler invoked for generate-report", caseName);
 
-      const caseId = await getOrCreateCase(caseName);
+      caseId = await getOrCreateCase(caseName);
+      log.info("Case ID in generate reroprt:", caseId);
       if (!receivedResult?.files?.length) {
         throw new Error("Invalid or empty files array received");
       }
@@ -643,10 +650,10 @@ function generateReportIpc(tmpdir_path) {
       log.info("Case Folder for PDFs:", caseFolder);
 
       // Track file status
-      const successfulFiles = new Set();
-      const failedFiles = new Set();
-      const allProcessedFiles = new Set();
-      const uploadedFiles = new Map();
+      // const successfulFiles = new Set();
+      // const failedFiles = new Set();
+      // const allProcessedFiles = new Set();
+      // const uploadedFiles = new Map();
 
       // Step 1: Save all uploaded files in the case folder
       const fileDetails = receivedResult.files.map((fileDetail, index) => {
@@ -1127,4 +1134,4 @@ function generateReportIpc(tmpdir_path) {
   });
 }
 
-module.exports = { generateReportIpc,updateCaseStatus };
+module.exports = { generateReportIpc, updateCaseStatus };
