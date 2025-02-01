@@ -24,7 +24,7 @@ import { Input } from "../ui/input";
 const GenerateReportForm = ({
   currentCaseName = null,
   handleReportSubmit,
-  source
+  onReportGenerated
 }) => {
   const [unit, setUnit] = useState("Unit 1");
   const [units, setUnits] = useState(["Unit 1", "Unit 2"]);

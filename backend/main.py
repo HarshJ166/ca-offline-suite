@@ -27,13 +27,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Bank Statement Analyzer API")
 logger.info(f"Temp directory python : {TEMP_SAVED_PDF_DIR}")
 
-class BankStatementRequest(BaseModel):
-    bank_names: List[str]
-    pdf_paths: List[str]
-    passwords: Optional[List[str]] = []  # Optional field, defaults to empty list
-    start_date: List[str]
-    end_date: List[str]
-    ca_id: str
+
 
 class Transaction(BaseModel):
     id: int
@@ -68,6 +62,15 @@ class EditPdfRequest(BaseModel):
     whole_transaction_sheet: Optional[List[Transaction]] = None
     ca_id: str
 
+class BankStatementRequest(BaseModel):
+    bank_names: List[str]
+    pdf_paths: List[str]
+    passwords: Optional[List[str]] = []  # Optional field, defaults to empty list
+    start_date: List[str]
+    end_date: List[str]
+    ca_id: str
+    whole_transaction_sheet: Optional[List[Transaction]] = None
+    
 class EditCategoryRequest(BaseModel):
     transaction_data: List[dict]
     new_categories: List[dict]
@@ -166,7 +169,8 @@ async def analyze_bank_statements(request: BankStatementRequest):
 
 
         logger.info("Starting extraction")
-        result = start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_date, end_date, CA_ID, progress_data)
+        whole_transaction_sheet = request.whole_transaction_sheet or None
+        result = start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_date, end_date, CA_ID, progress_data,whole_transaction_sheet=whole_transaction_sheet)
         
         print("RESULT GENERATED")
         logger.info("Extraction completed successfully")

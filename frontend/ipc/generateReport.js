@@ -628,7 +628,7 @@ function generateReportIpc(tmpdir_path) {
   //   console.error(err.message);
   //   console.error(err.response.data.detail[0].loc);
   // });
-  ipcMain.handle("generate-report", async (event, receivedResult, caseName) => {
+  ipcMain.handle("generate-report", async (event, receivedResult, caseName,source) => {
     
     const caseId = await getOrCreateCase(caseName);
     // Track file status
@@ -636,7 +636,32 @@ function generateReportIpc(tmpdir_path) {
     const failedFiles = new Set();
     const allProcessedFiles = new Set();
     const uploadedFiles = new Map();
+    let whole_transaction_sheet = null
+
     try {
+
+      if(source=="add-pdf"){
+        const allStatements = await db
+        .select()
+        .from(statements)
+        .where(eq(statements.caseId, caseId));
+      if (allStatements.length === 0) {
+        log.info("No statements found for case:", caseId);
+      }
+
+      const allTransactions = await db
+        .select()
+        .from(transactions)
+        .where(
+          inArray(
+            transactions.statementId,
+            allStatements.map((stmt) => stmt.id.toString()) // Convert integer ID to string
+          )
+        );
+
+        whole_transaction_sheet = allTransactions
+      }
+    
       log.info("IPC handler invoked for generate-report", caseName);
 
       if (!receivedResult?.files?.length) {
@@ -692,6 +717,7 @@ function generateReportIpc(tmpdir_path) {
         start_date: fileDetails.map((d) => d.start_date || ""),
         end_date: fileDetails.map((d) => d.end_date || ""),
         ca_id: caseName || "DEFAULT_CASE",
+        whole_transaction_sheet: whole_transaction_sheet,
       };
 
       log.info("Sending API request with payload:", payload);
@@ -709,6 +735,8 @@ function generateReportIpc(tmpdir_path) {
       if (response.data?.["pdf_paths_not_extracted"]) {
         const failedPdfPaths =
           response.data["pdf_paths_not_extracted"].paths || [];
+        
+        log.info({caseId,failedPdfPaths})
 
         // Store failed statements in database
         await db.insert(failedStatements).values({

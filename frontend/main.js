@@ -49,8 +49,8 @@ autoUpdater.allowPrerelease = true;
 if (process.platform === 'darwin') {
   autoUpdater.allowDowngrade = true;
 } else if (process.platform === 'win32') {
-  app.setAppUserModelId('com.electron.electronapp');
-  // app.setAppUserModelId(process.execPath); // changed it to process.execPath from 'com.electron.electronapp' to fix the taskbar icon not showing issue ~ Aiyaz
+  // app.setAppUserModelId('com.electron.electronapp');
+  app.setAppUserModelId(process.execPath); // changed it to process.execPath from 'com.electron.electronapp' to fix the taskbar icon not showing issue ~ Aiyaz
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.allowDowngrade = false;
 }

@@ -108,7 +108,8 @@ export default function GenerateReport() {
         {
           files: filesWithContent,
         },
-        caseName
+        caseName,
+        "generate-report"
       );
 
       console.log("Report generation result:", result.data);
@@ -191,6 +192,7 @@ export default function GenerateReport() {
   };
 
   const handleRectify = () => {
+    setDialogOpen(false);
     console.log("Rectify clicked ", currentCaseId, currentCaseName);
   };
 
@@ -254,8 +256,8 @@ export default function GenerateReport() {
           onReportGenerated={refreshPage}
         />
       </div>
-
-      <RecentReports key={refreshTrigger} setShowRectifyButton={setShowRectifyButton} setFailedStatements={setFailedStatements} setShowAnalysisButton={setShowAnalysisButton} setDialogOpen={setDialogOpen} showAnalsisButton={showAnalsisButton} showRectifyButton={showRectifyButton}/>
+      
+      <RecentReports key={refreshTrigger} handleReportSubmit={handleSubmit} setShowRectifyButton={setShowRectifyButton} setFailedStatements={setFailedStatements} setShowAnalysisButton={setShowAnalysisButton} setDialogOpen={setDialogOpen} showAnalsisButton={showAnalsisButton} showRectifyButton={showRectifyButton}/>
 
       {/* Dialog for successful report generation */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
