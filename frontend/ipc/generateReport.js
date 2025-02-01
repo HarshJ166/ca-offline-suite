@@ -16,6 +16,8 @@ const { opportunityToEarn } = require("../db/schema/OpportunityToEarn");
 const sanitizeJSONString = (jsonString) => {
   if (!jsonString) return jsonString;
   if (typeof jsonString !== "string") return jsonString;
+  if (!jsonString) return jsonString;
+  if (typeof jsonString !== "string") return jsonString;
 
   return jsonString
     .replace(/: *NaN/g, ": null")
@@ -160,7 +162,6 @@ const getOrCreateCase = async (caseName, userId = 1) => {
       .limit(1);
 
     if (existingCase.length > 0) {
-      log.info(`Found existing case with ID: ${existingCase[0].id, caseName}`);
       log.info(
         `Found existing case with ID: ${(existingCase[0].id, caseName)}`
       );
@@ -180,7 +181,6 @@ const getOrCreateCase = async (caseName, userId = 1) => {
       .returning();
 
     if (newCase.length > 0) {
-      log.info(`Created new case with ID: ${newCase[0].id, caseName}`);
       log.info(`Created new case with ID: ${(newCase[0].id, caseName)}`);
       return newCase[0].id;
     }
@@ -404,7 +404,6 @@ const processSummaryData = async (parsedData, caseName) => {
   try {
     const validCaseId = await getOrCreateCase(caseName);
 
-    log.info({ parsedDataFromProcessSummary: parsedData })
     log.info({ parsedDataFromProcessSummary: parsedData });
 
     // Validate the summary data
@@ -550,17 +549,6 @@ function preprocessPayload(payload) {
   // 1) Rename or handle the ColumnData "type" field
   //    e.g., rename "type" to "column_type"
   if (Array.isArray(payload.aiyaz_array_of_array)) {
-    payload.aiyaz_array_of_array = payload.aiyaz_array_of_array.map((statement) => {
-      return statement.map((col) => {
-        return {
-          ...col,
-          // rename `type` -> `column_type`; default to null if it's missing
-          column_type: col.type ?? null,
-          // remove the old `type` field if needed
-          type: undefined,
-        }
-      })
-    });
     payload.aiyaz_array_of_array = payload.aiyaz_array_of_array.map(
       (statement) => {
         return statement.map((col) => {
@@ -579,18 +567,6 @@ function preprocessPayload(payload) {
   // 2) Rename or handle the Transaction "type" field
   //    e.g., rename "type" -> "transaction_type"
   if (Array.isArray(payload.whole_transaction_sheet)) {
-    payload.whole_transaction_sheet = payload.whole_transaction_sheet.map((tx) => {
-      return {
-        ...tx,
-        // rename `type` -> `transaction_type`
-        transaction_type: tx.type ?? "",
-        // remove or set to undefined so it doesn't get sent
-        type: undefined,
-        // Make sure numeric fields are actually numbers (not strings/null)
-        amount: tx.amount || 0,
-        balance: tx.balance || 0,
-      };
-    });
     payload.whole_transaction_sheet = payload.whole_transaction_sheet.map(
       (tx) => {
         return {
@@ -653,42 +629,34 @@ function generateReportIpc(tmpdir_path) {
   //   console.error(err.response.data.detail[0].loc);
   // });
   ipcMain.handle("generate-report", async (event, receivedResult, caseName) => {
-    log.info({ event, receivedResult, caseName })
-    log.info({ event, receivedResult, caseName });
-    let caseId = null;
-    // Track files status
-    const successfulFiles = new Set();
-    const failedFiles = new Set();
-    const allProcessedFiles = new Set();
-    const uploadedFiles = new Map(); // Track original filenames and their temp paths
     try {
       log.info("IPC handler invoked for generate-report", caseName);
 
-      const tempDir = tmpdir_path;
-      log.info("Temp Directory : ", tempDir);
-
-      caseId = await getOrCreateCase(caseName);
+      const caseId = await getOrCreateCase(caseName);
       if (!receivedResult?.files?.length) {
         throw new Error("Invalid or empty files array received");
       }
 
-      // Track files status
+      // Ensure a dedicated directory for storing all PDFs (before processing)
+      const caseFolder = path.join(tmpdir_path, "failed_pdfs", caseName);
+      fs.mkdirSync(caseFolder, { recursive: true });
+      log.info("Case Folder for PDFs:", caseFolder);
+
+      // Track file status
       const successfulFiles = new Set();
       const failedFiles = new Set();
       const allProcessedFiles = new Set();
-      const uploadedFiles = new Map(); // Track original filenames and their temp paths
+      const uploadedFiles = new Map();
 
-
-      // First, save all uploaded files and track them
+      // Step 1: Save all uploaded files in the case folder
       const fileDetails = receivedResult.files.map((fileDetail, index) => {
         if (!fileDetail.pdf_paths || !fileDetail.bankName) {
           throw new Error(`Missing required fields for file at index ${index}`);
         }
 
         const originalFilename = fileDetail.pdf_paths;
-        // add a random string at the end to the filename to prevent overwriting
         const tempFilename = `${Date.now()}-${path.basename(originalFilename)}`;
-        const filePath = path.join(tempDir, tempFilename);
+        const filePath = path.join(caseFolder, tempFilename);
 
         allProcessedFiles.add(filePath);
         uploadedFiles.set(filePath, {
@@ -700,7 +668,7 @@ function generateReportIpc(tmpdir_path) {
 
         if (fileDetail.fileContent) {
           fs.writeFileSync(filePath, fileDetail.fileContent, "binary");
-          successfulFiles.add(filePath); // Initially mark as successful
+          successfulFiles.add(filePath); // Initially assume success
         } else {
           log.warn(`No file content for ${fileDetail.bankName}`);
           failedFiles.add(filePath);
@@ -714,7 +682,7 @@ function generateReportIpc(tmpdir_path) {
         };
       });
 
-      // Rest of the API call setup
+      // Step 2: Send API request
       const payload = {
         bank_names: fileDetails.map((d) => d.bankName),
         pdf_paths: fileDetails.map((d) => d.pdf_paths),
@@ -730,10 +698,8 @@ function generateReportIpc(tmpdir_path) {
         validateStatus: (status) => status === 200,
       });
 
-      // Handle failed extractions from API response
+      // Step 3: Handle failed extractions
       if (response.data?.["pdf_paths_not_extracted"]) {
-        // const failedPdfPaths = response.data["pdf_paths_not_extracted"].paths || [];
-
         const failedPdfPaths =
           response.data["pdf_paths_not_extracted"].paths || [];
 
@@ -743,12 +709,7 @@ function generateReportIpc(tmpdir_path) {
           data: JSON.stringify(response.data["pdf_paths_not_extracted"]),
         });
 
-        // Mark files as failed based on API response
         for (const failedPath of failedPdfPaths) {
-          // Find the corresponding full path in our processed files
-          // const fullPath = fileDetails.find(detail =>
-          // detail.pdf_paths.includes(path.basename(failedPath)))?.pdf_paths;
-
           const fullPath = fileDetails.find((detail) =>
             detail.pdf_paths.includes(path.basename(failedPath))
           )?.pdf_paths;
@@ -762,69 +723,22 @@ function generateReportIpc(tmpdir_path) {
         log.warn("Some PDF paths were not extracted", Array.from(failedFiles));
       }
 
-      // Process transactions
+      // Step 4: Process transactions
       const parsedData = JSON.parse(sanitizeJSONString(response.data.data));
-      // const transactions = (parsedData.Transactions || []).filter((transaction) => {
-      //   if (typeof transaction.Credit === "number" && isNaN(transaction.Credit)) {
-      //     transaction.Credit = null;
-      //   }
-      //   if (typeof transaction.Debit === "number" && isNaN(transaction.Debit)) {
-      //     transaction.Debit = null;
-      //   }
-      //   if (typeof transaction.Balance === "number" && isNaN(transaction.Balance)) {
-      //     transaction.Balance = 0;
-      //   }
-
-      //   return (
-      //     (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
-      //     (transaction.Debit !== null && !isNaN(transaction.Debit))
-      //   );
-      // });
-
-      // log.info({ parsedDataFromGenerateReport: parsedData });
-
-      // if (parsedData == null) {
-      //   await updateCaseStatus(caseId, "Failed");
-      //   const failedPDFsDir = path.join(tempDir, "failed_pdfs", caseName);
-      //   fs.mkdirSync(failedPDFsDir, { recursive: true });
-      //   return {
-      //     success: true,
-      //     data: {
-      //       caseId: caseId,
-      //       processed: null,
-      //       totalTransactions: 0,
-      //       eodProcessed: false,
-      //       summaryProcessed: false,
-      //       failedStatements: response.data["pdf_paths_not_extracted"] || null,
-      //       failedFiles: Array.from(failedFiles),
-      //       successfulFiles: Array.from(successfulFiles),
-      //       nerResults: response.data?.ner_results || {
-      //         Name: [],
-      //         "Acc Number": [],
-      //       },
-      //     },
-      //   };
-      // }
       const transactions = (parsedData.Transactions || []).filter(
         (transaction) => {
           if (
             typeof transaction.Credit === "number" &&
             isNaN(transaction.Credit)
-          ) {
+          )
             transaction.Credit = null;
-          }
-          if (
-            typeof transaction.Debit === "number" &&
-            isNaN(transaction.Debit)
-          ) {
+          if (typeof transaction.Debit === "number" && isNaN(transaction.Debit))
             transaction.Debit = null;
-          }
           if (
             typeof transaction.Balance === "number" &&
             isNaN(transaction.Balance)
-          ) {
+          )
             transaction.Balance = 0;
-          }
 
           return (
             (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
@@ -833,7 +747,7 @@ function generateReportIpc(tmpdir_path) {
         }
       );
 
-      // Process each file and update status
+      // Step 5: Process each file
       const processedData = [];
       for (const fileDetail of fileDetails) {
         try {
@@ -860,7 +774,7 @@ function generateReportIpc(tmpdir_path) {
         }
       }
 
-      // Process summary data
+      // Step 6: Process summary and earnings
       try {
         await processSummaryData(
           {
@@ -871,50 +785,34 @@ function generateReportIpc(tmpdir_path) {
           },
           caseName
         );
-
-        log.info("Summary Data : ", parsedData["Particulars"]);
-        log.info("Income Receipts : ", parsedData["Income Receipts"]);
-        log.info("Important Expenses : ", parsedData["Important Expenses"]);
-        log.info("Other Expenses : ", parsedData["Other Expenses"]);
       } catch (error) {
         log.error("Error processing summary data:", error);
         throw error;
       }
 
-      // Process Opportunity to Earn Data
       try {
         await processOpportunityToEarnData(
           parsedData["Opportunity to Earn"] || [],
-          caseName
+          payload.ca_id
         );
       } catch (error) {
         log.error("Error processing opportunity to earn data:", error);
         throw error;
       }
 
-      // Update case status
-      if (failedFiles.size === 0) {
-        await updateCaseStatus(caseId, "Success");
-      } else {
-        await updateCaseStatus(caseId, "Failed");
-      }
+      // Step 7: Update case status
+      await updateCaseStatus(
+        caseId,
+        failedFiles.size === 0 ? "Success" : "Failed"
+      );
 
-      // Create directory for failed PDFs
-      const failedPDFsDir = path.join(tempDir, "failed_pdfs", caseName);
-      fs.mkdirSync(failedPDFsDir, { recursive: true });
-
-      // Handle failed and successful files
+      // Step 8: Handle file cleanup
       for (const filePath of allProcessedFiles) {
         try {
           if (fs.existsSync(filePath)) {
             if (failedFiles.has(filePath)) {
-              // Move failed file to its specific directory
-              const newPath = path.join(failedPDFsDir, path.basename(filePath));
-              fs.copyFileSync(filePath, newPath); // Copy first to prevent any move errors
-              fs.unlinkSync(filePath); // Then remove the original
-              log.info(`Moved failed PDF to: ${newPath}`);
+              log.info(`Failed PDF retained: ${filePath}`);
             } else if (successfulFiles.has(filePath)) {
-              // Remove successful files
               fs.unlinkSync(filePath);
               log.info(`Successfully deleted processed file: ${filePath}`);
             }
@@ -927,7 +825,6 @@ function generateReportIpc(tmpdir_path) {
       return {
         success: true,
         data: {
-          caseId: caseId,
           processed: processedData,
           totalTransactions: processedData.reduce(
             (sum, d) => sum + d.transactionCount,
@@ -1228,8 +1125,6 @@ function generateReportIpc(tmpdir_path) {
       };
     }
   });
-
-
 }
 
 module.exports = { generateReportIpc };

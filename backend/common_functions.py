@@ -3274,7 +3274,7 @@ def Upi(df):
     df['Entity'] = df.apply(extract_name_mpay, axis=1)
     df['Entity'] = df.apply(apply_regex_to_categories_dcb, axis=1)
 
-    print(df)
+    # print(df)
     return df
 
 # def is_name( description):
@@ -4931,3 +4931,58 @@ def sort_dataframes_by_date(dataframes):
     sorted_dataframes = [dataframes[i] for i, _, _ in sorted_ranges]
 
     return sorted_dataframes
+
+
+
+def process_transactions(df):
+
+
+    # Define the columns for the output
+    columns = [
+        "Date",
+        "Effective Date",
+        "Bill Ref",
+        "Dr Ledger",
+        "Cr Ledger",
+        "Amount",
+        "Voucher Type",
+        "Narration",
+    ]
+
+    # Create an empty output DataFrame with the desired columns
+    out_df = pd.DataFrame(columns=columns)
+
+    # Iterate over each row in the original DataFrame
+    for _, row in df.iterrows():
+        # Prepare a basic dictionary for the new row
+        new_row = {
+            "Date": row["Value Date"],
+            "Effective Date": "",  # fill if needed
+            "Bill Ref": "-",  # fill if needed
+            "Dr Ledger": "",
+            "Cr Ledger": "",
+            "Amount": 0,
+            "Voucher Type":"",
+            "Narration": row["Description"],
+        }
+
+        # Decide if this row is a Debit or a Credit
+        if pd.notna(row.get("Debit", None)):
+            # It's a payment (Debit)
+            new_row["Dr Ledger"] = row["Category"]
+            new_row["Voucher Type"] = "Payment"
+            new_row["Amount"] = row["Debit"]
+        elif pd.notna(row.get("Credit", None)):
+            # It's a receipt (Credit)
+            new_row["Cr Ledger"] = row["Category"]
+            new_row["Voucher Type"] = "Receipt"
+            new_row["Amount"] = row["Credit"]
+        else:
+            # If both are null or not as expected, handle however you wish
+            # e.g., skip, or continue
+            continue
+
+        # Append the new_row to out_df
+        out_df = out_df._append(new_row, ignore_index=True)
+
+    return out_df
