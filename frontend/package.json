@@ -55,7 +55,7 @@
     ],
     "extraResources": [
       {
-        "from": "../backend/dist",
+        "from": "../dist",
         "to": "backend"
       },
       {
