@@ -27,13 +27,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Bank Statement Analyzer API")
 logger.info(f"Temp directory python : {TEMP_SAVED_PDF_DIR}")
 
-class BankStatementRequest(BaseModel):
-    bank_names: List[str]
-    pdf_paths: List[str]
-    passwords: Optional[List[str]] = []  # Optional field, defaults to empty list
-    start_date: List[str]
-    end_date: List[str]
-    ca_id: str
+
 
 class Transaction(BaseModel):
     id: int
@@ -68,6 +62,15 @@ class EditPdfRequest(BaseModel):
     whole_transaction_sheet: Optional[List[Transaction]] = None
     ca_id: str
 
+class BankStatementRequest(BaseModel):
+    bank_names: List[str]
+    pdf_paths: List[str]
+    passwords: Optional[List[str]] = []  # Optional field, defaults to empty list
+    start_date: List[str]
+    end_date: List[str]
+    ca_id: str
+    whole_transaction_sheet: Optional[List[Transaction]] = None
+    
 class EditCategoryRequest(BaseModel):
     transaction_data: List[dict]
     new_categories: List[dict]
@@ -170,7 +173,8 @@ async def analyze_bank_statements(request: BankStatementRequest):
 
 
         logger.info("Starting extraction")
-        result = start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_date, end_date, CA_ID, progress_data)
+        whole_transaction_sheet = request.whole_transaction_sheet or None
+        result = start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_date, end_date, CA_ID, progress_data,whole_transaction_sheet=whole_transaction_sheet)
         
         print("RESULT GENERATED")
         logger.info("Extraction completed successfully")
@@ -233,6 +237,51 @@ async def column_rectify_add_pdf(request:EditPdfRequest):
         progress_data = progress_data
         aiyazs_array_of_array = temp_aiyaz_array_of_array
         whole_transaction_sheet = request.whole_transaction_sheet
+
+
+        ner_results = {
+                "Name": [],
+                "Acc Number": []
+            }
+
+        # Process PDFs with NER
+        start_ner = time.time()
+        person_count = 0
+        for pdf in pdf_paths:
+            person_count+=1
+            # result = pdf_to_name_and_accno(pdf)
+            fetched_name = None
+            fetched_acc_num = None
+
+            name_entities = extract_entities(pdf)
+            acc_number_ifsc = extract_accno_ifsc(pdf)
+
+            print("name_entities:- ",name_entities)
+
+            fetched_acc_num=acc_number_ifsc["acc"]
+
+            if name_entities:
+                for entity in name_entities:
+                    if fetched_name==None:
+                        fetched_name=entity
+
+            if fetched_name:
+                ner_results["Name"].append(fetched_name)
+            else:
+                ner_results["Name"].append(f"Statement {person_count}")
+                
+            if fetched_acc_num:
+                ner_results["Acc Number"].append(fetched_acc_num)
+            else:
+                ner_results["Acc Number"].append("XXXXXXXXXXX")
+        print("Ner results", ner_results)
+        end_ner = time.time()
+        print("Time taken to process NER", end_ner-start_ner)
+
+
+
+
+        logger.info("Starting extraction")
         result = start_extraction_edit_pdf(bank_names=bank_names,pdf_paths= pdf_paths,passwords= passwords,start_dates= start_date,end_dates= end_date,CA_ID= CA_ID, progress_data=progress_data,aiyazs_array_of_array=aiyazs_array_of_array,whole_transaction_sheet=whole_transaction_sheet)
 
         print("RESULT GENERATED")
@@ -244,6 +293,7 @@ async def column_rectify_add_pdf(request:EditPdfRequest):
             "message": "Bank statements analyzed successfully",
             "data": result["sheets_in_json"],
             "pdf_paths_not_extracted": result["pdf_paths_not_extracted"],
+            "ner_results": ner_results, 
         }
 
     except Exception as e:

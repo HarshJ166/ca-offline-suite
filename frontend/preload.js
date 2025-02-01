@@ -72,8 +72,8 @@ contextBridge.exposeInMainWorld("electron", {
   saveFileToTemp: (fileBuffer) =>
     ipcRenderer.invoke("save-file-to-temp", fileBuffer),
   cleanupTempFiles: () => ipcRenderer.invoke("cleanup-temp-files"),
-  generateReportIpc: (result, reportName) =>
-    ipcRenderer.invoke("generate-report", result, reportName),
+  generateReportIpc: (result, reportName,source) =>
+    ipcRenderer.invoke("generate-report", result, reportName,source),
 
   getOpportunityToEarn: () => ipcRenderer.invoke("getOpportunityToEarn"),
 
