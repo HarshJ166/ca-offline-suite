@@ -212,7 +212,7 @@ export default function GenerateReport() {
         <h2 className="text-3xl font-bold tracking-tight dark:text-slate-300">
           Report Generator
         </h2>
-        <button onClick={handleTestEdit}>Test Edit</button>
+        {/* <button onClick={handleTestEdit}>Test Edit</button> */}
         <div className="flex items-center space-x-4">
           <button
             onClick={() => setNotificationsOpen(!notificationsOpen)}
