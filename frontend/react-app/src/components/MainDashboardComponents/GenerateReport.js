@@ -32,7 +32,6 @@ export default function GenerateReport() {
     fileDetails,
     setSelectedFiles,
     setFileDetails,
-    setCaseId,
     toast,
     progressIntervalRef,
     simulateProgress,
@@ -109,7 +108,8 @@ export default function GenerateReport() {
         {
           files: filesWithContent,
         },
-        caseName
+        caseName,
+        "generate-report"
       );
 
       console.log("Report generation result:", result.data);
@@ -170,7 +170,9 @@ export default function GenerateReport() {
       clearInterval(progressIntervalRef.current);
       toast.dismiss(newToastId);
       setProgress(0);
-      setDialogOpen(true);
+      if (showAnalsisButton || showRectifyButton) {
+        setDialogOpen(true);
+      }
       toast({
         title: "Error",
         description: "Failed to generate report",
@@ -185,11 +187,12 @@ export default function GenerateReport() {
     }
   };
   const viewAnalysis = () => {
-    console.log("View Analysis clicked");
+    console.log("View Analysis clicked - ", currentCaseId);
     navigate(`/case-dashboard/${currentCaseId}/defaultTab`);
   };
 
   const handleRectify = () => {
+    setDialogOpen(false);
     console.log("Rectify clicked ", currentCaseId, currentCaseName);
   };
 
@@ -214,7 +217,7 @@ export default function GenerateReport() {
         <h2 className="text-3xl font-bold tracking-tight dark:text-slate-300">
           Report Generator
         </h2>
-        <button onClick={handleTestEdit}>Test Excel Download</button>
+        {/* <button onClick={handleTestEdit}>Test Edit</button> */}
         <div className="flex items-center space-x-4">
           <button
             onClick={() => setNotificationsOpen(!notificationsOpen)}
@@ -254,7 +257,7 @@ export default function GenerateReport() {
         />
       </div>
 
-      <RecentReports />
+      <RecentReports key={refreshTrigger} handleReportSubmit={handleSubmit} setShowRectifyButton={setShowRectifyButton} setFailedStatements={setFailedStatements} setShowAnalysisButton={setShowAnalysisButton} setDialogOpen={setDialogOpen} showAnalsisButton={showAnalsisButton} showRectifyButton={showRectifyButton} />
 
       {/* Dialog for successful report generation */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

@@ -21,12 +21,12 @@ const PDFMarkerModal = ({
     onClose();
   };
 
-  const addColsToStatementData = (pdfName,columns) => {
+  const addColsToStatementData = (pdfPath,columns) => {
     if(!selectedFailedFile) return;
-    if(selectedFailedFile.pdfName !== pdfName) return;
+    if(selectedFailedFile.path !== pdfPath) return;
     selectedFailedFile.rectifiedColumns = columns;
     selectedFailedFile.resolved = true;
-    setFailedDatasOfCurrentReport((prev)=>prev.map((item)=>item.pdfName === selectedFailedFile.pdfName ? selectedFailedFile : item))
+    setFailedDatasOfCurrentReport((prev)=>prev.map((item)=>item.path === selectedFailedFile.path ? selectedFailedFile : item))
     onClose();
   }
 
@@ -39,7 +39,7 @@ const PDFMarkerModal = ({
       tempinitialConfigFormatted.lines = selectedFailedFile?.columns.map((line) => ({ x: line }))
       setInitialConfigFormatted(tempinitialConfigFormatted);
     }
-    console.log("PDFMarkerModal pdfName:", selectedFailedFile?.pdfName, "initialConfig ",initialConfigFormatted)
+    console.log("PDFMarkerModal ", selectedFailedFile, "initialConfig ",initialConfigFormatted)
   }, [selectedFailedFile])
 
 
@@ -49,7 +49,7 @@ const PDFMarkerModal = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent   className="max-w-7xl h-[95vh] flex flex-col p-6 overflow-y-auto">
       {selectedFailedFile ? (
-        <PdfMarker addColsToStatementData={addColsToStatementData} initialConfig={initialConfigFormatted} pdfName={selectedFailedFile?.pdfName} />
+        <PdfMarker addColsToStatementData={addColsToStatementData} initialConfig={initialConfigFormatted} pdfPath={selectedFailedFile?.path} />
       ) : (
         <div className="text-center text-red-500">Error: PDF path not available</div>
       )}
