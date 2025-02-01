@@ -182,6 +182,7 @@ const getOrCreateCase = async (caseName, userId = 1) => {
 
     if (newCase.length > 0) {
       log.info(`Created new case with ID: ${(newCase[0].id, caseName)}`);
+      log.info(`Case id: ${newCase[0].id}`);
       return newCase[0].id;
     }
 
@@ -628,8 +629,8 @@ function generateReportIpc(tmpdir_path) {
   //   console.error(err.message);
   //   console.error(err.response.data.detail[0].loc);
   // });
-  ipcMain.handle("generate-report", async (event, receivedResult, caseName,source) => {
-    
+  ipcMain.handle("generate-report", async (event, receivedResult, caseName, source) => {
+
     const caseId = await getOrCreateCase(caseName);
     // Track file status
     const successfulFiles = new Set();
@@ -640,28 +641,28 @@ function generateReportIpc(tmpdir_path) {
 
     try {
 
-      if(source=="add-pdf"){
+      if (source == "add-pdf") {
         const allStatements = await db
-        .select()
-        .from(statements)
-        .where(eq(statements.caseId, caseId));
-      if (allStatements.length === 0) {
-        log.info("No statements found for case:", caseId);
-      }
+          .select()
+          .from(statements)
+          .where(eq(statements.caseId, caseId));
+        if (allStatements.length === 0) {
+          log.info("No statements found for case:", caseId);
+        }
 
-      const allTransactions = await db
-        .select()
-        .from(transactions)
-        .where(
-          inArray(
-            transactions.statementId,
-            allStatements.map((stmt) => stmt.id.toString()) // Convert integer ID to string
-          )
-        );
+        const allTransactions = await db
+          .select()
+          .from(transactions)
+          .where(
+            inArray(
+              transactions.statementId,
+              allStatements.map((stmt) => stmt.id.toString()) // Convert integer ID to string
+            )
+          );
 
         whole_transaction_sheet = allTransactions
       }
-    
+
       log.info("IPC handler invoked for generate-report", caseName);
 
       if (!receivedResult?.files?.length) {
@@ -673,7 +674,7 @@ function generateReportIpc(tmpdir_path) {
       fs.mkdirSync(caseFolder, { recursive: true });
       log.info("Case Folder for PDFs:", caseFolder);
 
-      
+
 
       // Step 1: Save all uploaded files in the case folder
       const fileDetails = receivedResult.files.map((fileDetail, index) => {
@@ -729,14 +730,14 @@ function generateReportIpc(tmpdir_path) {
       });
 
       log.info("API response received:", response.data);
-    
+
 
       // Step 3: Handle failed extractions
       if (response.data?.["pdf_paths_not_extracted"]) {
         const failedPdfPaths =
           response.data["pdf_paths_not_extracted"].paths || [];
-        
-        log.info({caseId,failedPdfPaths})
+
+        log.info({ caseId, failedPdfPaths })
 
         // Store failed statements in database
         await db.insert(failedStatements).values({
@@ -760,28 +761,28 @@ function generateReportIpc(tmpdir_path) {
 
       // Step 4: Process transactions
       const parsedData = JSON.parse(sanitizeJSONString(response.data.data));
-       if (parsedData == null) {
-                    await updateCaseStatus(caseId, "Failed");
-                    const failedPDFsDir = path.join(tmpdir_path, "failed_pdfs", caseName);
-                    fs.mkdirSync(failedPDFsDir, { recursive: true });
-                    return {
-                      success: true,
-                      data: {
-                        caseId: caseId,
-                        processed: null,
-                        totalTransactions: 0,
-                        eodProcessed: false,
-                        summaryProcessed: false,
-                        failedStatements: response.data["pdf_paths_not_extracted"] || null,
-                        failedFiles: Array.from(failedFiles),
-                        successfulFiles: Array.from(successfulFiles),
-                        nerResults: response.data?.ner_results || {
-                          Name: [],
-                          "Acc Number": [],
-                        },
-                      },
-                    };
-                  }
+      if (parsedData == null) {
+        await updateCaseStatus(caseId, "Failed");
+        const failedPDFsDir = path.join(tmpdir_path, "failed_pdfs", caseName);
+        fs.mkdirSync(failedPDFsDir, { recursive: true });
+        return {
+          success: true,
+          data: {
+            caseId: caseId,
+            processed: null,
+            totalTransactions: 0,
+            eodProcessed: false,
+            summaryProcessed: false,
+            failedStatements: response.data["pdf_paths_not_extracted"] || null,
+            failedFiles: Array.from(failedFiles),
+            successfulFiles: Array.from(successfulFiles),
+            nerResults: response.data?.ner_results || {
+              Name: [],
+              "Acc Number": [],
+            },
+          },
+        };
+      }
 
       const transactions_temp = (parsedData.Transactions || []).filter(
         (transaction) => {
@@ -883,7 +884,7 @@ function generateReportIpc(tmpdir_path) {
       return {
         success: true,
         data: {
-          caseId:caseId,
+          caseId: caseId,
           processed: processedData,
           totalTransactions: processedData.reduce(
             (sum, d) => sum + d.transactionCount,
@@ -983,7 +984,7 @@ function generateReportIpc(tmpdir_path) {
       let failedPdfPaths = [];
 
       // Check if there are any PDF paths not extracted
-      if (response.data?.["pdf_paths_not_extracted"]?.paths?.length>0) {
+      if (response.data?.["pdf_paths_not_extracted"]?.paths?.length > 0) {
         await updateCaseStatus(caseId, "Failed");
         // Get the case ID
         const validCaseId = await getOrCreateCase(caseName);
@@ -1046,7 +1047,7 @@ function generateReportIpc(tmpdir_path) {
         }
       );
 
-      log.info("transactions_temp ",transactions_temp.length)
+      log.info("transactions_temp ", transactions_temp.length)
 
       const processedData = [];
 
@@ -1063,8 +1064,8 @@ function generateReportIpc(tmpdir_path) {
         };
       });
 
-      log.info({exampleTrnsaction:transactions_temp[0]})
-      log.info({exampleFileDetails:fileDetails})
+      log.info({ exampleTrnsaction: transactions_temp[0] })
+      log.info({ exampleFileDetails: fileDetails })
 
       for (const fileDetail of fileDetails) {
         try {
@@ -1134,7 +1135,7 @@ function generateReportIpc(tmpdir_path) {
       return {
         success: true,
         data: {
-          caseId:caseId,
+          caseId: caseId,
           processed: processedData,
           totalTransactions: processedData.reduce(
             (sum, d) => sum + d.transactionCount,
@@ -1195,4 +1196,4 @@ function generateReportIpc(tmpdir_path) {
   });
 }
 
-module.exports = { generateReportIpc,updateCaseStatus };
+module.exports = { generateReportIpc, updateCaseStatus };
