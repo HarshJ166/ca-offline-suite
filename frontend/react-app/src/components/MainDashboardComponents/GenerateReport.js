@@ -170,7 +170,7 @@ export default function GenerateReport() {
       clearInterval(progressIntervalRef.current);
       toast.dismiss(newToastId);
       setProgress(0);
-      if(showAnalsisButton || showRectifyButton) {
+      if (showAnalsisButton || showRectifyButton) {
         setDialogOpen(true);
       }
       toast({
@@ -208,7 +208,7 @@ export default function GenerateReport() {
   }, []);
 
   const handleTestEdit = () => {
-    window.electron.editCategory({});
+    window.electron.excelFileDownload(26);
   };
 
   return (
@@ -256,8 +256,8 @@ export default function GenerateReport() {
           onReportGenerated={refreshPage}
         />
       </div>
-      
-      <RecentReports key={refreshTrigger} handleReportSubmit={handleSubmit} setShowRectifyButton={setShowRectifyButton} setFailedStatements={setFailedStatements} setShowAnalysisButton={setShowAnalysisButton} setDialogOpen={setDialogOpen} showAnalsisButton={showAnalsisButton} showRectifyButton={showRectifyButton}/>
+
+      <RecentReports key={refreshTrigger} handleReportSubmit={handleSubmit} setShowRectifyButton={setShowRectifyButton} setFailedStatements={setFailedStatements} setShowAnalysisButton={setShowAnalysisButton} setDialogOpen={setDialogOpen} showAnalsisButton={showAnalsisButton} showRectifyButton={showRectifyButton} />
 
       {/* Dialog for successful report generation */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
