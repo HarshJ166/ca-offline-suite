@@ -124,12 +124,28 @@ const Transactions = () => {
       try {
         console.log("Fetching transactions for statementId:", caseId);
 
-        const data = await window.electron.getTransactions(
-          caseId,
-          parseInt(individualId)
-        );
-        setTransactionData(data);
-        console.log("Fetched transactions:", data.length);
+        // Add this line to debug the electron call
+        console.log("Before electron call");
+        const data = await window.electron.getTransactions(caseId);
+        console.log("After electron call, received data:", data);
+
+        // Transform the data to only include required fields
+        const formattedData = data.map((transaction) => ({
+          date: new Date(transaction.date).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          }),
+          description: transaction.description,
+          amount: transaction.amount,
+          category: transaction.category,
+          type: transaction.type,
+          balance: transaction.balance,
+          bank: transaction.bank,
+          id:transaction.id
+        }));
+
+        setTransactionData(formattedData);
       } catch (err) {
         setError("Failed to fetch transactions");
         console.error("Error fetching transactions:", err);
@@ -353,6 +369,7 @@ const Transactions = () => {
                 data={filteredData}
                 categoryOptions={categoryOptions}
                 setCategoryOptions={setCategoryOptions}
+                caseId={caseId}
               />
             </>
           )}
