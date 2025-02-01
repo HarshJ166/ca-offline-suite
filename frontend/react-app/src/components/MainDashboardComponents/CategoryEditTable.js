@@ -51,6 +51,7 @@ const CategoryEditTable = ({
   data = [],
   categoryOptions,
   setCategoryOptions,
+  caseId
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [transactions, setTransactions] = useState([]);
@@ -108,13 +109,20 @@ const CategoryEditTable = ({
 
   useEffect(() => {
     // Format any Date objects in the data when it's first received
-    const formattedData = data.map((row) => {
-      const newRow = {};
+    const formattedData = data.map((row, index) => {
+      const newRow = {
+        ...row 
+      };
+      
+      // Format each value
       Object.keys(row).forEach((key) => {
         newRow[key] = formatValue(row[key]);
       });
+
       return newRow;
     });
+    // also add a id field to each transaction which resembles real row id of that transaction
+
 
     setTransactions(formattedData);
     setFilteredData(formattedData);
@@ -156,7 +164,7 @@ const CategoryEditTable = ({
 
     // Set the pending category change
     const oldCategory =
-      currentData[pendingCategoryChange?.rowIndex]?.Category || "";
+      currentData[pendingCategoryChange?.rowIndex]?.category || "";
     setPendingCategoryChange({
       ...pendingCategoryChange,
       newCategory: newCategoryToClassify,
@@ -168,7 +176,7 @@ const CategoryEditTable = ({
 
     // Show the reasoning modal
     setReasoningModalOpen(true);
-    setSelectedType(""); // Reset for next use
+    // setSelectedType(""); // Reset for next use
   };
 
   const handleSearch = (searchValue) => {
@@ -198,7 +206,7 @@ const CategoryEditTable = ({
 
   const handleCategoryChange = (rowIndex, newCategory) => {
     const dataOnUi = [...currentData];
-    const oldCategory = dataOnUi[rowIndex].Category;
+    const oldCategory = dataOnUi[rowIndex].category;
 
     // Store pending change and show reasoning dialog
     setPendingCategoryChange({
@@ -216,15 +224,27 @@ const CategoryEditTable = ({
 
     const { rowIndex, newCategory, oldCategory } = pendingCategoryChange;
     const dataOnUi = [...currentData];
-    dataOnUi[rowIndex].Category = newCategory;
+    dataOnUi[rowIndex].category = newCategory;
     setCurrentdata(dataOnUi);
-
+    console.log({selectedType})
+    if(selectedType){
+      const modifiedObject = {
+        ...dataOnUi[rowIndex],
+        oldCategory,
+        clasification:selectedType,
+        keyword: showKeywordInput ? reasoning : "", // Only include reasoning if checkbox was checked
+      };
+      setModifiedData([...modifiedData, modifiedObject]);
+      setSelectedType(""); // Reset for next use
+    }
+    else{
     const modifiedObject = {
       ...dataOnUi[rowIndex],
       oldCategory,
       keyword: showKeywordInput ? reasoning : "", // Only include reasoning if checkbox was checked
     };
     setModifiedData([...modifiedData, modifiedObject]);
+  }
     setHasChanges(true);
 
     // Reset states
@@ -241,8 +261,8 @@ const CategoryEditTable = ({
     const newModifiedData = [...modifiedData];
 
     globalSelectedRows.forEach((globalIndex) => {
-      const oldCategory = dataOnUi[globalIndex].Category;
-      dataOnUi[globalIndex].Category = selectedBulkCategory;
+      const oldCategory = dataOnUi[globalIndex].category;
+      dataOnUi[globalIndex].category = selectedBulkCategory;
 
       const modifiedObject = {
         ...dataOnUi[globalIndex],
@@ -389,7 +409,7 @@ const CategoryEditTable = ({
       setPendingCategoryChange({
         rowIndex,
         newCategory: newCategory,
-        oldCategory: currentData[rowIndex]?.Category || "",
+        oldCategory: currentData[rowIndex]?.category || "",
       });
       setShowClassificationModal(true);
       const updatedOptions = [...categoryOptions, newCategory].sort();
@@ -437,23 +457,29 @@ const CategoryEditTable = ({
     return pageNumbers;
   };
 
+  const convertArrayToObject = (array) => {
+    return array.reduce((acc, transaction) => {
+      // Use realid if present, otherwise use transactionId
+      const id = transaction.id;
+      
+      // Only add to accumulator if we have a valid id
+      if (id) {
+          acc[Number(id)] = transaction;
+      }
+      
+      return acc;
+    }, {});
+  };
+
   const handleSaveChanges = async () => {
     try {
       setIsLoading(true);
 
       console.log({ "Form Submitted": modifiedData });
-
-      // const response = await fetch('/api/update-categories', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({ data: "test" }),
-      // });
-
-      // if (!response.ok) {
-      //   throw new Error('Failed to save changes');
-      // }
+      const payload = convertArrayToObject(modifiedData)
+      console.log("sending request ",payload)
+      const reposonse = await window.electron.editCategory(payload,caseId);
+      console.log({reposonse})
 
       setHasChanges(false);
       toast({
@@ -753,7 +779,7 @@ const CategoryEditTable = ({
           )}
         </CardContent>
 
-        {/* Category Filter Modal */}
+        {/* category Filter Modal */}
         {filterModalOpen && (
           <Dialog open={filterModalOpen} onOpenChange={setFilterModalOpen}>
             <DialogContent className="sm:max-w-[400px]">
@@ -857,7 +883,7 @@ const CategoryEditTable = ({
           </Dialog>
         )}
 
-        {/* Bulk Category Update Modal */}
+        {/* Bulk category Update Modal */}
         <Dialog
           open={bulkCategoryModalOpen}
           onOpenChange={setBulkCategoryModalOpen}
@@ -975,13 +1001,13 @@ const CategoryEditTable = ({
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem
-                  value="important_expenses"
+                  value="Important Expenses"
                   id="important_expenses"
                 />
                 <Label htmlFor="important_expenses">Important Expenses</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="other_expenses" id="other_expenses" />
+                <RadioGroupItem value="Other Expenses" id="other_expenses" />
                 <Label htmlFor="other_expenses">Other Expenses</Label>
               </div>
             </RadioGroup>

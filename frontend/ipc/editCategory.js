@@ -191,6 +191,7 @@ function registerCategoryHandlers() {
 
     // Prepare data for database insertion
     const prepareTransactionsForDB = async (data) => {
+        console.log({prepareTransactionsForDB:data})
         if (!data || Object.keys(data).length === 0) {
             return; // No data to process
         }
@@ -206,7 +207,7 @@ function registerCategoryHandlers() {
         for (const [key, item] of Object.entries(data)) {
             log.info('Item : ', key, item.Category);
             const id = key; // Use transactionId or fallback to key
-            const category = item.Category || "Uncategorized"; // Default to "Uncategorized"
+            const category = item.category || "Uncategorized"; // Default to "Uncategorized"
 
             sqlChunks.push(sql`when ${transactions.id} = ${id} then ${category}`); // Create case condition
             ids.push(id); // Collect the IDs for the WHERE clause
@@ -223,11 +224,11 @@ function registerCategoryHandlers() {
     };
 
 
-    ipcMain.handle('edit-category', async (event, data) => {
+    ipcMain.handle('edit-category', async (event, data,caseId) => {
 
 
         log.info('Edit Category : ', data);
-        const caseId = 26;
+        // const caseId = 26;
 
         let new_categories = [];
         let transactionsForCase = null;
@@ -253,44 +254,50 @@ function registerCategoryHandlers() {
             log.error("Error fetching transactions for case:", err);
         }
 
-        log.info("Count of transactions for case:", transactionsForCase[1]);
+        log.info("Count of transactions for case:", transactionsForCase.length);
 
 
-        const frontendData = {
-            478: {
+        // const frontendData = {
+        //     478: {
 
-                "Value Date": "2023-04-06",
-                "Description": "upi-mraiyazanwarqures-qureshi.aiyaz123-3@okaxis-mahb0000470-309653603841-upi",
-                "transactionId": 12,
-                "Debit": null,
-                "Credit": 17000,
-                "Balance": 17190,
-                "Bank": "a",
-                "Category": "Bank Interest Received",
-                "Entity": "mraiyazanwarqures",
-                "Month": "Apr-2023",
-                "Date": 6,
-                "oldCategory": "Upi-cr",
-                "keyword": ""
-            }
-        }
+        //         "Value Date": "2023-04-06",
+        //         "Description": "upi-mraiyazanwarqures-qureshi.aiyaz123-3@okaxis-mahb0000470-309653603841-upi",
+        //         "transactionId": 12,
+        //         "Debit": null,
+        //         "Credit": 17000,
+        //         "Balance": 17190,
+        //         "Bank": "a",
+        //         "Category": "Bank Interest Received",
+        //         "Entity": "mraiyazanwarqures",
+        //         "Month": "Apr-2023",
+        //         "Date": 6,
+        //         "oldCategory": "Upi-cr",
+        //         "keyword": ""
+        //     }
+        // }
+        const frontendData = data
+        let aiyaz = 0;
 
-        const updatedTransactions = transactionsForCase.map((transaction) => {
+        const updatedTransactions = transactionsForCase.map((transaction,index) => {
 
             const { id, Date, Amount, Type, ...requiredFields } = transaction;
-            const frontendEntry = frontendData[transaction.id]; // Check if the ID exists in frontend data
+            log.info(transaction.id);
+            const frontendEntry = frontendData[transaction.id.toString()]; // Check if the ID exists in frontend data
 
             if (frontendEntry) {
                 log.info("Found frontend entry for ID:", frontendEntry, id);
                 const formattedDate = formatDate(Date);
                 // If present in frontend data, update the transaction
+                log.info({transaction,frontendEntry})
+                aiyaz=index;
                 return {
                     "Value Date": formattedDate,
                     ...requiredFields,
-                    Category: frontendEntry.Category || transaction.Category,
+                    Category: frontendEntry.category || transaction.category,
                     Debit: Type === "debit" ? Amount : 0,
                     Credit: Type === "credit" ? Amount : 0
                 };
+              
             }
 
             return {
@@ -302,16 +309,18 @@ function registerCategoryHandlers() {
         });
 
         log.info("Updated transactions:", updatedTransactions.slice(0, 5));
+        log.info("aiyaz:",aiyaz);
+        log.info("Updated transactions:", updatedTransactions[aiyaz]);
 
 
         const transformedCategories = Object.values(frontendData).map(item => ({
-            Description: item.Description || "Unknown",
-            "Debit / Credit": item.Debit ? "Debit" : "Credit",
-            Category: item.Category || "Uncategorized",
-            Particulars: item.Category === "Unknown"
+            Description: item.description || "Unknown",
+            "Debit / Credit": item.type=="debit" ? "Debit" : "Credit",
+            Category: item.category || "Uncategorized",
+            Particulars: item.category === "Unknown"
         }));
 
-        console.log(transformedCategories[0], transformedCategories.length);
+        console.log({transformedCategories:transformedCategories[0], transformedCategoriesLength:transformedCategories.length});
 
 
         try {
