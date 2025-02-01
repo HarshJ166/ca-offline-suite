@@ -50,6 +50,7 @@ if (process.platform === 'darwin') {
   autoUpdater.allowDowngrade = true;
 } else if (process.platform === 'win32') {
   app.setAppUserModelId('com.electron.electronapp');
+  // app.setAppUserModelId(process.execPath); // changed it to process.execPath from 'com.electron.electronapp' to fix the taskbar icon not showing issue ~ Aiyaz
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.allowDowngrade = false;
 }
@@ -290,11 +291,10 @@ async function createWindow() {
       nodeIntegration: true,
       preload: path.join(__dirname, "preload.js"),
     },
-    icon: path.join(__dirname, "./assets/cyphersol-icon.png"),
+    icon: path.join(__dirname, "assets","cyphersol-icon.png"),
     autoHideMenuBar: true,
     title: isDev ? "CypherSol Dev" : "CypherSol",
   });
-
   if (isDev) {
     win.loadURL("http://localhost:3000");
   } else {
@@ -358,6 +358,41 @@ async function createWindow() {
     log.info("TEMP directory:", tempDir);
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
+    }else{
+      const failedDir = path.join(tempDir, "failed_pdfs");
+      // go into failed directory and delete all the folders which are empty
+      fs.readdir(failedDir, (err, files) => {
+        if (err) {
+          log.error("Error reading temp directory:", err);
+          return;
+        }
+        files.forEach((file) => {
+          const filePath = path.join(failedDir, file);
+          fs.stat(filePath, (err, stat) => {
+            if (err) {
+              log.error("Error checking file stats:", err);
+              return;
+            }
+            if (stat.isDirectory()) {
+              fs.readdir(filePath, (err, files) => {
+                if (err) {
+                  log.error("Error reading directory:", err);
+                  return;
+                }
+                if (files.length === 0) {
+                  fs.rmdir(filePath, (err) => {
+                    if (err) {
+                      log.error("Error deleting empty directory:", err);
+                      return;
+                    }
+                    log.info("Empty directory deleted:", filePath);
+                  });
+                }
+              });
+            }
+          });
+        });
+      });
     }
     log.info("TEMP directory:", tempDir);
     return tempDir;

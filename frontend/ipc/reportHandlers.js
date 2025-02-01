@@ -9,9 +9,13 @@ const { statements } = require("../db/schema/Statement");
 const { cases } = require("../db/schema/Cases");
 const { failedStatements } = require("../db/schema/FailedStatements");
 const { eq, and } = require("drizzle-orm");
+const {updateCaseStatus} = require("./generateReport")
 
 // Helper function to sanitize JSON string
 const sanitizeJSONString = (jsonString) => {
+  if (!jsonString) return jsonString;
+  if (typeof jsonString !== "string") return jsonString;
+
   return jsonString
     .replace(/: *NaN/g, ": null")
     .replace(/: *undefined/g, ": null")
@@ -304,6 +308,17 @@ function registerReportHandlers(tmpdir_path) {
     const tempDir = tmpdir_path;
     log.info("Temp Directory : ", tempDir);
     log.info("CASE ID : ", caseId);
+    const successfulFiles = new Set();
+    const failedFiles = new Set();
+    const allProcessedFiles = new Set();
+    const uploadedFiles = new Map()
+    // fetch case name
+    const caseData = await db
+      .select()
+      .from(cases)
+      .where(eq(cases.id, caseId));
+    const caseName= caseData.name;
+    log.info("Case Name : ", caseName); 
     try {
       if (!result?.files?.length) {
         throw new Error("Invalid or empty files array received");
@@ -326,12 +341,24 @@ function registerReportHandlers(tmpdir_path) {
           throw new Error(`Missing required fields for file at index ${index}`);
         }
 
-        const filePath = path.join(tempDir, fileDetail.pdf_paths);
+        const originalFilename = fileDetail.pdf_paths;
+        // add a random string at the end to the filename to prevent overwriting
+        const tempFilename = `${Date.now()}-${path.basename(originalFilename)}`;
+        const filePath = path.join(tempDir, tempFilename);
+
+        allProcessedFiles.add(filePath);
+        uploadedFiles.set(filePath, {
+          originalName: originalFilename,
+          bankName: fileDetail.bankName,
+        });
+
+        console.log(`Saving file to ${filePath}`);
 
         if (fileDetail.fileContent) {
           fs.writeFileSync(filePath, fileDetail.fileContent, "binary");
         } else {
           log.warn(`No file content for ${fileDetail.bankName}`);
+          failedFiles.add(filePath);
         }
 
         return {
@@ -366,19 +393,86 @@ function registerReportHandlers(tmpdir_path) {
         throw new Error("Empty response received from analysis server");
       }
 
-      log.info("Response received from analysis server, processing data...");
+  // Handle failed extractions from API response
+        if (response.data?.["pdf_paths_not_extracted"]) {
+          const failedPdfPaths =
+            response.data["pdf_paths_not_extracted"].paths || [];
+  
+          // Store failed statements in database
+          await db.insert(failedStatements).values({
+            caseId: caseId,
+            data: JSON.stringify(response.data["pdf_paths_not_extracted"]),
+          });
+  
+          // Mark files as failed based on API response
+          for (const failedPath of failedPdfPaths) {
+            // Find the corresponding full path in our processed files
+            const fullPath = fileDetails.find((detail) =>
+              detail.pdf_paths.includes(path.basename(failedPath))
+            )?.pdf_paths;
+  
+            if (fullPath) {
+              failedFiles.add(fullPath);
+              successfulFiles.delete(fullPath);
+            }
+          }
+  
+          log.warn("Some PDF paths were not extracted", Array.from(failedFiles));
+        }
+
 
       const sanitizedJsonString = sanitizeJSONString(response.data.data);
       const parsedData = JSON.parse(sanitizedJsonString);
+       if (parsedData == null) {
+              await updateCaseStatus(caseId, "Failed");
+              const failedPDFsDir = path.join(tempDir, "failed_pdfs", caseName);
+              fs.mkdirSync(failedPDFsDir, { recursive: true });
+              return {
+                success: true,
+                data: {
+                  caseId: caseId,
+                  processed: null,
+                  totalTransactions: 0,
+                  eodProcessed: false,
+                  summaryProcessed: false,
+                  failedStatements: response.data["pdf_paths_not_extracted"] || null,
+                  failedFiles: Array.from(failedFiles),
+                  successfulFiles: Array.from(successfulFiles),
+                  nerResults: response.data?.ner_results || {
+                    Name: [],
+                    "Acc Number": [],
+                  },
+                },
+              };
+            }
 
-      const transactions = (parsedData.Transactions || []).filter(
-        (transaction) => {
-          return (
-            (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
-            (transaction.Debit !== null && !isNaN(transaction.Debit))
-          );
-        }
-      );
+            const transactions = (parsedData.Transactions || []).filter(
+              (transaction) => {
+                if (
+                  typeof transaction.Credit === "number" &&
+                  isNaN(transaction.Credit)
+                ) {
+                  transaction.Credit = null;
+                }
+                if (
+                  typeof transaction.Debit === "number" &&
+                  isNaN(transaction.Debit)
+                ) {
+                  transaction.Debit = null;
+                }
+                if (
+                  typeof transaction.Balance === "number" &&
+                  isNaN(transaction.Balance)
+                ) {
+                  transaction.Balance = 0;
+                }
+      
+                return (
+                  (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
+                  (transaction.Debit !== null && !isNaN(transaction.Debit))
+                );
+              }
+            );
 
       log.info(
         `Extracted ${transactions.length} valid transactions from response`
@@ -407,13 +501,37 @@ function registerReportHandlers(tmpdir_path) {
         }
       }
 
-      fileDetails.forEach((detail) => {
-        try {
-          fs.unlinkSync(detail.pdf_paths);
-        } catch (error) {
-          log.warn(`Failed to cleanup temp file: ${detail.pdf_paths}`, error);
-        }
-      });
+      // Update case status
+      if (failedFiles.size === 0) {
+        await updateCaseStatus(caseId, "Success");
+      } else {
+        await updateCaseStatus(caseId, "Failed");
+      }
+
+       // Create directory for failed PDFs
+        const failedPDFsDir = path.join(tempDir, "failed_pdfs", caseName);
+        fs.mkdirSync(failedPDFsDir, { recursive: true });
+
+       // Handle failed and successful files
+            for (const filePath of allProcessedFiles) {
+              try {
+                if (fs.existsSync(filePath)) {
+                  if (failedFiles.has(filePath)) {
+                    // Move failed file to its specific directory
+                    const newPath = path.join(failedPDFsDir, path.basename(filePath));
+                    fs.copyFileSync(filePath, newPath); // Copy first to prevent any move errors
+                    fs.unlinkSync(filePath); // Then remove the original
+                    log.info(`Moved failed PDF to: ${newPath}`);
+                  } else if (successfulFiles.has(filePath)) {
+                    // Remove successful files
+                    fs.unlinkSync(filePath);
+                    log.info(`Successfully deleted processed file: ${filePath}`);
+                  }
+                }
+              } catch (error) {
+                log.error(`Error handling file ${filePath}:`, error);
+              }
+            }
 
       // try {
       //     fs.rmdirSync(tempDir);
@@ -424,29 +542,27 @@ function registerReportHandlers(tmpdir_path) {
       return {
         success: true,
         data: {
+          caseId: caseId,
           processed: processedData,
           totalTransactions: processedData.reduce(
             (sum, d) => sum + d.transactionCount,
             0
           ),
+          eodProcessed: true,
+          summaryProcessed: true,
+          failedStatements: response.data["pdf_paths_not_extracted"] || null,
+          failedFiles: Array.from(failedFiles),
+          successfulFiles: Array.from(successfulFiles),
+          nerResults: response.data?.ner_results || {
+            Name: [],
+            "Acc Number": [],
+          },
         },
       };
     } catch (error) {
       // Cleanup on error
-      try {
-        if (fs.existsSync(tempDir)) {
-          fs.readdirSync(tempDir).forEach((file) => {
-            try {
-              fs.unlinkSync(path.join(tempDir, file));
-            } catch (e) {
-              log.warn(`Failed to delete temp file ${file}:`, e);
-            }
-          });
-          // fs.rmdirSync(tempDir);
-        }
-      } catch (cleanupError) {
-        log.warn("Error during cleanup:", cleanupError);
-      }
+      await updateCaseStatus(caseId, "Failed");
+
 
       log.error("Error in report generation:", {
         message: error.message,

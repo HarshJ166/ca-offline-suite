@@ -75,12 +75,11 @@ function registerMainDashboardIpc(tmpdir_path) {
     }
   });
 
-  ipcMain.handle("fetch-pdf-content", async (event, fileName) => {
-    console.log({ fileName });
+  ipcMain.handle("fetch-pdf-content", async (event, path) => {
     // This hander takes in a file path and returns the base64 encoded data of the file
     // const filePath = 'E:/Workplace/Bizpedia/ca-offline-suite/frontend/tmp/52 Kotak bank account statement - Apr 23 to Mar 24.pdf'; // The path to the PDF file
-    const filePath = path.join(tmpdir_path, "failed_pdfs", "check", fileName);
-    const data = await fs.promises.readFile(filePath);
+    // const filePath = path.join(tmpdir_path, "failed_pdfs", "check", fileName);
+    const data = await fs.promises.readFile(path);
     return data.toString("base64"); // Convert file data to base64 string
   });
 }
