@@ -207,9 +207,9 @@ export default function GenerateReport() {
     setRefreshTrigger((prev) => prev + 1);
   }, []);
 
-  const handleTestEdit = () => {
-    window.electron.excelFileDownload(26);
-  };
+  // const handleTestEdit = () => {
+  //   window.electron.excelFileDownload(26);
+  // };
 
   return (
     <div className="p-8 pt-0 space-y-8 bg-white dark:bg-black min-h-screen">

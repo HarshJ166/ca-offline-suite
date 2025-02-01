@@ -106,6 +106,7 @@ function registerExcelDownloadHandlers(event, data) {
 
 
             try {
+                
                 const serverEndpoint = "http://localhost:7500/excel-download/";
 
                 const payload = {
@@ -113,6 +114,8 @@ function registerExcelDownloadHandlers(event, data) {
                     name_and_number_data: nameAndNumberData,
                     case_name: caseName,
                 }
+
+                // 
 
                 // use axios 
                 const response = await axios.post(serverEndpoint, payload, {
