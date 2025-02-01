@@ -1174,4 +1174,4 @@ function generateReportIpc(tmpdir_path) {
   });
 }
 
-module.exports = { generateReportIpc };
+module.exports = { generateReportIpc,updateCaseStatus };
