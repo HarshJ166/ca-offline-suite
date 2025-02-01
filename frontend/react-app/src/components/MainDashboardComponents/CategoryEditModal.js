@@ -97,6 +97,7 @@ const CategoryEditModal = ({ open, onOpenChange, caseId }) => {
           type: transaction.type,
           balance: transaction.balance,
           bank: transaction.bank,
+          id:transaction.id
         }));
 
         setTransactionData(formattedData);
@@ -134,7 +135,7 @@ const CategoryEditModal = ({ open, onOpenChange, caseId }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl h-[95vh] flex flex-col">
+      <DialogContent className="min-w-[90vw] h-[95vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Transactions</DialogTitle>
         </DialogHeader>
@@ -143,6 +144,7 @@ const CategoryEditModal = ({ open, onOpenChange, caseId }) => {
             data={transactionData}
             categoryOptions={categoryOptions}
             setCategoryOptions={setCategoryOptions}
+            caseId={caseId}
           />
         </div>
       </DialogContent>

@@ -121,7 +121,7 @@ contextBridge.exposeInMainWorld("electron", {
   onLicenseExpired: (callback) => ipcRenderer.on("navigateToLogin", callback),
   removeLicenseExpiredListener: () =>
     ipcRenderer.removeAllListeners("navigateToLogin"),
-  editCategory: (data) => ipcRenderer.invoke("edit-category", data),
+  editCategory: (data,caseId) => ipcRenderer.invoke("edit-category", data,caseId),
   editPdf: (result, reportName) => ipcRenderer.invoke("edit-pdf", result, reportName),
 
   // Add auto-update related methods
