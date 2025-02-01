@@ -31,13 +31,13 @@ const SuspensePieChart = ({
       name: 'Suspense Transactions', 
       value: suspenseTransactionCount, 
       percentage: ((suspenseTransactionCount / totalCount) * 100).toFixed(2),
-      fill: 'hsl(var(--chart-1))' 
+      fill: 'hsl(var(--chart-2))' 
     },
     { 
       name: 'Other Transactions', 
       value: nonSuspenseTransactionCount, 
       percentage: ((nonSuspenseTransactionCount / totalCount) * 100).toFixed(2),
-      fill: 'hsl(var(--chart-2))' 
+      fill: 'hsl(var(--chart-1))' 
     }
   ];
 
