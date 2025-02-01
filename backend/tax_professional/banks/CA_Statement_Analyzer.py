@@ -28,58 +28,48 @@ from ...common_functions import (process_excel_to_json,process_name_n_num_df,cat
                               Summary_note, Investment_note, CreditorList_note, DebtorList_note, CashWithdrawalt_note,
                               Cash_Deposit_note, Emi_note, Refund_note, Suspense_Credit_note, Suspense_Debit_note,
                               add_filters_to_excel, create_excel_sheet, color_excel_tabs_inplace, sort_dataframes_by_date,
-                              extraction_process_explicit_lines)
+                              extraction_process_explicit_lines, process_transactions)
 
-def reconstruct_dict_from_json_save_to_excel(json_input, account_number, CA_ID):
-    """
-    Reconstructs the results dictionary from a JSON object.
+def save_to_excel(df, name_n_num_df, account_number):
 
-    Args:
-        json_input (str): A JSON-formatted string representing the results.
+    # Generate all necessary DataFrames
+    eod_sheet_df = eod(df)
+    opening_bal, closing_bal = opening_and_closing_bal(eod_sheet_df, df)
 
-    Returns:
-        dict: A dictionary where each key is a category and each value is a DataFrame.
-    """
-    # Parse the JSON string into a Python dictionary
-    parsed_data = json.loads(json_input)
+    summary_df_list = summary_sheet(df, opening_bal, closing_bal, df)
 
-    # Initialize an empty dictionary to hold the DataFrames
-    results = {}
+    particulars_df = summary_df_list[0]
+    income_receipts_df = summary_df_list[1]
+    imp_expenses_payments_df = summary_df_list[2]
+    other_expenses_df = summary_df_list[3]
 
-    # Iterate through each key-value pair in the parsed data
-    for key, records in parsed_data.items():
-        # Convert the list of records into a Pandas DataFrame
-        results[key] = pd.DataFrame(records)
+    df['Value Date'] = pd.to_datetime(df['Value Date']).dt.strftime('%d-%m-%Y')
+    transaction_sheet_df = transaction_sheet(df)
+    investment_df = total_investment(df)
+    creditor_df = creditor_list(df)
+    debtor_df = debtor_list(transaction_sheet_df)
 
-    # Reconstruct all the DataFrames from the results dictionary
-    name_n_num_df = results["Name Acc No"]
-    particulars_df = results["Particulars"]
-    income_receipts_df = results["Income Receipts"]
-    imp_expenses_payments_df = results["Important Expenses"]
-    other_expenses_df = results["Other Expenses"]
-    loan_value_df = results["Opportunity to Earn"]
-    transaction_sheet_df = results["Transactions"]
-    eod_sheet_df = results["EOD"]
-    investment_df = results["Investment"]
-    creditor_df = results["Creditors"]
-    debtor_df = results["Debtors"]
-    upi_cr_df = results["UPI-CR"]
-    upi_dr_df = results["UPI-DR"]
-    cash_withdrawal_df = results["Cash Withdrawal"]
-    cash_deposit_df = results["Cash Deposit"]
-    dividend_int_df = results["Redemption, Dividend & Interest"]
-    emi_df = results["Probable EMI"]
-    refund_df = results["Refund-Reversal"]
-    suspense_credit_df = results["Suspense Credit"]
-    suspense_debit_df = results["Suspense Debit"]
-    payment_df = results["Payment Voucher"]
-    receipt_df = results["Receipt Voucher"]
+    upi_cr_df = df[(df["Description"].str.contains("UPI", case=False)) & (df["Credit"] > 0)]
+    upi_dr_df = df[(df["Description"].str.contains("UPI", case=False)) & (df["Debit"] > 0)]
 
-    # All sheets are now restored as Pandas DataFrames
+    cash_withdrawal_df = cash_withdraw(df)
+    cash_deposit_df = cash_depo(df)
+    dividend_int_df = div_int(df)
+    emi_df = emi(df)
+    refund_df = refund_reversal(df)
+    suspense_credit_df = suspense_credit(df)
+    suspense_debit_df = suspense_debit(df)
+    payment_df = payment(df)
+    receipt_df = receipt(df)
+    pay_n_receipt_df = process_transactions(df)
+
+    bank_avg_balance_df = calculate_fixed_day_average(eod_sheet_df)
+    loan_value_df = process_avg_last_6_months(bank_avg_balance_df, eod_sheet_df)
+
 
     filename = os.path.join(
         "saved_excel",
-        f"{CA_ID}_extracted_statements_file_{account_number}.xlsx",
+        f"Bank_{account_number}_Extracted_statements_file.xlsx",
     )
 
     writer = pd.ExcelWriter(filename, engine="xlsxwriter")
@@ -135,10 +125,273 @@ def reconstruct_dict_from_json_save_to_excel(json_input, account_number, CA_ID):
     refund_df.to_excel(writer, sheet_name='Refund-Reversal', index=False)
     suspense_credit_df.to_excel(writer, sheet_name='Suspense Credit', index=False)
     suspense_debit_df.to_excel(writer, sheet_name='Suspense Debit', index=False)
+    pay_n_receipt_df.to_excel(writer, sheet_name='Payment & Receipt Voucher', index=False)
     payment_df.to_excel(writer, sheet_name='Payment Voucher', index=False)
     receipt_df.to_excel(writer, sheet_name='Receipt Voucher', index=False)
-    writer._save()
     writer.close()
+
+    #added color formatting nd filter functionalities
+    color_summary_sheet(filename)
+    format_numbers_with_commas(filename)
+    sheet_specs = {
+        "Summary": {
+            "A": 50,
+            "B": 15,
+            "C": 15,
+            "D": 15,
+            "E": 15,
+            "F": 15,
+            "G": 15,
+            "H": 15,
+            "I": 15,
+            "J": 15,
+            "K": 15,
+            "L": 15,
+            "M": 15,
+            "N": 15,
+            "O": 15,
+        },
+        "DateWise Avg Balance": {
+            "A": 35,
+            "B": 15,
+            "C": 15,
+            "D": 15,
+            "E": 15,
+            "F": 15,
+            "G": 15,
+            "H": 15,
+            "I": 15,
+            "J": 15,
+            "K": 15,
+            "L": 15,
+            "M": 15,
+            "N": 20,
+            "O": 20,
+            "P": 20,
+        },
+        "BankWise Eligibility": {
+            "A": 35,
+            "B": 20,
+            "C": 20,
+            "D": 25,
+            "E": 25,
+            "F": 25,
+            "G": 25,
+            "H": 25,
+            "I": 25,
+        },
+        "Transaction": {
+            "A": 10,
+            "B": 70,
+            "C": 15,
+            "D": 15,
+            "E": 15,
+            "F": 20,
+            "G": 10,
+        },
+        "EOD Balance": {
+            "A": 15,
+            "B": 15,
+            "C": 15,
+            "D": 15,
+            "E": 15,
+            "F": 15,
+            "G": 15,
+            "H": 15,
+            "I": 15,
+            "J": 15,
+            "K": 15,
+            "L": 15,
+            "M": 15,
+            "N": 15,
+            "O": 15,
+            "P": 15,
+            "Q": 15,
+            "R": 15,
+            "S": 15,
+            "T": 15,
+            "U": 15,
+            "V": 15,
+            "W": 15,
+            "X": 15,
+            "Y": 15,
+            "Z": 15,
+        },
+        "Probable EMI": {
+            "A": 10,
+            "B": 70,
+            "C": 15,
+            "D": 15,
+            "E": 15,
+            "F": 20,
+            "G": 10,
+        },
+        "Bounce": {"A": 10, "B": 70, "C": 15, "D": 15, "E": 15, "F": 20, "G": 10},
+        "Creditor": {
+            "A": 10,
+            "B": 70,
+            "C": 15,
+            "D": 15,
+            "E": 15,
+            "F": 20,
+            "G": 10,
+        },
+        "Debtor": {
+            "A": 10,
+            "B": 70,
+            "C": 15,
+            "D": 15,
+            "E": 15,
+            "F": 20,
+            "G": 10,
+        },
+        "Cash Deposit": {
+            "A": 10,
+            "B": 70,
+            "C": 15,
+            "D": 15,
+            "E": 15,
+            "F": 20,
+            "G": 10,
+        },
+        "Cash Withdrawal": {
+            "A": 10,
+            "B": 70,
+            "C": 15,
+            "D": 15,
+            "E": 15,
+            "F": 20,
+            "G": 10,
+        },
+        "POS_CR": {"A": 10, "B": 70, "C": 15, "D": 15, "E": 15, "F": 20, "G": 10},
+        "UPI_CR": {"A": 10, "B": 70, "C": 15, "D": 15, "E": 15, "F": 20, "G": 10},
+        "Investment": {
+            "A": 10,
+            "B": 70,
+            "C": 15,
+            "D": 15,
+            "E": 15,
+            "F": 20,
+            "G": 10,
+        },
+        "Subscription_Entertainment": {
+            "A": 10,
+            "B": 70,
+            "C": 15,
+            "D": 15,
+            "E": 15,
+            "F": 20,
+            "G": 10,
+        },
+        "Refund-Reversal": {
+            "A": 10,
+            "B": 70,
+            "C": 15,
+            "D": 15,
+            "E": 15,
+            "F": 20,
+            "G": 10,
+        },
+        "Suspense Credit": {
+            "A": 10,
+            "B": 70,
+            "C": 15,
+            "D": 15,
+            "E": 15,
+            "F": 20,
+            "G": 10,
+        },
+        "Suspense Debit": {
+            "A": 10,
+            "B": 70,
+            "C": 15,
+            "D": 15,
+            "E": 15,
+            "F": 20,
+            "G": 10,
+        },
+        "Redemption, Dividend & Interest": {
+            "A": 10,
+            "B": 70,
+            "C": 15,
+            "D": 15,
+            "E": 15,
+            "F": 20,
+            "G": 10,
+        },
+        "Bank_charges": {
+            "A": 10,
+            "B": 70,
+            "C": 15,
+            "D": 15,
+            "E": 15,
+            "F": 20,
+            "G": 10,
+        },
+        "Payment Voucher": {
+            "A": 15,
+            "B": 15,
+            "C": 10,
+            "D": 20,
+            "E": 15,
+            "F": 15,
+            "G": 85,
+        },
+        "Receipt Voucher": {
+            "A": 15,
+            "B": 15,
+            "C": 20,
+            "D": 10,
+            "E": 15,
+            "F": 85,
+
+        },
+        "Payment_Receipt Voucher": {
+            "A": 15,
+            "B": 15,
+            "C": 10,
+            "D": 20,
+            "E": 20,
+            "F": 20,
+            "G": 20,
+            "H": 85,
+        },
+    }
+    adjust_column_widths_for_varied_sheets(filename, sheet_specs)
+    Summary_note(filename, empty_rows_between=2)
+    Investment_note(filename, empty_rows_between=2)
+    CreditorList_note(filename, empty_rows_between=2)
+    DebtorList_note(filename, empty_rows_between=2)
+    CW_note = "*The above table reflects the cash withdrawals made during the year on the basis of widely used acronyms of the finance industry."
+    CashWithdrawalt_note(filename, CW_note, empty_rows_between=2)
+    CD_note = "*The above table reflects the cash deposits made during the year on the basis of widely used acronyms of the finance industry."
+    Cash_Deposit_note(filename, CD_note, empty_rows_between=2)
+    emi_note = "* Transactions in the above table are based on the widely used acronyms of the finance industry and likely reflect EMI payment. \r\nKindly confirm the same from the loan statement or the interest certificate."
+    Emi_note(filename, emi_note, empty_rows_between=2)
+    reef_note = "*This table likely pertains to refunds/reversals/cashbacks received from card payments/online transactions."
+    Refund_note(filename, reef_note, empty_rows_between=2)
+    Suspense_Credit_note(filename, empty_rows_between=2)
+    Suspense_Debit_note(filename, empty_rows_between=2)
+    add_filters_to_excel(filename)
+    create_excel_sheet(filename, loan_value_df)
+    color_excel_tabs_inplace(filename)
+
+    def reorder_sheets(filename):
+        wb = load_workbook(filename)
+        desired_order_front = ["Summary", "Opportunity to Earn"]
+        existing_sheets = [
+            sheet for sheet in desired_order_front if sheet in wb.sheetnames
+        ]
+        other_sheets = [
+            sheet for sheet in wb.sheetnames if sheet not in existing_sheets
+        ]
+        new_order = existing_sheets + other_sheets
+        wb._sheets = [wb[sheet] for sheet in new_order]
+        wb.save(filename)
+        return "Sheets reordered successfully"
+
+    reorder_sheets(filename)
+
     return filename
 
 
@@ -172,6 +425,7 @@ def returns_json_output_of_all_sheets(df, name_n_num_df):
     suspense_debit_df = suspense_debit(df)
     payment_df = payment(df)
     receipt_df = receipt(df)
+    pay_n_receipt_df = process_transactions(df)
 
     bank_avg_balance_df = calculate_fixed_day_average(eod_sheet_df)
     loan_value_df = process_avg_last_6_months(bank_avg_balance_df, eod_sheet_df)
@@ -198,6 +452,7 @@ def returns_json_output_of_all_sheets(df, name_n_num_df):
         "Refund-Reversal": refund_df.to_dict(orient="records"),
         "Suspense Credit": suspense_credit_df.to_dict(orient="records"),
         "Suspense Debit": suspense_debit_df.to_dict(orient="records"),
+        "Payment & Receipt Voucher": pay_n_receipt_df.to_dict(orient="records"),
         "Payment Voucher": payment_df.to_dict(orient="records"),
         "Receipt Voucher": receipt_df.to_dict(orient="records"),
     }
@@ -444,7 +699,6 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
     print("|------------------------------|")
 
     if not dfs:
-        print("|-------------xxx---------------|")
         folder_path = "saved_pdf"
         try:
             shutil.rmtree(folder_path)
@@ -480,7 +734,7 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
 
         # arrange dfs
         initial_df = pd.concat(sort_dataframes_by_date(list_of_dataframes)).fillna("").reset_index(drop=True)
-
+        initial_df = initial_df.drop_duplicates(keep="first")
         df = category_add_ca(initial_df)
         new_tran_df = another_method(df)
         new_tran_df = Upi(new_tran_df)
@@ -490,7 +744,7 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
 
         json_lists_of_df = returns_json_output_of_all_sheets(new_tran_df, name_n_num_df)
 
-        # excel_file_path = reconstruct_dict_from_json_save_to_excel(json_lists_of_df, account_number, CA_ID)
+        excel_file_path = save_to_excel(new_tran_df, name_n_num_df, account_number)
         # print(excel_file_path)
 
         folder_path = "saved_pdf"

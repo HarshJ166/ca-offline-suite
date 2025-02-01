@@ -8,10 +8,7 @@ const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
 
-
-
 function registerMainDashboardIpc(tmpdir_path) {
-  
   ipcMain.handle("get-reports-processed", async (event) => {
     try {
       const totalCount = await db
@@ -26,7 +23,7 @@ function registerMainDashboardIpc(tmpdir_path) {
       const statusCounts = await db
         .select({
           status: cases.status,
-          count: count()
+          count: count(),
         })
         .from(cases)
         .groupBy(cases.status);
@@ -35,16 +32,18 @@ function registerMainDashboardIpc(tmpdir_path) {
       // console.log("caseDates", caseDates);
       console.log("statusCounts", statusCounts);
 
-      const successCount = statusCounts.find(row => row.status === 'Success')?.count || 0;
-      const failedCount = statusCounts.find(row => row.status === 'Failed')?.count || 0;
+      const successCount =
+        statusCounts.find((row) => row.status === "Success")?.count || 0;
+      const failedCount =
+        statusCounts.find((row) => row.status === "Failed")?.count || 0;
 
       return {
         totalCount,
         caseDates: caseDates.map((row) => row.createdAt),
         statusCounts: {
           success: successCount,
-          failed: failedCount
-        }
+          failed: failedCount,
+        },
       };
     } catch (error) {
       log.error("Error fetching cases processed:", error);
@@ -62,7 +61,7 @@ function registerMainDashboardIpc(tmpdir_path) {
       const statementDates = await db
         .select({ createdAt: statements.createdAt })
         .from(statements);
-    
+
       // console.log("count", totalCount);
       // console.log("statementDates", statementDates);
 
@@ -70,25 +69,20 @@ function registerMainDashboardIpc(tmpdir_path) {
         totalCount,
         statementDates: statementDates.map((row) => row.createdAt),
       };
-
     } catch (error) {
       log.error("Error fetching statements processed:", error);
       throw error;
     }
   });
 
-  ipcMain.handle('fetch-pdf-content', async (event,fileName) => {
-    console.log({fileName});
+  ipcMain.handle("fetch-pdf-content", async (event, fileName) => {
+    console.log({ fileName });
     // This hander takes in a file path and returns the base64 encoded data of the file
     // const filePath = 'E:/Workplace/Bizpedia/ca-offline-suite/frontend/tmp/52 Kotak bank account statement - Apr 23 to Mar 24.pdf'; // The path to the PDF file
-    const filePath = path.join(tmpdir_path, fileName);
+    const filePath = path.join(tmpdir_path, "failed_pdfs", "check", fileName);
     const data = await fs.promises.readFile(filePath);
-    return data.toString('base64'); // Convert file data to base64 string
+    return data.toString("base64"); // Convert file data to base64 string
   });
-
-
-
 }
 
 module.exports = { registerMainDashboardIpc };
-
