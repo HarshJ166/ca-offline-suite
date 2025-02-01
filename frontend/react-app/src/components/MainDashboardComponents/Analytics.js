@@ -31,7 +31,7 @@ import { useToast } from "../../hooks/use-toast";
 const Analytics = () => {
   const { toast } = useToast();
   const [recentReports, setRecentReports] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState([]);
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -39,25 +39,27 @@ const Analytics = () => {
         const result = await window.electron.getRecentReports();
         console.log("Fetched reports:", result);
 
-        const formattedReports = result.map((report) => ({
-          ...report,
-          createdAt: new Date(report.createdAt).toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          }),
-          statements: report.statements.map((statement) => ({
-            ...statement,
-            createdAt: new Date(statement.createdAt).toLocaleDateString(
-              "en-GB",
-              {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-              }
-            ),
-          })),
-        }));
+        const formattedReports = result
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .map((report) => ({
+            ...report,
+            createdAt: new Date(report.createdAt).toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            }),
+            statements: report.statements.map((statement) => ({
+              ...statement,
+              createdAt: new Date(statement.createdAt).toLocaleDateString(
+                "en-GB",
+                {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                }
+              ),
+            })),
+          }));
 
         setRecentReports(formattedReports);
         // toast({ title: "Success", description: "Reports loaded successfully." });
@@ -68,7 +70,7 @@ const Analytics = () => {
           variant: "destructive",
         });
       } finally {
-        setIsLoading(false);
+        // setIsLoading(false);
       }
     };
 
@@ -77,9 +79,15 @@ const Analytics = () => {
 
   // In your Analytics.jsx component
 
-  const handleDownload = () => {
+  const handleDownload =async (caseid) => {
     try {
-      setIsLoading(true);
+      const temp = isLoading;
+      temp.push(caseid)
+      // setIsLoading(temp);
+
+      const response = await window.electron.excelFileDownload(caseid);
+      console.log(response)
+
 
       // Assuming you have an Excel file named 'example.xlsx' in your public folder
       const filePath = "public/Sale Voucher final.xlsm";
@@ -107,21 +115,11 @@ const Analytics = () => {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      // setIsLoading((prev)=>prev.filter((r)=>r!==caseid))
     }
   };
 
-  // Update the Download button in your JSX:
-  <Button
-    variant="outline"
-    size="sm"
-    className="hover:bg-primary hover:text-primary-foreground transition-colors"
-    onClick={() => handleDownload}
-    disabled={isLoading}
-  >
-    <Download className="h-4 w-4 mr-2" />
-    {isLoading ? "Generating..." : "Download"}
-  </Button>;
+  
 
   return (
     <div className="w-full px-4 py-6 -space-y-2 mx-auto ">
@@ -163,22 +161,27 @@ const Analytics = () => {
                   </TableCell>
                   <TableCell className="w-40 text-center">
                     <div className="flex justify-center space-x-2">
-                      <Button
+                      {/* <Button
                         variant="secondary"
                         size="sm"
                         className="hover:bg-primary hover:text-primary-foreground transition-colors"
                       >
                         <Eye className="h-4 w-4 mr-2" />
                         View
-                      </Button>
+                      </Button> */}
+
                       <Button
+                      key={report.id}
                         variant="outline"
                         size="sm"
                         className="hover:bg-primary hover:text-primary-foreground transition-colors"
-                        onClick={handleDownload}
+                        onClick={()=>handleDownload(report.id)}
+                        disabled={isLoading.includes(report.id)}
+
                       >
                         <Download className="h-4 w-4 mr-2" />
-                        Download
+                        {isLoading.includes(report.id) ? "Generating..." : "Download"}
+
                       </Button>
                     </div>
                   </TableCell>
