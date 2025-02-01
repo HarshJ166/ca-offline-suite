@@ -744,7 +744,7 @@ def start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_dates, end_
 
         json_lists_of_df = returns_json_output_of_all_sheets(new_tran_df, name_n_num_df)
 
-        excel_file_path = save_to_excel(new_tran_df, name_n_num_df, account_number)
+        # excel_file_path = save_to_excel(new_tran_df, name_n_num_df, account_number)
         # print(excel_file_path)
 
         folder_path = "saved_pdf"
