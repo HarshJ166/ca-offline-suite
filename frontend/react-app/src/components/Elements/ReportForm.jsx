@@ -377,7 +377,7 @@ const GenerateReportForm = ({
       return;
     }
 
-    if (!caseName) {
+    if (!caseName && !currentCaseName) {
       toast({
         title: "Error",
         description: "Please enter a report name",
@@ -387,22 +387,24 @@ const GenerateReportForm = ({
       return;
     }
 
-    try {
-      // Check if report name exists
-      const response = await window.electron.getReportNameExists({
-        reportName: caseName,
-      });
 
-      if (response.exists) {
-        toast({
-          title: "Error",
-          description:
-            "Report name already exists. Please choose a different name.",
-          variant: "destructive",
-          duration: 3000,
+
+    try {
+       if(caseName){ // Check if report name exists
+        const response = await window.electron.getReportNameExists({
+          reportName: caseName || currentCaseName,
         });
-        return;
-      }
+
+        if (response.exists) {
+          toast({
+            title: "Error",
+            description:
+              "Report name already exists. Please choose a different name.",
+            variant: "destructive",
+            duration: 3000,
+          });
+          return;
+        }}
 
       // If report name is unique, proceed with report generation
       handleReportSubmit(
@@ -418,7 +420,7 @@ const GenerateReportForm = ({
         progressIntervalRef,
         simulateProgress,
         convertDateFormat,
-        caseName
+        caseName || currentCaseName
       );
     } catch (error) {
       console.error("Error checking report name:", error);
