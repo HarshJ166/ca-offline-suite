@@ -24,7 +24,7 @@ import { Input } from "../ui/input";
 const GenerateReportForm = ({
   currentCaseName = null,
   handleReportSubmit,
-  onReportGenerated,
+  source
 }) => {
   const [unit, setUnit] = useState("Unit 1");
   const [units, setUnits] = useState(["Unit 1", "Unit 2"]);
@@ -388,13 +388,13 @@ const GenerateReportForm = ({
     }
 
 
-
     try {
        if(caseName){ // Check if report name exists
         const response = await window.electron.getReportNameExists({
           reportName: caseName || currentCaseName,
         });
-
+        
+        console.log({response})
         if (response.exists) {
           toast({
             title: "Error",
@@ -415,13 +415,13 @@ const GenerateReportForm = ({
         fileDetails,
         setSelectedFiles,
         setFileDetails,
-        setCaseName,
         toast,
         progressIntervalRef,
         simulateProgress,
         convertDateFormat,
         caseName || currentCaseName
       );
+
     } catch (error) {
       console.error("Error checking report name:", error);
       toast({

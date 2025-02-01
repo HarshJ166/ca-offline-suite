@@ -240,7 +240,7 @@ const getOrCreateCase = async (caseName, userId = 1) => {
 
 const processStatementAndEOD = async (
   fileDetail,
-  transactions,
+  transactions_temp, // renamed cuz we had a schema as transactions
   eodData,
   caseName,
   nerResults,
@@ -256,7 +256,7 @@ const processStatementAndEOD = async (
     const accountNumber = nerResults?.["Acc Number"]?.[fileIndex] || "UNKNOWN";
 
     // First validate all transactions before creating the statement
-    const statementTransactions = transactions
+    const statementTransactions = transactions_temp
       .filter((t) => t.Bank === fileDetail.bankName)
       .map((transaction) => {
         try {
@@ -629,10 +629,16 @@ function generateReportIpc(tmpdir_path) {
   //   console.error(err.response.data.detail[0].loc);
   // });
   ipcMain.handle("generate-report", async (event, receivedResult, caseName) => {
+    
+    const caseId = await getOrCreateCase(caseName);
+    // Track file status
+    const successfulFiles = new Set();
+    const failedFiles = new Set();
+    const allProcessedFiles = new Set();
+    const uploadedFiles = new Map();
     try {
       log.info("IPC handler invoked for generate-report", caseName);
 
-      const caseId = await getOrCreateCase(caseName);
       if (!receivedResult?.files?.length) {
         throw new Error("Invalid or empty files array received");
       }
@@ -642,11 +648,7 @@ function generateReportIpc(tmpdir_path) {
       fs.mkdirSync(caseFolder, { recursive: true });
       log.info("Case Folder for PDFs:", caseFolder);
 
-      // Track file status
-      const successfulFiles = new Set();
-      const failedFiles = new Set();
-      const allProcessedFiles = new Set();
-      const uploadedFiles = new Map();
+      
 
       // Step 1: Save all uploaded files in the case folder
       const fileDetails = receivedResult.files.map((fileDetail, index) => {
@@ -689,14 +691,19 @@ function generateReportIpc(tmpdir_path) {
         passwords: fileDetails.map((d) => d.passwords || ""),
         start_date: fileDetails.map((d) => d.start_date || ""),
         end_date: fileDetails.map((d) => d.end_date || ""),
-        ca_id: fileDetails[0]?.ca_id || "DEFAULT_CASE",
+        ca_id: caseName || "DEFAULT_CASE",
       };
+
+      log.info("Sending API request with payload:", payload);
 
       const response = await axios.post(generateReportEndpoint, payload, {
         headers: { "Content-Type": "application/json" },
         timeout: 300000,
         validateStatus: (status) => status === 200,
       });
+
+      log.info("API response received:", response.data);
+    
 
       // Step 3: Handle failed extractions
       if (response.data?.["pdf_paths_not_extracted"]) {
@@ -725,7 +732,30 @@ function generateReportIpc(tmpdir_path) {
 
       // Step 4: Process transactions
       const parsedData = JSON.parse(sanitizeJSONString(response.data.data));
-      const transactions = (parsedData.Transactions || []).filter(
+       if (parsedData == null) {
+                    await updateCaseStatus(caseId, "Failed");
+                    const failedPDFsDir = path.join(tempDir, "failed_pdfs", caseName);
+                    fs.mkdirSync(failedPDFsDir, { recursive: true });
+                    return {
+                      success: true,
+                      data: {
+                        caseId: caseId,
+                        processed: null,
+                        totalTransactions: 0,
+                        eodProcessed: false,
+                        summaryProcessed: false,
+                        failedStatements: response.data["pdf_paths_not_extracted"] || null,
+                        failedFiles: Array.from(failedFiles),
+                        successfulFiles: Array.from(successfulFiles),
+                        nerResults: response.data?.ner_results || {
+                          Name: [],
+                          "Acc Number": [],
+                        },
+                      },
+                    };
+                  }
+                  
+      const transactions_temp = (parsedData.Transactions || []).filter(
         (transaction) => {
           if (
             typeof transaction.Credit === "number" &&
@@ -753,7 +783,7 @@ function generateReportIpc(tmpdir_path) {
         try {
           const result = await processStatementAndEOD(
             fileDetail,
-            transactions,
+            transactions_temp,
             parsedData.EOD,
             caseName,
             response.data?.ner_results || { Name: [], "Acc Number": [] },
@@ -825,6 +855,7 @@ function generateReportIpc(tmpdir_path) {
       return {
         success: true,
         data: {
+          caseId:caseId,
           processed: processedData,
           totalTransactions: processedData.reduce(
             (sum, d) => sum + d.transactionCount,
@@ -841,6 +872,7 @@ function generateReportIpc(tmpdir_path) {
           },
         },
       };
+
     } catch (error) {
       log.error("Error in report generation:", {
         message: error.message,
@@ -923,7 +955,7 @@ function generateReportIpc(tmpdir_path) {
       let failedPdfPaths = [];
 
       // Check if there are any PDF paths not extracted
-      if (response.data?.["pdf_paths_not_extracted"]) {
+      if (response.data?.["pdf_paths_not_extracted"]?.paths?.length>0) {
         await updateCaseStatus(caseId, "Failed");
         // Get the case ID
         const validCaseId = await getOrCreateCase(caseName);
@@ -955,7 +987,7 @@ function generateReportIpc(tmpdir_path) {
         throw error;
       }
 
-      log.info("Parsed Data aq : ", parsedData);
+      // log.info("Parsed Data aq : ", parsedData);
 
       const transactions_temp = (parsedData.Transactions || []).filter(
         (transaction_temp) => {
@@ -986,6 +1018,8 @@ function generateReportIpc(tmpdir_path) {
         }
       );
 
+      log.info("transactions_temp ",transactions_temp.length)
+
       const processedData = [];
 
       // create filedetails from result but remove rectifiedColumns
@@ -996,10 +1030,13 @@ function generateReportIpc(tmpdir_path) {
           end_date: fileDetail.endDate || "",
           start_date: fileDetail.startDate || "",
           pdf_paths: fileDetail.path,
-          bankName: fileDetail.bankName,
+          bankName: fileDetail.bankName.replace(/\d/g, ""),
           passwords: fileDetail.password || "",
         };
       });
+
+      log.info({exampleTrnsaction:transactions_temp[0]})
+      log.info({exampleFileDetails:fileDetails})
 
       for (const fileDetail of fileDetails) {
         try {
@@ -1007,7 +1044,9 @@ function generateReportIpc(tmpdir_path) {
             fileDetail,
             transactions_temp,
             parsedData.EOD,
-            caseName
+            caseName,
+            response.data?.ner_results || { Name: [], "Acc Number": [] },
+            fileDetails.indexOf(fileDetail)
           );
           processedData.push(result);
           // Track successfully processed files
@@ -1067,6 +1106,7 @@ function generateReportIpc(tmpdir_path) {
       return {
         success: true,
         data: {
+          caseId:caseId,
           processed: processedData,
           totalTransactions: processedData.reduce(
             (sum, d) => sum + d.transactionCount,

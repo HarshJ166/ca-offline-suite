@@ -23,17 +23,17 @@ const CaseDashboard = () => {
     const fetchReportName = async () => {
       try {
         const result = await window.electron.getReportName(caseId);
-        console.log("Report Name fetched successfully:", result);
+        // console.log("Report Name fetched successfully:", result);
         setReportNameFromDb(result);
       } catch (error) {
-        console.error("Error fetching report name:", error);
+        // console.error("Error fetching report name:", error);
       }
     };
 
     fetchReportName();
   }, [caseId]);
 
-  console.log("Report Name : ", reportNameFromDb);
+  // console.log("Report Name : ", reportNameFromDb);
 
   useEffect(() => {
     setCaseDashboard(activeTab, `/case-dashboard/${caseId}/${activeTab}`);
