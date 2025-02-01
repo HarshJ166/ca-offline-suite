@@ -77,6 +77,8 @@ const RecentReports = ({key,setShowRectifyButton,setFailedStatements,setShowAnal
 
   const [reportToDelete, setReportToDelete] = useState(null);
 
+  
+
   const handleSubmitEditPdf = async () => {
     setPdfEditLoading(true);
     const allRectified = failedDatasOfCurrentReport.every(
@@ -145,6 +147,8 @@ const RecentReports = ({key,setShowRectifyButton,setFailedStatements,setShowAnal
         setIsLoading(false);
       }
     };
+
+    console.log({setShowRectifyButton,setFailedStatements,setDialogOpen})
 
     fetchReports();
   }, []);

@@ -734,7 +734,7 @@ function generateReportIpc(tmpdir_path) {
       const parsedData = JSON.parse(sanitizeJSONString(response.data.data));
        if (parsedData == null) {
                     await updateCaseStatus(caseId, "Failed");
-                    const failedPDFsDir = path.join(tempDir, "failed_pdfs", caseName);
+                    const failedPDFsDir = path.join(tmpdir_path, "failed_pdfs", caseName);
                     fs.mkdirSync(failedPDFsDir, { recursive: true });
                     return {
                       success: true,
@@ -754,7 +754,7 @@ function generateReportIpc(tmpdir_path) {
                       },
                     };
                   }
-                  
+
       const transactions_temp = (parsedData.Transactions || []).filter(
         (transaction) => {
           if (
