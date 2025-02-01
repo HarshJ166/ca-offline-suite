@@ -285,10 +285,10 @@ const RecentReports = () => {
     const newToastId = toast({
       title: "Initializing Report Generation",
       description: (
-        <div className="mt-2 w-full flex flex-col gap-2">
+        <div className="mt-2 w-full flex items-center gap-2">
           <div className="flex items-center gap-4">
             <CircularProgress className="w-full" />
-            <CircularProgress value={0} className="w-full" />
+            {/* <CircularProgress value={0} className="w-full" /> */}
             {/* <span className="text-sm font-medium">0%</span> */}
           </div>
           <p className="text-sm text-gray-500">Preparing to process files...</p>
