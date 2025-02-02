@@ -205,7 +205,7 @@ function registerCategoryHandlers() {
 
         // Iterate through key-value pairs of data
         for (const [key, item] of Object.entries(data)) {
-            log.info('Item : ', key, item.Category);
+            log.info('Item : ', key, item.category);
             const id = key; // Use transactionId or fallback to key
             const category = item.category || "Uncategorized"; // Default to "Uncategorized"
 
@@ -317,7 +317,7 @@ function registerCategoryHandlers() {
             Description: item.description || "Unknown",
             "Debit / Credit": item.type == "debit" ? "Debit" : "Credit",
             Category: item.category || "Uncategorized",
-            Particulars: item.classification || "Unknown"
+            Particulars: item.classification || "Others"
         }));
 
         console.log({ transformedCategories: transformedCategories[0], transformedCategoriesLength: transformedCategories.length });
