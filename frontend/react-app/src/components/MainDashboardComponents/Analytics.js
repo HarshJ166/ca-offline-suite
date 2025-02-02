@@ -18,6 +18,7 @@ import {
 } from "../ui/card";
 import { useState, useEffect } from "react";
 import { useToast } from "../../hooks/use-toast";
+import { useLoading } from "../../contexts/LoadingContext";
 
 // const reports = [
 //   { date: "13-12-2024", name: "Report_ATS_unit_1_00008" },
@@ -31,7 +32,7 @@ import { useToast } from "../../hooks/use-toast";
 const Analytics = () => {
   const { toast } = useToast();
   const [recentReports, setRecentReports] = useState([]);
-  const [isLoading, setIsLoading] = useState([]);
+  const { setIsExcelLoading, setIsReportLoading } = useLoading();
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -70,20 +71,20 @@ const Analytics = () => {
           variant: "destructive",
         });
       } finally {
-        // setIsLoading(false);
       }
     };
 
     fetchReports();
   }, []);
 
+
   // In your Analytics.jsx component
   const handleDownload = async (caseid) => {
+    let file_cretaed = false;
     try {
-      // setIsLoading(true); // Start loading
-      const temp = isLoading;
-      temp.push(caseid)
-      // setIsLoading(temp);
+      console.log("setting setisexcel true");
+      setIsExcelLoading(true); // Start loading
+ 
 
       // Start the download process in the main process
       window.electron.download.excelReportDownload(caseid);
@@ -105,9 +106,13 @@ const Analytics = () => {
 
       // Listen for download completion
       window.electron.download.onExcelDownloadComplete((res) => {
+        if(!file_cretaed){
+
+        file_cretaed = true;
         const { message, fileName } = res;
         console.log("Download completed:", message);
-        setIsLoading([]); // End loading state
+        setIsExcelLoading(false); // End loading state
+
 
         const fileBlob = new Blob(downloadedChunks, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = window.URL.createObjectURL(fileBlob);
@@ -125,12 +130,14 @@ const Analytics = () => {
           title: 'Success',
           description: res.message || 'Excel file downloaded successfully',
         });
+      }
       });
 
       // Handle download error
       window.electron.download.onExcelDownloadError((error) => {
         console.log("Error downloading file:", error);
-        setIsLoading([]); // End loading state
+        setIsExcelLoading(false);
+
         toast({
           title: 'Error',
           description: `Failed to download Excel file: ${error}`,
@@ -138,7 +145,7 @@ const Analytics = () => {
         });
       });
     } catch (error) {
-      setIsLoading([]); // End loading state
+      setIsExcelLoading(false);
       toast({
         title: 'Error',
         description: `Failed to initiate download: ${error.message}`,
@@ -204,11 +211,10 @@ const Analytics = () => {
                         size="sm"
                         className="hover:bg-primary hover:text-primary-foreground transition-colors"
                         onClick={() => handleDownload(report.id)}
-                        disabled={isLoading.includes(report.id)}
 
                       >
                         <Download className="h-4 w-4 mr-2" />
-                        {isLoading.includes(report.id) ? "Generating..." : "Download"}
+                        Download
 
                       </Button>
                     </div>

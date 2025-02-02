@@ -15,6 +15,8 @@ import {
 } from "../ui/table";
 import { ScrollArea } from "../ui/scroll-area";
 import { Card } from "../ui/card";
+import { Phone, Mail, AlertCircle, ChevronRight } from "lucide-react";
+
 
 export default function Eligibility() {
   const [opportunityData, setOpportunityData] = useState(null);
@@ -124,12 +126,12 @@ export default function Eligibility() {
             benefits.
           </p>
         </div>
-        <Card className="p-4 rounded-lg">
+        <Card className="px-6 rounded-lg">
           <Accordion type="single" collapsible className="w-full">
             {opportunityData.map((data, index) => (
               <AccordionItem key={index} value={`item-${index + 1}`}>
                 <AccordionTrigger className="from-neutral-500">
-                  <div className="flex flex-col items-start ">
+                  <div className="flex flex-col items-start gap-y-1">
                     <span className="text-[18px] font-semibold">
                       {data.statementCustomerName}
                     </span>
@@ -138,90 +140,88 @@ export default function Eligibility() {
                     </span>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead className="text-center">Amount</TableHead>
-                        <TableHead className="text-center">
-                          Commission %
-                        </TableHead>
-                        <TableHead className="text-right">
-                          Commission (in Rs)
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {Object.entries(data)
-                        .filter(
-                          ([key]) =>
-                            !["caseName", "statementCustomerName"].includes(key)
-                        )
-                        .map(([key, item]) => (
-                          <TableRow key={key}>
-                            <TableCell className="font-medium">
-                              {item.type}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {item.amount.toLocaleString(undefined, {
-                                maximumFractionDigits: 2,
-                              })}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {item.rate}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {item.value.toLocaleString(undefined, {
-                                maximumFractionDigits: 2,
-                              })}
-                            </TableCell>
+                <AccordionContent className=" py-4">
+                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50 dark:bg-gray-800">
+                            <TableHead className="font-semibold">Product</TableHead>
+                            <TableHead className="text-center font-semibold">Amount</TableHead>
+                            <TableHead className="text-center font-semibold">Commission %</TableHead>
+                            <TableHead className="text-right font-semibold">Commission (₹)</TableHead>
                           </TableRow>
-                        ))}
-                    </TableBody>
-                  </Table>
-                </AccordionContent>
+                        </TableHeader>
+                        <TableBody>
+                          {Object.entries(data)
+                            .filter(([key]) => !["caseName", "statementCustomerName"].includes(key))
+                            .map(([key, item]) => (
+                              <TableRow key={key} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                <TableCell className="font-medium">{item.type}</TableCell>
+                                <TableCell className="text-center">
+                                  ₹{item.amount.toLocaleString(undefined, {
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </TableCell>
+                                <TableCell className="text-center">{item.rate}</TableCell>
+                                <TableCell className="text-right font-semibold">
+                                  ₹{item.value.toLocaleString(undefined, {
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
         </Card>
-
-        {note.map((section, index) => (
-          <Card key={index} className="p-6 rounded-lg shadow-sm">
-            <h4 className="text-lg font-semibold text-gray-700 mb-2 dark:text-white">
-              {section.title}
-            </h4>
-            {Array.isArray(section.content) ? (
-              <ul className="list-none space-y-1 text-gray-600 dark:text-slate-300">
-                {section.content.map((item, idx) => (
-                  <li key={idx} className="flex items-start">
-                    <span className="mr-2 mt-1 text-black dark:text-slate-300">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </span>
-                    {item}
+        <div className="grid gap-6 md:grid-cols-2">
+        <Card className="p-6">
+              <h4 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+                <AlertCircle className="h-5 w-5 text-amber-500" />
+                Important Notes
+              </h4>
+              <ul className="space-y-3">
+                {note[1].content.map((item, idx) => (
+                  <li key={idx} className="flex gap-3 text-gray-600 dark:text-slate-300">
+                    <ChevronRight className="h-5 w-5 flex-shrink-0 text-gray-400" />
+                    <span>{item}</span>
                   </li>
                 ))}
               </ul>
-            ) : (
-              <p className="text-gray-600 dark:text-slate-300">
-                {section.content}
-              </p>
-            )}
-          </Card>
-        ))}
+            </Card>
+            <Card className="p-6 space-y-4">
+              <h4 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Phone className="h-5 w-5 text-blue-500" />
+                Contact Information
+              </h4>
+              <div className="space-y-4 text-gray-600 dark:text-slate-300">
+                <p>
+In case your client is interested in any of the above products, you can contact our trusted vendor M/s BizPedia Tech Private Limited using below contact details.
+
+                </p>
+                <p className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  +91 8828824242
+                </p>
+                <p className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  support@leadsathi.in
+                </p>
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                    Use promo code: "CYPHERSOLEARN" for higher commission rates
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+          
+          </div>
+      
       </div>
     </ScrollArea>
   );
