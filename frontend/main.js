@@ -17,7 +17,7 @@ const { registerMainDashboardIpc } = require("./ipc/mainDashboard.js");
 const { registerCaseDashboardIpc } = require("./ipc/caseDashboard.js");
 const { registerReportHandlers } = require("./ipc/reportHandlers.js");
 const { registerAuthHandlers } = require("./ipc/authHandlers.js");
-const { registerCategoryHandlers } = require("./ipc/editCategory.js");
+const { registerEditReportHandlers } = require("./ipc/editReportHandlers.js");
 const sessionManager = require("./SessionManager");
 const licenseManager = require("./LicenseManager");
 const { generateReportIpc } = require("./ipc/generateReport");
@@ -411,7 +411,7 @@ async function createWindow() {
   registerAuthHandlers();
   registerOpportunityToEarnIpc();
   getdata();
-  registerCategoryHandlers();
+  registerEditReportHandlers();
   registerExcelDownloadHandlers(app.getPath("downloads"));
 
   // Auto-update IPC handlers with detailed logging
@@ -582,6 +582,7 @@ app.on("window-all-closed", () => {
 
 app.on("will-quit", () => {
   log.info("App is quitting");
+  sessionManager.clearUser();
   if (pythonProcess) {
     log.info("Stopping Python process...");
     pythonProcess.kill("SIGTERM");

@@ -12,7 +12,7 @@ const { opportunityToEarn } = require('../db/schema/OpportunityToEarn');
 const { eq, and, SQL, sql, inArray } = require("drizzle-orm");
 const axios = require("axios");
 
-function registerCategoryHandlers() {
+function registerEditReportHandlers() {
 
     async function processOpportunityToEarnData(opportunityToEarnData, caseId) {
         try {
@@ -223,6 +223,51 @@ function registerCategoryHandlers() {
         return { finalSql, ids };
     };
 
+    const prepareEntityForDB = async (data) => {
+        if (!data || data.length === 0) {
+            return; // No data to process
+        }
+
+        // Prepare SQL chunks and IDs
+        const sqlChunks = [];
+        const ids = [];
+
+        // Start the SQL case statement
+        sqlChunks.push(sql`(case`);
+
+        // Iterate through key-value pairs of data
+        // Iterate through the list of objects
+        for (const item of data) {
+            const id = item.transactionId; // Use transactionId from the object
+            const entity = item.entity || null; // Default to "Uncategorized"
+
+            // Log each item for debugging
+            log.info('Item:', id, entity);
+
+            // Create case condition
+            if (entity) {
+                sqlChunks.push(sql`when ${transactions.id} = ${id} then ${entity}`);
+            }
+            ids.push(id); // Collect the IDs for the WHERE clause
+        }
+
+
+        // End the SQL case statement
+        sqlChunks.push(sql`else null end)`);
+
+        // Join the SQL chunks into a final SQL statement
+        const finalSql = sql.join(sqlChunks, sql.raw(' '));
+
+        // Log the final query
+        log.info("Final SQL:", finalSql.text, ids);
+
+        // Return the final SQL query and IDs
+        return { finalSql, ids };
+    }
+
+    const bulkUpdateEntity = async (finalSql, ids) => {
+        await db.update(transactions).set({ entity: finalSql }).where(inArray(transactions.id, ids));
+    };
 
     ipcMain.handle('edit-category', async (event, data, caseId) => {
 
@@ -257,24 +302,7 @@ function registerCategoryHandlers() {
         log.info("Count of transactions for case:", transactionsForCase.length);
 
 
-        // const frontendData = {
-        //     478: {
 
-        //         "Value Date": "2023-04-06",
-        //         "Description": "upi-mraiyazanwarqures-qureshi.aiyaz123-3@okaxis-mahb0000470-309653603841-upi",
-        //         "transactionId": 12,
-        //         "Debit": null,
-        //         "Credit": 17000,
-        //         "Balance": 17190,
-        //         "Bank": "a",
-        //         "Category": "Bank Interest Received",
-        //         "Entity": "mraiyazanwarqures",
-        //         "Month": "Apr-2023",
-        //         "Date": 6,
-        //         "oldCategory": "Upi-cr",
-        //         "keyword": ""
-        //     }
-        // }
         const frontendData = data
         let aiyaz = 0;
 
@@ -416,6 +444,19 @@ function registerCategoryHandlers() {
 
 
     })
+
+
+    ipcMain.handle("edit-entity", async (event, payload) => {
+        try {
+            const { finalSql, ids } = await prepareEntityForDB(payload);
+            log.info({ finalSql, ids })
+            await bulkUpdateEntity(finalSql, ids);
+            log.info("Entity updated successfully");
+        } catch (error) {
+            log.error("Error inserting entity in batch:", error);
+            throw error;
+        }
+    })
 }
 
-module.exports = { registerCategoryHandlers };
+module.exports = { registerEditReportHandlers };
