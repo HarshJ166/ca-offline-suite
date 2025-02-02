@@ -1,12 +1,9 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   FilePlus2,
-  Files,
   Import,
   ChartNoAxesCombined,
-  ReceiptIndianRupee,
-  ReceiptText,
   IndianRupee,
 } from "lucide-react";
 import ReportGenerator from "../components/MainDashboardComponents/GenerateReport";

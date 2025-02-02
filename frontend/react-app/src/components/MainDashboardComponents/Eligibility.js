@@ -23,13 +23,13 @@ export default function Eligibility() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const commissionMap = {
-    "Business Loan": 1.0,
-    "Home Loan / Balance Transfer": 0.45,
-    "Loan Against Property / Balance Transfer": 0.65,
-    "Term Plan": "1 % -30",
-    "General Insurance": "upto 10",
-  };
+  // const commissionMap = {
+  //   "Business Loan": 1.0,
+  //   "Home Loan / Balance Transfer": 0.45,
+  //   "Loan Against Property / Balance Transfer": 0.65,
+  //   "Term Plan": "1 % -30",
+  //   "General Insurance": "upto 10",
+  // };
 
   useEffect(() => {
     async function fetchOpportunityData() {
