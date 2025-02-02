@@ -98,7 +98,17 @@ const CategoryEditTable = ({
 
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [showAllRows, setShowAllRows] = useState(false);
-
+  // New state variables for entity editing
+  const [entityEditModalOpen, setEntityEditModalOpen] = useState(false);
+  const [currentEntityEdit, setCurrentEntityEdit] = useState({
+    rowIndex: null,
+    oldValue: "",
+    newValue: "",
+  });
+  const [bulkEntityModalOpen, setBulkEntityModalOpen] = useState(false);
+  const [newBulkEntityValue, setNewBulkEntityValue] = useState("");
+  const [entityConfirmationModalOpen, setEntityConfirmationModalOpen] =
+    useState(false);
   // Add this helper function to format dates
   const formatValue = (value) => {
     if (value instanceof Date) {
@@ -155,6 +165,63 @@ const CategoryEditTable = ({
         "_",
         " "
       )}`,
+    });
+  };
+  // New handlers for entity editing
+  const handleEntityChange = (rowIndex, oldValue) => {
+    setCurrentEntityEdit({
+      rowIndex,
+      oldValue,
+      newValue: "",
+    });
+    setEntityEditModalOpen(true);
+  };
+
+  const confirmEntityChange = () => {
+    if (!currentEntityEdit.newValue.trim()) return;
+
+    const dataOnUi = [...currentData];
+    dataOnUi[currentEntityEdit.rowIndex].Entity = currentEntityEdit.newValue;
+    setCurrentdata(dataOnUi);
+
+    const modifiedObject = {
+      ...dataOnUi[currentEntityEdit.rowIndex],
+      oldEntity: currentEntityEdit.oldValue,
+    };
+    setModifiedData([...modifiedData, modifiedObject]);
+    setHasChanges(true);
+
+    setEntityEditModalOpen(false);
+    setCurrentEntityEdit({ rowIndex: null, oldValue: "", newValue: "" });
+  };
+
+  const handleBulkEntityChange = () => {
+    const dataOnUi = [...filteredData];
+    const newModifiedData = [...modifiedData];
+
+    globalSelectedRows.forEach((globalIndex) => {
+      const oldEntity = dataOnUi[globalIndex].Entity;
+      dataOnUi[globalIndex].Entity = newBulkEntityValue;
+
+      const modifiedObject = {
+        ...dataOnUi[globalIndex],
+        oldEntity,
+      };
+
+      newModifiedData.push(modifiedObject);
+    });
+
+    setFilteredData(dataOnUi);
+    setModifiedData(newModifiedData);
+    setHasChanges(true);
+    setGlobalSelectedRows(new Set());
+    setBulkEntityModalOpen(false);
+    setEntityConfirmationModalOpen(false);
+    setNewBulkEntityValue("");
+
+    toast({
+      title: "Entities updated",
+      description: `Updated ${globalSelectedRows.size} transactions`,
     });
   };
 
@@ -713,6 +780,16 @@ const CategoryEditTable = ({
                                 </div>
                               </SelectContent>
                             </Select>
+                          ) : column.toLowerCase() === "entity" ? (
+                            <div
+                              className="truncate cursor-pointer hover:bg-gray-100 p-1 rounded"
+                              onClick={() =>
+                                !globalSelectedRows.has(startIndex + index) &&
+                                handleEntityChange(index, row[column])
+                              }
+                            >
+                              {formatValue(row[column])}
+                            </div>
                           ) : (
                             <div className="truncate">
                               {formatValue(row[column])}
@@ -1114,12 +1191,20 @@ const CategoryEditTable = ({
       {(hasChanges || globalSelectedRows.size > 0) && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg flex justify-end gap-2 z-50">
           {globalSelectedRows.size > 0 && (
-            <Button
-              variant="secondary"
-              onClick={() => setBulkCategoryModalOpen(true)}
-            >
-              Update Selected ({globalSelectedRows.size})
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => setBulkEntityModalOpen(true)}
+              >
+                Update Entities ({globalSelectedRows.size})
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setBulkCategoryModalOpen(true)}
+              >
+                Update Categories ({globalSelectedRows.size})
+              </Button>
+            </>
           )}
           {hasChanges && (
             <Button
@@ -1137,6 +1222,120 @@ const CategoryEditTable = ({
           )}
         </div>
       )}
+
+      {/* Entity Edit Modal */}
+      <Dialog open={entityEditModalOpen} onOpenChange={setEntityEditModalOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Edit Entity</DialogTitle>
+            <DialogDescription>
+              Update the entity value for this transaction
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Current Value</Label>
+              <Input disabled value={currentEntityEdit.oldValue} />
+            </div>
+            <div className="space-y-2">
+              <Label>New Value</Label>
+              <Input
+                value={currentEntityEdit.newValue}
+                onChange={(e) =>
+                  setCurrentEntityEdit({
+                    ...currentEntityEdit,
+                    newValue: e.target.value,
+                  })
+                }
+                placeholder="Enter new entity value..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setEntityEditModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              onClick={confirmEntityChange}
+              disabled={!currentEntityEdit.newValue.trim()}
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Entity Update Modal */}
+      <Dialog open={bulkEntityModalOpen} onOpenChange={setBulkEntityModalOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Update Multiple Entities</DialogTitle>
+            <DialogDescription>
+              Enter a new entity value for the {globalSelectedRows.size}{" "}
+              selected transactions
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>New Entity Value</Label>
+              <Input
+                value={newBulkEntityValue}
+                onChange={(e) => setNewBulkEntityValue(e.target.value)}
+                placeholder="Enter new entity value..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setBulkEntityModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => {
+                setBulkEntityModalOpen(false);
+                setEntityConfirmationModalOpen(true);
+              }}
+              disabled={!newBulkEntityValue.trim()}
+            >
+              Update Entities
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Entity Confirmation Modal */}
+      <Dialog
+        open={entityConfirmationModalOpen}
+        onOpenChange={setEntityConfirmationModalOpen}
+      >
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Entity Update</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to update the entity to "
+              {newBulkEntityValue}" for {globalSelectedRows.size} transactions?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setEntityConfirmationModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="default" onClick={handleBulkEntityChange}>
+              Confirm Update
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

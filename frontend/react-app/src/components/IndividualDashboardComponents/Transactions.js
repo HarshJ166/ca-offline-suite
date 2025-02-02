@@ -58,8 +58,9 @@ const Transactions = () => {
   const [availableMonths, setAvailableMonths] = useState([]);
   const { caseId, individualId } = useParams();
   const [categoryOptions, setCategoryOptions] = useState(null);
+  const [entityOptions, setEntityOptions] = useState(new Set()); // New state for entity options
 
-  // Sample entity options
+  // Sample Category options
   const categoryOptionsfixed = [
     "Bank Charges",
     "Bank Interest Received",
@@ -124,28 +125,17 @@ const Transactions = () => {
       try {
         console.log("Fetching transactions for statementId:", caseId);
 
-        // Add this line to debug the electron call
-        console.log("Before electron call");
-        const data = await window.electron.getTransactions(caseId);
-        console.log("After electron call, received data:", data);
-
-        // Transform the data to only include required fields
-        const formattedData = data.map((transaction) => ({
-          date: new Date(transaction.date).toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          }),
-          description: transaction.description,
-          amount: transaction.amount,
-          category: transaction.category,
-          type: transaction.type,
-          balance: transaction.balance,
-          bank: transaction.bank,
-          id:transaction.id
-        }));
-
-        setTransactionData(formattedData);
+        const data = await window.electron.getTransactions(
+          caseId,
+          parseInt(individualId)
+        );
+        // Extract unique entities from the data
+        const entities = new Set(
+          data.map((transaction) => transaction.entity || "Unknown")
+        );
+        setEntityOptions(entities);
+        setTransactionData(data);
+        console.log("Fetched transactions:", data.length);
       } catch (err) {
         setError("Failed to fetch transactions");
         console.error("Error fetching transactions:", err);
@@ -155,7 +145,7 @@ const Transactions = () => {
     };
 
     fetchTransactions();
-  }, []);
+  }, [caseId, individualId]);
 
   const monthsData = React.useMemo(() => {
     return transactionData.reduce((acc, transaction) => {
@@ -175,7 +165,7 @@ const Transactions = () => {
         balance: transaction.balance,
         category: transaction.category,
         bank: transaction.bank,
-        // entity: transaction.entity,
+        entity: transaction.entity || "Unknown", // Include entity with default value
         type: transaction.type,
       };
 
@@ -183,7 +173,6 @@ const Transactions = () => {
       return acc;
     }, {});
   }, [transactionData]);
-
   const getMonthDate = (monthStr) => {
     const [month, year] = monthStr.split("-");
     const monthIndex = new Date(Date.parse(month + " 1, 2000")).getMonth();
@@ -205,7 +194,8 @@ const Transactions = () => {
       balance: transaction.balance,
       category: transaction.category,
       bank: transaction.bank,
-      // entity: transaction.entity,
+      entity: transaction.entity || "Unknown", // Include entity in processed data
+      // type: transaction.type,
     }));
   };
 
@@ -272,6 +262,40 @@ const Transactions = () => {
   const categoryData = processCategoryData(
     selectedMonths.flatMap((month) => monthsData[month])
   );
+  const handleSaveChanges = async (modifiedData) => {
+    try {
+      // Here you would typically make an API call to save the changes
+      console.log("Saving changes:", modifiedData);
+
+      // Update the local transaction data with the changes
+      const updatedTransactions = transactionData.map((transaction) => {
+        const modification = modifiedData.find(
+          (mod) =>
+            mod.date === transaction.date &&
+            mod.description === transaction.description
+        );
+
+        if (modification) {
+          return {
+            ...transaction,
+            category: modification.category,
+            entity: modification.entity,
+          };
+        }
+        return transaction;
+      });
+
+      setTransactionData(updatedTransactions);
+
+      // You would typically make your API call here
+      await window.electron.updateTransactions(caseId, updatedTransactions);
+
+      return true;
+    } catch (error) {
+      console.error("Error saving changes:", error);
+      return false;
+    }
+  };
 
   return (
     <div className="rounded-lg space-y-6 m-8 mt-2">
@@ -370,6 +394,8 @@ const Transactions = () => {
                 categoryOptions={categoryOptions}
                 setCategoryOptions={setCategoryOptions}
                 caseId={caseId}
+                onSaveChanges={handleSaveChanges}
+                entityOptions={Array.from(entityOptions)} // Pass entity options to the table
               />
             </>
           )}

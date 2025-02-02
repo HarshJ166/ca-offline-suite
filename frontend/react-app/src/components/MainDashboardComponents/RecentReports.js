@@ -675,6 +675,9 @@ const RecentReportsComp = ({ key, onReportGenerated }) => {
           password: firstFailedEntry.parsedContent.passwords[index] || "",
           resolved: false,
           pdfName: pdfPath.split("\\").pop(),
+          respectiveReasonsForError:
+            firstFailedEntry.parsedContent.respectiveReasonsForError?.[index] ||
+            "",
         })
       );
 
@@ -841,13 +844,12 @@ const RecentReportsComp = ({ key, onReportGenerated }) => {
                             <div>
                               {[...failedDatasOfCurrentReport]
                                 .sort((a, b) => {
-                                  // Sort by hasError (false comes first)
-                                  const aHasError =
-                                    a.respectiveReasonsForError &&
-                                    a.respectiveReasonsForError.length > 0;
-                                  const bHasError =
-                                    b.respectiveReasonsForError &&
-                                    b.respectiveReasonsForError.length > 0;
+                                  const aHasError = Boolean(
+                                    a.respectiveReasonsForError
+                                  );
+                                  const bHasError = Boolean(
+                                    b.respectiveReasonsForError
+                                  );
                                   return aHasError === bHasError
                                     ? 0
                                     : aHasError
@@ -856,10 +858,9 @@ const RecentReportsComp = ({ key, onReportGenerated }) => {
                                 })
                                 .map((statement, index) => {
                                   const isDone = statement.resolved;
-                                  const hasError =
-                                    statement.respectiveReasonsForError &&
-                                    statement.respectiveReasonsForError.length >
-                                      0;
+                                  const hasError = Boolean(
+                                    statement.respectiveReasonsForError
+                                  );
 
                                   return (
                                     <div
@@ -869,34 +870,56 @@ const RecentReportsComp = ({ key, onReportGenerated }) => {
                                       <h3 className="font-semibold mb-2">
                                         Failed Statement {index + 1}
                                       </h3>
-                                      <div className="flex gap-2 items-center">
-                                        <p className="flex-[4.5]">
-                                          <strong>File Name:</strong>{" "}
-                                          {statement.pdfName}
-                                        </p>
 
-                                        {/* Conditionally render the Rectify or Done button */}
-                                        {isDone ? (
-                                          <Button
-                                            size="sm"
-                                            disabled
-                                            className="flex-1 bg-green-600 hover:bg-green-700 text-white transition-colors"
-                                          >
-                                            <CheckCircle className="w-4 h-4 mr-2" />
-                                            Done
-                                          </Button>
-                                        ) : (
-                                          <Button
-                                            variant="secondary"
-                                            size="sm"
-                                            className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors"
-                                            onClick={() => {
-                                              setIsMarkerModalOpen(true);
-                                              setSelectedFailedFile(statement);
-                                            }}
-                                          >
-                                            Rectify
-                                          </Button>
+                                      {/* Main content container - using flex-col instead of items-center */}
+                                      <div className="flex flex-col gap-2">
+                                        {/* Top row with filename and button */}
+                                        <div className="flex items-center gap-2">
+                                          <p className="flex-[4.5]">
+                                            <strong>File Name:</strong>{" "}
+                                            {statement.pdfName}
+                                          </p>
+
+                                          {/* Only show button if there's no error */}
+                                          {!hasError && (
+                                            <>
+                                              {!isDone ? (
+                                                <Button
+                                                  variant="secondary"
+                                                  size="sm"
+                                                  className="hover:bg-primary hover:text-primary-foreground transition-colors"
+                                                  onClick={() => {
+                                                    setIsMarkerModalOpen(true);
+                                                    setSelectedFailedFile(
+                                                      statement
+                                                    );
+                                                  }}
+                                                >
+                                                  Rectify
+                                                </Button>
+                                              ) : (
+                                                <Button
+                                                  size="sm"
+                                                  disabled
+                                                  className="bg-green-600 hover:bg-green-700 text-white transition-colors"
+                                                >
+                                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                                  Done
+                                                </Button>
+                                              )}
+                                            </>
+                                          )}
+                                        </div>
+
+                                        {/* Error message row - only shown if error exists */}
+                                        {hasError && (
+                                          <p className="text-red-600 mt-1">
+                                            <strong>
+                                              {
+                                                statement.respectiveReasonsForError
+                                              }
+                                            </strong>{" "}
+                                          </p>
                                         )}
                                       </div>
                                     </div>
