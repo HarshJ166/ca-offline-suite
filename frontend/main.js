@@ -329,6 +329,7 @@ async function createWindow() {
 
     if (choice === 0) {
       log.info("User confirmed app close. Logging out...");
+      sessionManager.clearUser();
       // Add your session logout logic here
     } else {
       log.info("User canceled app close.");

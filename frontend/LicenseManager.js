@@ -1,9 +1,14 @@
 const keytar = require("keytar");
 const axios = require("axios");
+const { getSystemUUID } = require("./utils/getSystemUUID")
+const crypto = require("crypto");
+const log = require("electron-log");
+const { uuid } = require("systeminformation");
 
 const SERVICE_NAME = "Cyphersol-dumm";
 const LICENSE_KEY_ACCOUNT = "license-key";
-const API_URL = "http://43.204.61.215/validate-offline-login/";
+// const API_URL = "http://43.204.61.215/validate-offlineapp-login/";
+const API_URL = "http://127.0.0.1/validate-offlineapp-login/";
 // username : 2-32e6d741
 // licensekey : SOMEX4Y4ZLicenseKEYForCAOffline
 
@@ -47,11 +52,19 @@ class LicenseManager {
 
     async getLicenseKey() {
         try {
-            const licenseKey = await keytar.getPassword(
+            const licenseKeyData = await keytar.getPassword(
                 SERVICE_NAME,
                 LICENSE_KEY_ACCOUNT
             );
-            return licenseKey;
+
+            if (!licenseKeyData) {
+                throw new Error("No license key found");
+            }
+
+            const { licenseKey, uuidHash } = JSON.parse(licenseKeyData);
+
+            return { licenseKey, uuidHash };
+
         } catch (error) {
             console.error("License check failed:", error);
             return false;
@@ -60,6 +73,16 @@ class LicenseManager {
 
     // Method to validate and store license key
     async storeLicense(credentials) {
+
+        const uuidHash = await this.getHashedUUID();
+        console.log("UUID Hash in storing:", uuidHash);
+
+        const licenseData = {
+            licenseKey: credentials.licenseKey,
+            uuidHash,
+        };
+
+
         try {
             console.log("Credentials:", credentials);
             // const isValid = await this.validateLicense(
@@ -71,7 +94,7 @@ class LicenseManager {
             await keytar.setPassword(
                 SERVICE_NAME,
                 LICENSE_KEY_ACCOUNT,
-                credentials.licenseKey
+                JSON.stringify(licenseData)
             );
             this.isActivated = true;
             return { success: true };
@@ -107,21 +130,58 @@ class LicenseManager {
 
     }
 
+
+
+    // Hash UUID with salt to prevent reverse-engineering
+    async getHashedUUID() {
+        const uuid = await getSystemUUID();
+        const salt = process.env.UUID_SALT || 'default-salt'; // Use env variable!
+        log.info("UUID Salt:", salt);
+        return crypto.createHash('sha256').update(uuid + salt).digest('hex');
+    }
+
+    async isValidUUIDHash(storedHash) {
+        const computedHash = await this.getHashedUUID();
+        log.info("Stoede UUID Hash:", storedHash);
+        log.info("UUID Computed:", computedHash);
+        // const salt = process.env.UUID_SALT || 'default-salt'; // Use the same salt
+        // const computedHash = crypto.createHash('sha256').update(uuid + salt).digest('hex');
+
+        return computedHash === storedHash;
+    }
+
+
     // Placeholder method for validating the license key
-    async validateLicense(licenseKey, username) {
+    async validateLicense(licenseKey, username, uuidHash = null, isActivated = false) {
         try {
             const timestamp = Date.now() / 1000;
 
+            if (isActivated) {
+                const isValid = await this.isValidUUIDHash(uuidHash);
+                if (!isValid) {
+                    throw new Error("UUID Hash is invalid");
+                }
+                log.info("UUID Hash is valid");
+            }
+            else {
+                uuidHash = await this.getHashedUUID();
+            }
+
+            const payload = {
+                username: username,
+                license_key: licenseKey,
+                timestamp: timestamp,
+                is_activated: isActivated,
+                uuid_hash: uuidHash
+            };
+            // const apiKey =
+            //     "U08fir-OsEXdgMZKARdgz5oPvyRT6cIZioOeV_kZdLMeXsAc46_x.CAgICAgICAo=";
             const apiKey =
-                "U08fir-OsEXdgMZKARdgz5oPvyRT6cIZioOeV_kZdLMeXsAc46_x.CAgICAgICAo=";
+                "L4#gP93NEuzyXQFYAGk_KhY2SDHzJJ-O0fqFMlxJ46HZkNLtpdBI.CAgICAgICAk=";
 
             const response = await axios.post(
                 API_URL,
-                {
-                    username: username,
-                    license_key: licenseKey,
-                    timestamp: timestamp,
-                },
+                payload,
                 {
                     headers: {
                         "X-API-Key": apiKey,

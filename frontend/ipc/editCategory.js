@@ -313,14 +313,20 @@ function registerCategoryHandlers() {
         log.info("Updated transactions:", updatedTransactions[aiyaz]);
 
 
-        const transformedCategories = Object.values(frontendData).map(item => ({
-            Description: item.description || "Unknown",
-            "Debit / Credit": item.type == "debit" ? "Debit" : "Credit",
-            Category: item.category || "Uncategorized",
-            Particulars: item.classification || "Others"
-        }));
 
-        console.log({ transformedCategories: transformedCategories[0], transformedCategoriesLength: transformedCategories.length });
+        const newCategories = Object.values(frontendData).reduce((acc, item) => {
+            if (item.is_new) {
+                acc.push({
+                    Description: item.description || "Unknown",
+                    "Debit / Credit": item.type == "debit" ? "Debit" : "Credit",
+                    Category: item.category || "Uncategorized",
+                    Particulars: item.classification || "Others"
+                });
+            }
+            return acc;
+        }, []);
+
+        console.log({ newCategories: newCategories, newCategoriesLength: newCategories.length });
 
 
         try {
@@ -340,7 +346,7 @@ function registerCategoryHandlers() {
 
             const payload = {
                 transaction_data: updatedTransactions,
-                new_categories: transformedCategories,
+                new_categories: newCategories,
                 eod_data: eod_data
             }
 
@@ -388,7 +394,6 @@ function registerCategoryHandlers() {
             try {
 
                 const { finalSql, ids } = await prepareTransactionsForDB(frontendData);
-                log.info("Final SQL:", "IDs:", finalSql, ids);
 
                 // Insert transactions
                 await bulkUpdateTransactions(finalSql, ids);

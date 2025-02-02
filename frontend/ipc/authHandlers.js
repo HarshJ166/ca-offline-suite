@@ -32,7 +32,7 @@ function registerAuthHandlers() {
             }
 
             // Set the user session
-            const licenseKey = await licenseManager.getLicenseKey();
+            const { licenseKey, uuidHash } = await licenseManager.getLicenseKey();
             console.log("License key:", licenseKey);
 
             if (!licenseKey) {
@@ -40,7 +40,7 @@ function registerAuthHandlers() {
             }
 
             // Validate the license
-            const result = await licenseManager.validateLicense(licenseKey, credentials.email);
+            const result = await licenseManager.validateLicense(licenseKey, credentials.email, uuidHash, true);
             console.log("License activation result:", result);
 
             if (!result.success) {
