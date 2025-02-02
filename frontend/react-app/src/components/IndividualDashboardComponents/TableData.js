@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search, Loader2,Check } from "lucide-react";
+import { Search, Loader2,Check, Pause } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -192,19 +192,22 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
     setEditedEntities((prev) => ({ ...prev, [globalIndex]: newValue }));
   };
 
+  const entityUpdateIpc= (payload)=>{
+    // TODO- call ipc here and show error success toast
+    console.log(payload);
+  }
 
-  // Called when the user clicks the check mark next to an inline "Entity" input.
+
   const handleEntityUpdateConfirm = (globalIndex, row) => {
-    console.log({"from":"handleEntityUpdateConfirm",globalIndex,row})
     const newValue = editedEntities[globalIndex];
     if (
       window.confirm(
         "Are you sure you want to update the Entity for this transaction?"
       )
     ) {
-      // Replace this console.log with your backend update call.
-      console.log("Updating row", row, "to new entity:", newValue);
-      // (e.g., updateEntityBackend(row, newValue);)
+      
+      const payload = [{entity:newValue,transactionId:row.transactionId}]
+      entityUpdateIpc(payload);
 
       // Clear the edit state for this row.
       setEditedEntities((prev) => {
@@ -228,12 +231,17 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
 
       // Toggle select–all for the rows in the current page.
   const handleSelectAllRows = () => {
-    const currentGlobalIndices = currentData.map((row, i) =>
+    console.log("Triggering select all");
+    const currentGlobalIndices = filteredData.map((row, i) =>
       showAllRows ? i : startIndex + i
     );
+    console.log({currentGlobalIndices});
+
     const allSelected = currentGlobalIndices.every((index) =>
       selectedRows.includes(index)
     );
+    console.log({allSelected});
+
     if (allSelected) {
       // Deselect all current page rows.
       setSelectedRows((prev) =>
@@ -257,12 +265,13 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
         )
       ) {
         // For each selected row, find the row in filteredData (using its global index)
-        selectedRows.forEach((globalIndex) => {
+        const payload = selectedRows.map((globalIndex) => {
           const row = filteredData[globalIndex];
+          console.log(row)
           // Replace this console.log with your backend call.
-          console.log("Batch updating row", row, "to new entity:", batchEntityValue);
-          // (e.g., updateEntityBackend(row, batchEntityValue);)
+          return {entity:batchEntityValue,transactionId:row.transactionId}
         });
+        entityUpdateIpc(payload)
         // Clear selections and close the modal.
         setSelectedRows([]);
         setBatchEntityValue("");
@@ -530,6 +539,16 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
         >
           Clear Filters
         </Button>
+        {hasEntity && (
+          <Button
+            variant="default"
+            className="ml-2"
+            disabled={selectedRows.length === 0}
+            onClick={() => setBatchModalOpen(true)}
+          >
+            Batch Edit Entities
+          </Button>
+        )}
       </div>
     </div>
   </div>
@@ -540,15 +559,15 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
             <TableHeader>
               <TableRow>
                  {hasEntity && (
-                                  <TableHead className="w-10">
-                                    <Checkbox
-                                      checked={currentData.every((_, i) =>
-                                        selectedRows.includes(showAllRows ? i : startIndex + i)
-                                      )}
-                                      onChange={handleSelectAllRows}
-                                    />
-                                  </TableHead>
-                                )}
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={currentData.every((_, i) =>
+                          selectedRows.includes(showAllRows ? i : startIndex + i)
+                        )}
+                        onCheckedChange={handleSelectAllRows}
+                      />
+                    </TableHead>
+                  )}
                 {columns.map((column) => (
                   <TableHead key={column} className="whitespace-nowrap"
                   // className={source === "summary" ? "bg-gray-900 dark:bg-slate-800 text-white" : ""}
@@ -600,7 +619,7 @@ const DataTable = ({ data = [], source,title,subtitle }) => {
                         <TableCell className="w-10">
                           <Checkbox
                             checked={selectedRows.includes(globalIndex)}
-                            onChange={() => toggleRowSelection(globalIndex)}
+                            onCheckedChange={() => toggleRowSelection(globalIndex)}
                           />
                         </TableCell>
                       )}
