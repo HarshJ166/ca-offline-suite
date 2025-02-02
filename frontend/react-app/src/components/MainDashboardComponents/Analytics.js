@@ -1,5 +1,5 @@
 import React from "react";
-import { Eye, Download } from "lucide-react";
+import {Download } from "lucide-react";
 import { Button } from "../ui/button";
 import {
   Table,
@@ -32,7 +32,7 @@ import { useLoading } from "../../contexts/LoadingContext";
 const Analytics = () => {
   const { toast } = useToast();
   const [recentReports, setRecentReports] = useState([]);
-  const { setIsExcelLoading, setIsReportLoading } = useLoading();
+  const { setIsExcelLoading } = useLoading();
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -75,7 +75,7 @@ const Analytics = () => {
     };
 
     fetchReports();
-  }, []);
+  }, [toast]);
 
 
   // In your Analytics.jsx component
@@ -90,7 +90,7 @@ const Analytics = () => {
       window.electron.download.excelReportDownload(caseid);
 
       let downloadedChunks = [];
-      let totalFileSize = 0;
+      // let totalFileSize = 0;
       let downloadProgress = 0;
 
       // Listen for file chunks from the main process
