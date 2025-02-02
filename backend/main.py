@@ -14,7 +14,7 @@ from backend.utils import get_saved_pdf_dir
 TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
 from pydantic import Field
 # If you have other custom imports:
-from backend.tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf,start_extraction_edit_pdf, refresh_category_all_sheets
+from backend.tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf,start_extraction_edit_pdf, refresh_category_all_sheets, save_to_excel
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from backend.account_number_ifsc_extraction import extract_accno_ifsc
@@ -27,13 +27,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Bank Statement Analyzer API")
 logger.info(f"Temp directory python : {TEMP_SAVED_PDF_DIR}")
 
-class BankStatementRequest(BaseModel):
-    bank_names: List[str]
-    pdf_paths: List[str]
-    passwords: Optional[List[str]] = []  # Optional field, defaults to empty list
-    start_date: List[str]
-    end_date: List[str]
-    ca_id: str
+
 
 class Transaction(BaseModel):
     id: int
@@ -68,10 +62,24 @@ class EditPdfRequest(BaseModel):
     whole_transaction_sheet: Optional[List[Transaction]] = None
     ca_id: str
 
+class BankStatementRequest(BaseModel):
+    bank_names: List[str]
+    pdf_paths: List[str]
+    passwords: Optional[List[str]] = []  # Optional field, defaults to empty list
+    start_date: List[str]
+    end_date: List[str]
+    ca_id: str
+    whole_transaction_sheet: Optional[List[Transaction]] = None
+    
 class EditCategoryRequest(BaseModel):
     transaction_data: List[dict]
     new_categories: List[dict]
     eod_data: List[dict]
+
+class ExcelDownloadRequest(BaseModel):
+    transaction_data: List[dict]
+    name_n_num: List[dict]
+    case_name: str
 
 class DummyRequest(BaseModel):
     data: str
@@ -166,7 +174,8 @@ async def analyze_bank_statements(request: BankStatementRequest):
 
 
         logger.info("Starting extraction")
-        result = start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_date, end_date, CA_ID, progress_data)
+        whole_transaction_sheet = request.whole_transaction_sheet or None
+        result = start_extraction_add_pdf(bank_names, pdf_paths, passwords, start_date, end_date, CA_ID, progress_data,whole_transaction_sheet=whole_transaction_sheet)
         
         print("RESULT GENERATED")
         logger.info("Extraction completed successfully")
@@ -337,6 +346,39 @@ async def edit_category(request: EditCategoryRequest):
         logger.error(f"Error processing bank statements: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"Error processing bank statements: {str(e)}"
+        )
+
+
+
+@app.post("/excel-download/")
+async def excel_download(request: ExcelDownloadRequest):
+    try:
+        transaction_data = request.transaction_data
+        case_name = request.case_name
+        name_n_num_data = request.name_n_num
+        logger.info(f"Received request with transaction data: {transaction_data[0]}")
+        logger.info(f"Received request with case name: {case_name}")
+
+        # convert transaction_data to df
+        transaction_df = pd.DataFrame(transaction_data)
+        name_n_num_df = pd.DataFrame(name_n_num_data)
+        
+        print("Transactions : \n", transaction_df.head())
+        print("Name and Number : \n", name_n_num_df.head())
+
+        file_path = save_to_excel(transaction_df, name_n_num_df, case_name)
+        print("Python data : ", file_path)
+
+        if not os.path.exists(file_path):
+            raise HTTPException(
+                status_code=404, detail="Something went wrong while generating the file"
+            )
+    
+        return file_path
+    except Exception as e:
+        logger.error(f"Error processing bank statements: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"{str(e)}"
         )
 
 

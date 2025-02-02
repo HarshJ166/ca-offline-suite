@@ -12,10 +12,41 @@ import { BreadcrumbProvider } from "./contexts/BreadcrumbContext";
 import { PrivateRoute } from "./components/PrivateRoute";
 import Login from "./components/Authentication/Login";
 import UpdateNotification from "./components/UpdateNotification";
+import { useLoading } from "./contexts/LoadingContext";
+import { useToast } from "./hooks/use-toast";
 
 function App() {
   const [showIntro, setShowIntro] = useState(true);
+  const { isExcelLoading, isReportLoading } = useLoading();
+  const { toast } = useToast();
 
+   // Toast for Excel Download
+   useEffect(() => {
+    let toastId;
+    
+    if (isExcelLoading) {
+      toastId = toast({
+        title: "Downloading Excel",
+        description: (
+          <div className="mt-2 w-full flex items-center gap-2">
+            <p className="text-sm text-gray-500">
+              Preparing Excel, Please Wait...
+            </p>
+          </div>
+        ),
+        duration: Infinity,
+      });
+    }
+
+    return () => {
+      if (toastId) {
+        toast.dismiss(toastId);
+      }
+    };
+  }, [isExcelLoading, toast]);
+
+
+  
   return (
     <ThemeProvider defaultTheme="system" storageKey="app-theme">
       {showIntro && <ElectronIntro onComplete={() => setShowIntro(false)} />}

@@ -72,8 +72,8 @@ contextBridge.exposeInMainWorld("electron", {
   saveFileToTemp: (fileBuffer) =>
     ipcRenderer.invoke("save-file-to-temp", fileBuffer),
   cleanupTempFiles: () => ipcRenderer.invoke("cleanup-temp-files"),
-  generateReportIpc: (result, reportName) =>
-    ipcRenderer.invoke("generate-report", result, reportName),
+  generateReportIpc: (result, reportName, source) =>
+    ipcRenderer.invoke("generate-report", result, reportName, source),
 
   getOpportunityToEarn: () => ipcRenderer.invoke("getOpportunityToEarn"),
 
@@ -121,7 +121,8 @@ contextBridge.exposeInMainWorld("electron", {
   onLicenseExpired: (callback) => ipcRenderer.on("navigateToLogin", callback),
   removeLicenseExpiredListener: () =>
     ipcRenderer.removeAllListeners("navigateToLogin"),
-  editCategory: (data) => ipcRenderer.invoke("edit-category", data),
+  editCategory: (data, caseId) => ipcRenderer.invoke("edit-category", data, caseId),
+  excelFileDownload: (caseId) => ipcRenderer.invoke("excel-report-download", caseId),
   editPdf: (result, reportName) => ipcRenderer.invoke("edit-pdf", result, reportName),
 
   // Add auto-update related methods
@@ -145,6 +146,13 @@ contextBridge.exposeInMainWorld("electron", {
       ipcRenderer.removeAllListeners("update-downloaded");
       ipcRenderer.removeAllListeners("update-error");
     },
+  },
+
+  download: {
+    excelReportDownload: (caseId) => ipcRenderer.invoke('excel-report-download', caseId),
+    onExcelDownloadChunk: (callback) => ipcRenderer.on('excel-report-chunk', (event, chunk) => callback(chunk)),
+    onExcelDownloadComplete: (callback) => ipcRenderer.on('excel-report-complete', (event, message) => callback(message)),
+    onExcelDownloadError: (callback) => ipcRenderer.on('excel-report-error', (event, error) => callback(error)),
   },
 
   shell: {

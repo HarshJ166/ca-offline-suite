@@ -30,6 +30,9 @@ const Creditors = () => {
           debit: item.amount,
           category: item.category,
           balance: item.balance,
+          entity:item.entity|| '-',
+          transactionId:item.id
+
         }));
         setData(transformedData);
       } catch (error) {

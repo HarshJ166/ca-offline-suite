@@ -33,6 +33,9 @@ const Upi = () => {
           Description: item.description,
           Credit: item.amount || 0,
           Balance: item.balance || 0,
+          entity:item.entity|| '-',
+          transactionId:item.id
+
         }));
 
         // Transform UPI-Dr data
@@ -45,6 +48,9 @@ const Upi = () => {
           Description: item.description,
           Debit: Math.abs(item.amount) || 0, // Ensure positive value
           Balance: item.balance || 0,
+          entity:item.entity || '-',
+          transactionId:item.id
+
         }));
 
         setUpiCrData(transformedUpiCrData);
@@ -124,7 +130,7 @@ const Upi = () => {
                 />
               </div>
               <div>
-                <DataTable data={upiCrData} title="UPI-Cr Table" />
+                <DataTable data={upiCrData} title="UPI Credit Table" />
               </div>
             </>
           )}
@@ -148,7 +154,7 @@ const Upi = () => {
                 />
               </div>
               <div>
-                <DataTable data={upiDrData} title="UPI-Dr Table" />
+                <DataTable data={upiDrData} title="UPI Debit Table" />
               </div>
             </>
           )}

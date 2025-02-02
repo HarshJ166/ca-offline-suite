@@ -3,10 +3,7 @@ import PieCharts from "../charts/PieCharts";
 import { Card, CardHeader, CardTitle } from "../ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Maximize2, Minimize2 } from "lucide-react";
-import ToggleStrip from "./ToggleStrip";
-import { Button } from "../ui/button";
 import SummaryTable from "./SummaryTable";
-import TableData from "./TableData";
 
 const formatDecimal = (value) => {
   return Number(parseFloat(value || 0).toFixed(2));

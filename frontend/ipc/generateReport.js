@@ -182,6 +182,7 @@ const getOrCreateCase = async (caseName, userId = 1) => {
 
     if (newCase.length > 0) {
       log.info(`Created new case with ID: ${(newCase[0].id, caseName)}`);
+      log.info(`Case id: ${newCase[0].id}`);
       return newCase[0].id;
     }
 
@@ -628,118 +629,277 @@ function generateReportIpc(tmpdir_path) {
   //   console.error(err.message);
   //   console.error(err.response.data.detail[0].loc);
   // });
-  ipcMain.handle("generate-report", async (event, receivedResult, caseName) => {
-    const caseId = await getOrCreateCase(caseName);
-    // Track file status
-    const successfulFiles = new Set();
-    const failedFiles = new Set();
-    const allProcessedFiles = new Set();
-    const uploadedFiles = new Map();
-    try {
-      log.info("IPC handler invoked for generate-report", caseName);
+  ipcMain.handle(
+    "generate-report",
+    async (event, receivedResult, caseName, source) => {
+      const caseId = await getOrCreateCase(caseName);
+      // Track file status
+      const successfulFiles = new Set();
+      const failedFiles = new Set();
+      const allProcessedFiles = new Set();
+      const uploadedFiles = new Map();
+      let whole_transaction_sheet = null;
 
-      if (!receivedResult?.files?.length) {
-        throw new Error("Invalid or empty files array received");
-      }
+      try {
+        if (source == "add-pdf") {
+          const allStatements = await db
+            .select()
+            .from(statements)
+            .where(eq(statements.caseId, caseId));
+          if (allStatements.length === 0) {
+            log.info("No statements found for case:", caseId);
+          }
 
-      // Ensure a dedicated directory for storing all PDFs (before processing)
-      const caseFolder = path.join(tmpdir_path, "failed_pdfs", caseName);
-      fs.mkdirSync(caseFolder, { recursive: true });
-      log.info("Case Folder for PDFs:", caseFolder);
+          const allTransactions = await db
+            .select()
+            .from(transactions)
+            .where(
+              inArray(
+                transactions.statementId,
+                allStatements.map((stmt) => stmt.id.toString()) // Convert integer ID to string
+              )
+            );
 
-      // Step 1: Save all uploaded files in the case folder
-      const fileDetails = receivedResult.files.map((fileDetail, index) => {
-        if (!fileDetail.pdf_paths || !fileDetail.bankName) {
-          throw new Error(`Missing required fields for file at index ${index}`);
+          whole_transaction_sheet = allTransactions;
         }
 
-        const originalFilename = fileDetail.pdf_paths;
-        const tempFilename = `${Date.now()}-${path.basename(originalFilename)}`;
-        const filePath = path.join(caseFolder, tempFilename);
+        log.info("IPC handler invoked for generate-report", caseName);
 
-        allProcessedFiles.add(filePath);
-        uploadedFiles.set(filePath, {
-          originalName: originalFilename,
-          bankName: fileDetail.bankName,
+        if (!receivedResult?.files?.length) {
+          throw new Error("Invalid or empty files array received");
+        }
+
+        // Ensure a dedicated directory for storing all PDFs (before processing)
+        const caseFolder = path.join(tmpdir_path, "failed_pdfs", caseName);
+        fs.mkdirSync(caseFolder, { recursive: true });
+        log.info("Case Folder for PDFs:", caseFolder);
+
+        // Step 1: Save all uploaded files in the case folder
+        const fileDetails = receivedResult.files.map((fileDetail, index) => {
+          if (!fileDetail.pdf_paths || !fileDetail.bankName) {
+            throw new Error(
+              `Missing required fields for file at index ${index}`
+            );
+          }
+
+          const originalFilename = fileDetail.pdf_paths;
+          const tempFilename = `${Date.now()}-${path.basename(
+            originalFilename
+          )}`;
+          const filePath = path.join(caseFolder, tempFilename);
+
+          allProcessedFiles.add(filePath);
+          uploadedFiles.set(filePath, {
+            originalName: originalFilename,
+            bankName: fileDetail.bankName,
+          });
+
+          console.log(`Saving file to ${filePath}`);
+
+          if (fileDetail.fileContent) {
+            fs.writeFileSync(filePath, fileDetail.fileContent, "binary");
+            successfulFiles.add(filePath); // Initially assume success
+          } else {
+            log.warn(`No file content for ${fileDetail.bankName}`);
+            failedFiles.add(filePath);
+          }
+
+          return {
+            ...fileDetail,
+            pdf_paths: filePath,
+            start_date: fileDetail.start_date || "",
+            end_date: fileDetail.end_date || "",
+          };
         });
 
-        console.log(`Saving file to ${filePath}`);
-
-        if (fileDetail.fileContent) {
-          fs.writeFileSync(filePath, fileDetail.fileContent, "binary");
-          successfulFiles.add(filePath); // Initially assume success
-        } else {
-          log.warn(`No file content for ${fileDetail.bankName}`);
-          failedFiles.add(filePath);
-        }
-
-        return {
-          ...fileDetail,
-          pdf_paths: filePath,
-          start_date: fileDetail.start_date || "",
-          end_date: fileDetail.end_date || "",
+        // Step 2: Send API request
+        const payload = {
+          bank_names: fileDetails.map((d) => d.bankName),
+          pdf_paths: fileDetails.map((d) => d.pdf_paths),
+          passwords: fileDetails.map((d) => d.passwords || ""),
+          start_date: fileDetails.map((d) => d.start_date || ""),
+          end_date: fileDetails.map((d) => d.end_date || ""),
+          ca_id: caseName || "DEFAULT_CASE",
+          whole_transaction_sheet: whole_transaction_sheet,
         };
-      });
 
-      // Step 2: Send API request
-      const payload = {
-        bank_names: fileDetails.map((d) => d.bankName),
-        pdf_paths: fileDetails.map((d) => d.pdf_paths),
-        passwords: fileDetails.map((d) => d.passwords || ""),
-        start_date: fileDetails.map((d) => d.start_date || ""),
-        end_date: fileDetails.map((d) => d.end_date || ""),
-        ca_id: caseName || "DEFAULT_CASE",
-      };
+        log.info("Sending API request with payload:", payload);
 
-      log.info("Sending API request with payload:", payload);
-
-      const response = await axios.post(generateReportEndpoint, payload, {
-        headers: { "Content-Type": "application/json" },
-        timeout: 300000,
-        validateStatus: (status) => status === 200,
-      });
-
-      log.info("API response received:", response.data);
-
-      // Step 3: Handle failed extractions
-      if (response.data?.["pdf_paths_not_extracted"]) {
-        const failedPdfPaths =
-          response.data["pdf_paths_not_extracted"].paths || [];
-
-        // Store failed statements in database
-        await db.insert(failedStatements).values({
-          caseId: caseId,
-          data: JSON.stringify(response.data["pdf_paths_not_extracted"]),
+        const response = await axios.post(generateReportEndpoint, payload, {
+          headers: { "Content-Type": "application/json" },
+          timeout: 300000,
+          validateStatus: (status) => status === 200,
         });
 
-        for (const failedPath of failedPdfPaths) {
-          const fullPath = fileDetails.find((detail) =>
-            detail.pdf_paths.includes(path.basename(failedPath))
-          )?.pdf_paths;
+        log.info("API response received:", response.data);
 
-          if (fullPath) {
-            failedFiles.add(fullPath);
-            successfulFiles.delete(fullPath);
+        // Step 3: Handle failed extractions
+        if (response.data?.["pdf_paths_not_extracted"]) {
+          const failedPdfPaths =
+            response.data["pdf_paths_not_extracted"].paths || [];
+
+          log.info({ caseId, failedPdfPaths });
+
+          // Store failed statements in database
+          await db.insert(failedStatements).values({
+            caseId: caseId,
+            data: JSON.stringify(response.data["pdf_paths_not_extracted"]),
+          });
+
+          for (const failedPath of failedPdfPaths) {
+            const fullPath = fileDetails.find((detail) =>
+              detail.pdf_paths.includes(path.basename(failedPath))
+            )?.pdf_paths;
+
+            if (fullPath) {
+              failedFiles.add(fullPath);
+              successfulFiles.delete(fullPath);
+            }
+          }
+
+          log.warn(
+            "Some PDF paths were not extracted",
+            Array.from(failedFiles)
+          );
+        }
+
+        // Step 4: Process transactions
+        const parsedData = JSON.parse(sanitizeJSONString(response.data.data));
+        if (parsedData == null) {
+          await updateCaseStatus(caseId, "Failed");
+          const failedPDFsDir = path.join(tmpdir_path, "failed_pdfs", caseName);
+          fs.mkdirSync(failedPDFsDir, { recursive: true });
+          return {
+            success: true,
+            data: {
+              caseId: caseId,
+              processed: null,
+              totalTransactions: 0,
+              eodProcessed: false,
+              summaryProcessed: false,
+              failedStatements:
+                response.data["pdf_paths_not_extracted"] || null,
+              failedFiles: Array.from(failedFiles),
+              successfulFiles: Array.from(successfulFiles),
+              nerResults: response.data?.ner_results || {
+                Name: [],
+                "Acc Number": [],
+              },
+            },
+          };
+        }
+
+        const transactions_temp = (parsedData.Transactions || []).filter(
+          (transaction) => {
+            if (
+              typeof transaction.Credit === "number" &&
+              isNaN(transaction.Credit)
+            )
+              transaction.Credit = null;
+            if (
+              typeof transaction.Debit === "number" &&
+              isNaN(transaction.Debit)
+            )
+              transaction.Debit = null;
+            if (
+              typeof transaction.Balance === "number" &&
+              isNaN(transaction.Balance)
+            )
+              transaction.Balance = 0;
+
+            return (
+              (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
+              (transaction.Debit !== null && !isNaN(transaction.Debit))
+            );
+          }
+        );
+
+        // Step 5: Process each file
+        const processedData = [];
+        for (const fileDetail of fileDetails) {
+          try {
+            const result = await processStatementAndEOD(
+              fileDetail,
+              transactions_temp,
+              parsedData.EOD,
+              caseName,
+              response.data?.ner_results || { Name: [], "Acc Number": [] },
+              fileDetails.indexOf(fileDetail)
+            );
+            processedData.push(result);
+
+            if (!failedFiles.has(fileDetail.pdf_paths)) {
+              successfulFiles.add(fileDetail.pdf_paths);
+            }
+          } catch (error) {
+            failedFiles.add(fileDetail.pdf_paths);
+            successfulFiles.delete(fileDetail.pdf_paths);
+            log.error(
+              `Error processing file detail for ${fileDetail.bankName}:`,
+              error
+            );
           }
         }
 
-        log.warn("Some PDF paths were not extracted", Array.from(failedFiles));
-      }
+        // Step 6: Process summary and earnings
+        try {
+          await processSummaryData(
+            {
+              Particulars: parsedData["Particulars"] || [],
+              "Income Receipts": parsedData["Income Receipts"] || [],
+              "Important Expenses": parsedData["Important Expenses"] || [],
+              "Other Expenses": parsedData["Other Expenses"] || [],
+            },
+            caseName
+          );
+        } catch (error) {
+          log.error("Error processing summary data:", error);
+          throw error;
+        }
 
-      // Step 4: Process transactions
-      const parsedData = JSON.parse(sanitizeJSONString(response.data.data));
-      if (parsedData == null) {
-        await updateCaseStatus(caseId, "Failed");
-        const failedPDFsDir = path.join(tmpdir_path, "failed_pdfs", caseName);
-        fs.mkdirSync(failedPDFsDir, { recursive: true });
+        try {
+          await processOpportunityToEarnData(
+            parsedData["Opportunity to Earn"] || [],
+            payload.ca_id
+          );
+        } catch (error) {
+          log.error("Error processing opportunity to earn data:", error);
+          throw error;
+        }
+
+        // Step 7: Update case status
+        await updateCaseStatus(
+          caseId,
+          failedFiles.size === 0 ? "Success" : "Failed"
+        );
+
+        // Step 8: Handle file cleanup
+        for (const filePath of allProcessedFiles) {
+          try {
+            if (fs.existsSync(filePath)) {
+              if (failedFiles.has(filePath)) {
+                log.info(`Failed PDF retained: ${filePath}`);
+              } else if (successfulFiles.has(filePath)) {
+                fs.unlinkSync(filePath);
+                log.info(`Successfully deleted processed file: ${filePath}`);
+              }
+            }
+          } catch (error) {
+            log.error(`Error handling file ${filePath}:`, error);
+          }
+        }
+
         return {
           success: true,
           data: {
             caseId: caseId,
-            processed: null,
-            totalTransactions: 0,
-            eodProcessed: false,
-            summaryProcessed: false,
+            processed: processedData,
+            totalTransactions: processedData.reduce(
+              (sum, d) => sum + d.transactionCount,
+              0
+            ),
+            eodProcessed: true,
+            summaryProcessed: true,
             failedStatements: response.data["pdf_paths_not_extracted"] || null,
             failedFiles: Array.from(failedFiles),
             successfulFiles: Array.from(successfulFiles),
@@ -749,144 +909,26 @@ function generateReportIpc(tmpdir_path) {
             },
           },
         };
-      }
-
-      const transactions_temp = (parsedData.Transactions || []).filter(
-        (transaction) => {
-          if (
-            typeof transaction.Credit === "number" &&
-            isNaN(transaction.Credit)
-          )
-            transaction.Credit = null;
-          if (typeof transaction.Debit === "number" && isNaN(transaction.Debit))
-            transaction.Debit = null;
-          if (
-            typeof transaction.Balance === "number" &&
-            isNaN(transaction.Balance)
-          )
-            transaction.Balance = 0;
-
-          return (
-            (transaction.Credit !== null && !isNaN(transaction.Credit)) ||
-            (transaction.Debit !== null && !isNaN(transaction.Debit))
-          );
-        }
-      );
-
-      // Step 5: Process each file
-      const processedData = [];
-      for (const fileDetail of fileDetails) {
-        try {
-          const result = await processStatementAndEOD(
-            fileDetail,
-            transactions_temp,
-            parsedData.EOD,
-            caseName,
-            response.data?.ner_results || { Name: [], "Acc Number": [] },
-            fileDetails.indexOf(fileDetail)
-          );
-          processedData.push(result);
-
-          if (!failedFiles.has(fileDetail.pdf_paths)) {
-            successfulFiles.add(fileDetail.pdf_paths);
-          }
-        } catch (error) {
-          failedFiles.add(fileDetail.pdf_paths);
-          successfulFiles.delete(fileDetail.pdf_paths);
-          log.error(
-            `Error processing file detail for ${fileDetail.bankName}:`,
-            error
-          );
-        }
-      }
-
-      // Step 6: Process summary and earnings
-      try {
-        await processSummaryData(
-          {
-            Particulars: parsedData["Particulars"] || [],
-            "Income Receipts": parsedData["Income Receipts"] || [],
-            "Important Expenses": parsedData["Important Expenses"] || [],
-            "Other Expenses": parsedData["Other Expenses"] || [],
-          },
-          caseName
-        );
       } catch (error) {
-        log.error("Error processing summary data:", error);
-        throw error;
+        log.error("Error in report generation:", {
+          message: error.message,
+          stack: error.stack,
+        });
+
+        await updateCaseStatus(caseId, "Failed");
+
+        throw {
+          message: error.message || "Failed to generate report",
+          code: 500,
+          details: error.toString(),
+          timestamp: new Date().toISOString(),
+          failedFiles: Array.from(failedFiles || []),
+          successfulFiles: Array.from(successfulFiles || []),
+          nerResults: {},
+        };
       }
-
-      try {
-        await processOpportunityToEarnData(
-          parsedData["Opportunity to Earn"] || [],
-          payload.ca_id
-        );
-      } catch (error) {
-        log.error("Error processing opportunity to earn data:", error);
-        throw error;
-      }
-
-      // Step 7: Update case status
-      await updateCaseStatus(
-        caseId,
-        failedFiles.size === 0 ? "Success" : "Failed"
-      );
-
-      // Step 8: Handle file cleanup
-      for (const filePath of allProcessedFiles) {
-        try {
-          if (fs.existsSync(filePath)) {
-            if (failedFiles.has(filePath)) {
-              log.info(`Failed PDF retained: ${filePath}`);
-            } else if (successfulFiles.has(filePath)) {
-              fs.unlinkSync(filePath);
-              log.info(`Successfully deleted processed file: ${filePath}`);
-            }
-          }
-        } catch (error) {
-          log.error(`Error handling file ${filePath}:`, error);
-        }
-      }
-
-      return {
-        success: true,
-        data: {
-          caseId: caseId,
-          processed: processedData,
-          totalTransactions: processedData.reduce(
-            (sum, d) => sum + d.transactionCount,
-            0
-          ),
-          eodProcessed: true,
-          summaryProcessed: true,
-          failedStatements: response.data["pdf_paths_not_extracted"] || null,
-          failedFiles: Array.from(failedFiles),
-          successfulFiles: Array.from(successfulFiles),
-          nerResults: response.data?.ner_results || {
-            Name: [],
-            "Acc Number": [],
-          },
-        },
-      };
-    } catch (error) {
-      log.error("Error in report generation:", {
-        message: error.message,
-        stack: error.stack,
-      });
-
-      await updateCaseStatus(caseId, "Failed");
-
-      throw {
-        message: error.message || "Failed to generate report",
-        code: 500,
-        details: error.toString(),
-        timestamp: new Date().toISOString(),
-        failedFiles: Array.from(failedFiles || []),
-        successfulFiles: Array.from(successfulFiles || []),
-        nerResults: {},
-      };
     }
-  });
+  );
 
   ipcMain.handle("edit-pdf", async (event, result, caseName) => {
     log.info("IPC handler invoked for edit-pdf", caseName);

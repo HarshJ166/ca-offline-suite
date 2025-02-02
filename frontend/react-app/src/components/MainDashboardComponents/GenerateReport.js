@@ -108,7 +108,8 @@ export default function GenerateReport() {
         {
           files: filesWithContent,
         },
-        caseName
+        caseName,
+        "generate-report"
       );
 
       console.log("Report generation result:", result.data);
@@ -169,7 +170,7 @@ export default function GenerateReport() {
       clearInterval(progressIntervalRef.current);
       toast.dismiss(newToastId);
       setProgress(0);
-      if(showAnalsisButton || showRectifyButton) {
+      if (showAnalsisButton || showRectifyButton) {
         setDialogOpen(true);
       }
       toast({
@@ -191,6 +192,7 @@ export default function GenerateReport() {
   };
 
   const handleRectify = () => {
+    setDialogOpen(false);
     console.log("Rectify clicked ", currentCaseId, currentCaseName);
   };
 
@@ -205,9 +207,9 @@ export default function GenerateReport() {
     setRefreshTrigger((prev) => prev + 1);
   }, []);
 
-  const handleTestEdit = () => {
-    window.electron.editCategory({});
-  };
+  // const handleTestEdit = () => {
+  //   window.electron.excelFileDownload(5);
+  // };
 
   return (
     <div className="p-8 pt-0 space-y-8 bg-white dark:bg-black min-h-screen">
@@ -215,7 +217,7 @@ export default function GenerateReport() {
         <h2 className="text-3xl font-bold tracking-tight dark:text-slate-300">
           Report Generator
         </h2>
-        {/* <button onClick={handleTestEdit}>Test Edit</button> */}
+        {/* <button onClick={handleTestEdit}>Test Excel download</button> */}
         <div className="flex items-center space-x-4">
           <button
             onClick={() => setNotificationsOpen(!notificationsOpen)}
@@ -255,7 +257,7 @@ export default function GenerateReport() {
         />
       </div>
 
-      <RecentReports key={refreshTrigger} setShowRectifyButton={setShowRectifyButton} setFailedStatements={setFailedStatements} setShowAnalysisButton={setShowAnalysisButton} setDialogOpen={setDialogOpen} showAnalsisButton={showAnalsisButton} showRectifyButton={showRectifyButton}/>
+      <RecentReports key={refreshTrigger}  onReportGenerated={refreshPage}/>
 
       {/* Dialog for successful report generation */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
