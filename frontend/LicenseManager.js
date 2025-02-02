@@ -7,8 +7,8 @@ const { uuid } = require("systeminformation");
 
 const SERVICE_NAME = "Cyphersol-dumm";
 const LICENSE_KEY_ACCOUNT = "license-key";
-// const API_URL = "http://43.204.61.215/validate-offlineapp-login/";
-const API_URL = "http://127.0.0.1/validate-offlineapp-login/";
+const API_URL = "http://43.204.61.215/validate-offlineapp-login/";
+// const API_URL = "http://127.0.0.1/validate-offlineapp-login/";
 // username : 2-32e6d741
 // licensekey : SOMEX4Y4ZLicenseKEYForCAOffline
 
