@@ -12,7 +12,7 @@ pd.options.display.float_format = "{:,.2f}".format
 pd.set_option("display.max_columns", None)
 pd.set_option("display.max_rows", None)
 pd.set_option("display.width", None)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(os.path.join(__file__, "../../../")))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 from ...utils import get_saved_pdf_dir
 # from findaddy.exceptions import ExtractionError
@@ -65,9 +65,9 @@ def save_to_excel(df, name_n_num_df, account_number):
 
     bank_avg_balance_df = calculate_fixed_day_average(eod_sheet_df)
     loan_value_df = process_avg_last_6_months(bank_avg_balance_df, eod_sheet_df)
-
-
-    filename = os.path.join(
+    
+    os.makedirs(os.path.join(BASE_DIR, "saved_excel"), exist_ok=True)    
+    filename = os.path.join(BASE_DIR,
         "saved_excel",
         f"Bank_{account_number}_Extracted_statements_file.xlsx",
     )
