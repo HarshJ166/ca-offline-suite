@@ -191,7 +191,7 @@ function registerCategoryHandlers() {
 
     // Prepare data for database insertion
     const prepareTransactionsForDB = async (data) => {
-        console.log({prepareTransactionsForDB:data})
+        console.log({ prepareTransactionsForDB: data })
         if (!data || Object.keys(data).length === 0) {
             return; // No data to process
         }
@@ -224,7 +224,7 @@ function registerCategoryHandlers() {
     };
 
 
-    ipcMain.handle('edit-category', async (event, data,caseId) => {
+    ipcMain.handle('edit-category', async (event, data, caseId) => {
 
 
         log.info('Edit Category : ', data);
@@ -278,7 +278,7 @@ function registerCategoryHandlers() {
         const frontendData = data
         let aiyaz = 0;
 
-        const updatedTransactions = transactionsForCase.map((transaction,index) => {
+        const updatedTransactions = transactionsForCase.map((transaction, index) => {
 
             const { id, Date, Amount, Type, ...requiredFields } = transaction;
             log.info(transaction.id);
@@ -288,8 +288,8 @@ function registerCategoryHandlers() {
                 log.info("Found frontend entry for ID:", frontendEntry, id);
                 const formattedDate = formatDate(Date);
                 // If present in frontend data, update the transaction
-                log.info({transaction,frontendEntry})
-                aiyaz=index;
+                log.info({ transaction, frontendEntry })
+                aiyaz = index;
                 return {
                     "Value Date": formattedDate,
                     ...requiredFields,
@@ -297,7 +297,7 @@ function registerCategoryHandlers() {
                     Debit: Type === "debit" ? Amount : 0,
                     Credit: Type === "credit" ? Amount : 0
                 };
-              
+
             }
 
             return {
@@ -309,18 +309,18 @@ function registerCategoryHandlers() {
         });
 
         log.info("Updated transactions:", updatedTransactions.slice(0, 5));
-        log.info("aiyaz:",aiyaz);
+        log.info("aiyaz:", aiyaz);
         log.info("Updated transactions:", updatedTransactions[aiyaz]);
 
 
         const transformedCategories = Object.values(frontendData).map(item => ({
             Description: item.description || "Unknown",
-            "Debit / Credit": item.type=="debit" ? "Debit" : "Credit",
+            "Debit / Credit": item.type == "debit" ? "Debit" : "Credit",
             Category: item.category || "Uncategorized",
-            Particulars: item.category === "Unknown"
+            Particulars: item.classification || "Unknown"
         }));
 
-        console.log({transformedCategories:transformedCategories[0], transformedCategoriesLength:transformedCategories.length});
+        console.log({ transformedCategories: transformedCategories[0], transformedCategoriesLength: transformedCategories.length });
 
 
         try {

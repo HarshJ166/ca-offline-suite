@@ -292,7 +292,7 @@ async function createWindow() {
       nodeIntegration: true,
       preload: path.join(__dirname, "preload.js"),
     },
-    icon: path.join(__dirname, "assets","cyphersol-icon.png"),
+    icon: path.join(__dirname, "assets", "cyphersol-icon.png"),
     autoHideMenuBar: true,
     title: isDev ? "CypherSol Dev" : "CypherSol",
   });
@@ -359,7 +359,7 @@ async function createWindow() {
     log.info("TEMP directory:", tempDir);
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
-    }else{
+    } else {
       const failedDir = path.join(tempDir, "failed_pdfs");
       // go into failed directory and delete all the folders which are empty
       fs.readdir(failedDir, (err, files) => {
@@ -411,7 +411,7 @@ async function createWindow() {
   registerOpportunityToEarnIpc();
   getdata();
   registerCategoryHandlers();
-  registerExcelDownloadHandlers();
+  registerExcelDownloadHandlers(app.getPath("downloads"));
 
   // Auto-update IPC handlers with detailed logging
   ipcMain.handle('check-for-updates', async () => {

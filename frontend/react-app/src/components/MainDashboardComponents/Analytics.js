@@ -78,48 +78,76 @@ const Analytics = () => {
   }, []);
 
   // In your Analytics.jsx component
-
-  const handleDownload =async (caseid) => {
+  const handleDownload = async (caseid) => {
     try {
+      // setIsLoading(true); // Start loading
       const temp = isLoading;
       temp.push(caseid)
       // setIsLoading(temp);
 
-      const response = await window.electron.excelFileDownload(caseid);
-      console.log(response)
+      // Start the download process in the main process
+      window.electron.download.excelReportDownload(caseid);
 
+      let downloadedChunks = [];
+      let totalFileSize = 0;
+      let downloadProgress = 0;
 
-      // Assuming you have an Excel file named 'example.xlsx' in your public folder
-      const filePath = "public/Sale Voucher final.xlsm";
+      // Listen for file chunks from the main process
+      window.electron.download.onExcelDownloadChunk((chunk) => {
+        downloadedChunks.push(chunk);
+        downloadProgress += chunk.length;
+        console.log(`Downloaded ${downloadProgress} bytes`);
 
-      // Create a blob URL
-      const url = window.URL.createObjectURL(new Blob([filePath]));
+        // Update progress if needed (could add a progress bar)
+        // const progressPercentage = (downloadProgress / totalFileSize) * 100;
+        // setProgress(progressPercentage);
+      });
 
-      // Create a link element
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `Sale Voucher final.xlsx`;
-      link.click();
+      // Listen for download completion
+      window.electron.download.onExcelDownloadComplete((res) => {
+        const { message, fileName } = res;
+        console.log("Download completed:", message);
+        setIsLoading([]); // End loading state
 
-      // Clean up
-      window.URL.revokeObjectURL(url);
+        const fileBlob = new Blob(downloadedChunks, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(fileBlob);
 
-      toast({
-        title: "Success",
-        description: "Excel file downloaded successfully",
+        // Trigger file download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName
+        link.click();
+
+        // Clean up URL
+        window.URL.revokeObjectURL(url);
+
+        toast({
+          title: 'Success',
+          description: res.message || 'Excel file downloaded successfully',
+        });
+      });
+
+      // Handle download error
+      window.electron.download.onExcelDownloadError((error) => {
+        console.log("Error downloading file:", error);
+        setIsLoading([]); // End loading state
+        toast({
+          title: 'Error',
+          description: `Failed to download Excel file: ${error}`,
+          variant: 'destructive',
+        });
       });
     } catch (error) {
+      setIsLoading([]); // End loading state
       toast({
-        title: "Error",
-        description: `Failed to download Excel file: ${error.message}`,
-        variant: "destructive",
+        title: 'Error',
+        description: `Failed to initiate download: ${error.message}`,
+        variant: 'destructive',
       });
-    } finally {
-      // setIsLoading((prev)=>prev.filter((r)=>r!==caseid))
     }
   };
 
-  
+
 
   return (
     <div className="w-full px-4 py-6 -space-y-2 mx-auto ">
@@ -171,11 +199,11 @@ const Analytics = () => {
                       </Button> */}
 
                       <Button
-                      key={report.id}
+                        key={report.id}
                         variant="outline"
                         size="sm"
                         className="hover:bg-primary hover:text-primary-foreground transition-colors"
-                        onClick={()=>handleDownload(report.id)}
+                        onClick={() => handleDownload(report.id)}
                         disabled={isLoading.includes(report.id)}
 
                       >

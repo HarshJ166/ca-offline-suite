@@ -14,7 +14,7 @@ from backend.utils import get_saved_pdf_dir
 TEMP_SAVED_PDF_DIR = get_saved_pdf_dir()
 from pydantic import Field
 # If you have other custom imports:
-from backend.tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf,start_extraction_edit_pdf, refresh_category_all_sheets
+from backend.tax_professional.banks.CA_Statement_Analyzer import start_extraction_add_pdf,start_extraction_edit_pdf, refresh_category_all_sheets, save_to_excel
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from backend.account_number_ifsc_extraction import extract_accno_ifsc
@@ -78,7 +78,8 @@ class EditCategoryRequest(BaseModel):
 
 class ExcelDownloadRequest(BaseModel):
     transaction_data: List[dict]
-    case_name = str
+    name_n_num: List[dict]
+    case_name: str
 
 class DummyRequest(BaseModel):
     data: str
@@ -348,26 +349,36 @@ async def edit_category(request: EditCategoryRequest):
         )
 
 
+
 @app.post("/excel-download/")
 async def excel_download(request: ExcelDownloadRequest):
-
     try:
         transaction_data = request.transaction_data
         case_name = request.case_name
+        name_n_num_data = request.name_n_num
         logger.info(f"Received request with transaction data: {transaction_data[0]}")
         logger.info(f"Received request with case name: {case_name}")
 
         # convert transaction_data to df
         transaction_df = pd.DataFrame(transaction_data)
-        # transaction_df["Value Date"] = pd.to_datetime(transaction_df["Value Date"], format="%d-%m-%Y")
-        print("Transactions : ", transaction_df.head())
+        name_n_num_df = pd.DataFrame(name_n_num_data)
+        
+        print("Transactions : \n", transaction_df.head())
+        print("Name and Number : \n", name_n_num_df.head())
 
-        # data = download_excel(transaction_df, case_name)
-        # print(data)
+        file_path = save_to_excel(transaction_df, name_n_num_df, case_name)
+        print("Python data : ", file_path)
+
+        if not os.path.exists(file_path):
+            raise HTTPException(
+                status_code=404, detail="Something went wrong while generating the file"
+            )
+    
+        return file_path
     except Exception as e:
         logger.error(f"Error processing bank statements: {str(e)}")
         raise HTTPException(
-            status_code=500, detail=f"Error processing bank statements: {str(e)}"
+            status_code=500, detail=f"{str(e)}"
         )
 
 
