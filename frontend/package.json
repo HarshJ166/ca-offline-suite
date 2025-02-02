@@ -4,7 +4,6 @@
   "description": "",
   "main": "main.js",
   "icon": "./assets/cyphersol-icon.png",
-
   "scripts": {
     "start": "electron main.js",
     "start:fastapi": "cd ../ && uvicorn backend.main:app --reload --port 7500",
@@ -91,11 +90,13 @@
       "darkModeSupport": true
     },
     "win": {
-      "target": ["nsis", "zip"],
+      "target": [
+        "nsis",
+        "zip"
+      ],
       "artifactName": "${productName}-Setup-${version}.${ext}",
       "verifyUpdateCodeSignature": false,
       "publisherName": "Cyphersol"
-
     },
     "nsis": {
       "oneClick": false,
@@ -121,6 +122,7 @@
     "bcrypt": "^5.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "crypto": "^1.0.1",
     "d3-scale": "^4.0.2",
     "d3-scale-chromatic": "^3.1.0",
     "dotenv": "^16.4.7",
@@ -136,6 +138,7 @@
     "python-shell": "^5.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "systeminformation": "^5.25.11",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^11.0.5"

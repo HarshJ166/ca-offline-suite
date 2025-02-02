@@ -16,11 +16,11 @@ function ExcelViewer() {
   };
 
   const files = [
-    { label: "Ledgers Voucher", path: "tallyprime/Ledgers Voucher Final.xlsm" },
-    { label: "Payment Voucher", path: "tallyprime/Payment Voucher Final.xlsm" },
-    { label: "Receipt Voucher", path: "tallyprime/Receipt Voucher Final.xlsm" },
-    { label: "Purchase Voucher", path: "tallyprime/Purchase Voucher Final.xlsm" },
-    { label: "Sale Voucher", path: "tallyprime/Sale Voucher final.xlsm" },
+    { label: "Ledgers Voucher", path: "tallyprime/LedgersVoucher.xlsm" },
+    { label: "Payment & Receipt Voucher", path: "tallyprime/PaymentReceiptVoucher.xlsm" },
+    { label: "Purchase Multi-Stock Items Voucher", path: "tallyprime/PurchaseMultiStockItemsVoucher.xlsm" },
+    { label: "Sales Voucher", path: "tallyprime/SalesVoucher.xlsm" },
+    { label: "Stock Items Voucher", path: "tallyprime/StockItemVoucher.xlsm" },
   ];
 
   return (
