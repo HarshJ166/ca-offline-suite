@@ -63,7 +63,7 @@ import {
 
 import PDFMarkerModal from "./PdfMarkerModal";
 
-const RecentReportsComp = ({key}) => {
+const RecentReportsComp = ({key,onReportGenerated}) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();

@@ -324,7 +324,7 @@ const SummaryTable = ({ data = [], source, title, subtitle }) => {
               <TableRow>
                 {columns.map((column) => (
                   <TableHead key={column}
-                    className="bg-gray-900 dark:bg-slate-800 text-white"
+                    className="bg-gray-300 dark:bg-slate-800 text-black opacity-80 whitespace-nowrap"
                   >
                     <div className="flex items-center gap-2">
                       {column.charAt(0).toUpperCase() +

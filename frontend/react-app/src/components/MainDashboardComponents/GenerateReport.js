@@ -257,7 +257,7 @@ export default function GenerateReport() {
         />
       </div>
 
-      <RecentReports key={refreshTrigger} handleReportSubmit={handleSubmit} setShowRectifyButton={setShowRectifyButton} setFailedStatements={setFailedStatements} setShowAnalysisButton={setShowAnalysisButton} setDialogOpen={setDialogOpen} showAnalsisButton={showAnalsisButton} showRectifyButton={showRectifyButton} />
+      <RecentReports key={refreshTrigger}  onReportGenerated={refreshPage}/>
 
       {/* Dialog for successful report generation */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
