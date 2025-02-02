@@ -231,7 +231,8 @@ const CategoryEditTable = ({
       const modifiedObject = {
         ...dataOnUi[rowIndex],
         oldCategory,
-        clasification:selectedType,
+        classification:selectedType,
+        is_new:true,
         keyword: showKeywordInput ? reasoning : "", // Only include reasoning if checkbox was checked
       };
       setModifiedData([...modifiedData, modifiedObject]);
@@ -241,6 +242,7 @@ const CategoryEditTable = ({
     const modifiedObject = {
       ...dataOnUi[rowIndex],
       oldCategory,
+      is_new:false,
       keyword: showKeywordInput ? reasoning : "", // Only include reasoning if checkbox was checked
     };
     setModifiedData([...modifiedData, modifiedObject]);
