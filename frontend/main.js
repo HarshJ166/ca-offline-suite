@@ -17,7 +17,7 @@ const { registerMainDashboardIpc } = require("./ipc/mainDashboard.js");
 const { registerCaseDashboardIpc } = require("./ipc/caseDashboard.js");
 const { registerReportHandlers } = require("./ipc/reportHandlers.js");
 const { registerAuthHandlers } = require("./ipc/authHandlers.js");
-const { registerCategoryHandlers } = require("./ipc/editCategory.js");
+const { registerEditReportHandlers } = require("./ipc/editReportHandlers.js");
 const sessionManager = require("./SessionManager");
 const licenseManager = require("./LicenseManager");
 const { generateReportIpc } = require("./ipc/generateReport");
@@ -329,6 +329,7 @@ async function createWindow() {
 
     if (choice === 0) {
       log.info("User confirmed app close. Logging out...");
+      sessionManager.clearUser();
       // Add your session logout logic here
     } else {
       log.info("User canceled app close.");
@@ -410,7 +411,7 @@ async function createWindow() {
   registerAuthHandlers();
   registerOpportunityToEarnIpc();
   getdata();
-  registerCategoryHandlers();
+  registerEditReportHandlers();
   registerExcelDownloadHandlers(app.getPath("downloads"));
 
   // Auto-update IPC handlers with detailed logging
@@ -518,19 +519,19 @@ app.setName("CypherSol Dev");
 app.whenReady().then(async () => {
   log.info("App is ready", app.getPath("userData"));
   try {
-    try {
-      sessionManager.init();
-    } catch (error) {
-      log.error("SessionManager initialization failed:", error);
-      throw error;
-    }
+    // try {
+    //   sessionManager.init();
+    // } catch (error) {
+    //   log.error("SessionManager initialization failed:", error);
+    //   throw error;
+    // }
 
-    try {
-      licenseManager.init();
-    } catch (error) {
-      log.error("LicenseManager initialization failed:", error);
-      throw error;
-    }
+    // try {
+    //   licenseManager.init();
+    // } catch (error) {
+    //   log.error("LicenseManager initialization failed:", error);
+    //   throw error;
+    // }
 
     try {
       sessionManager.init();
@@ -581,6 +582,7 @@ app.on("window-all-closed", () => {
 
 app.on("will-quit", () => {
   log.info("App is quitting");
+  sessionManager.clearUser();
   if (pythonProcess) {
     log.info("Stopping Python process...");
     pythonProcess.kill("SIGTERM");
