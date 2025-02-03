@@ -452,9 +452,11 @@ function registerEditReportHandlers() {
             log.info({ finalSql, ids })
             await bulkUpdateEntity(finalSql, ids);
             log.info("Entity updated successfully");
+            return { success: true };
         } catch (error) {
             log.error("Error inserting entity in batch:", error);
             throw error;
+            return { success: false };
         }
     })
 }
