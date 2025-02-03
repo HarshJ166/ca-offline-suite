@@ -146,17 +146,20 @@ const storeTransactionsBatch = async (transformedTransactions) => {
   }
 };
 
-const getOrCreateCase = async (caseName, userId = 1) => {
+const getOrCreateCase = async (caseName, userId=1) => {
   try {
+    if (!userId) {
+      throw new Error("User ID is required to create or get a case");
+    }
+
     // First try to find existing case with exact match on name
     const existingCase = await db
       .select()
       .from(cases)
       .where(
         and(
-          eq(cases.name, caseName)
-          // eq(cases.userId, userId),
-          // eq(cases.status, "active")
+          eq(cases.name, caseName),
+          eq(cases.userId, userId)
         )
       )
       .limit(1);
@@ -165,6 +168,7 @@ const getOrCreateCase = async (caseName, userId = 1) => {
       log.info(
         `Found existing case with ID: ${(existingCase[0].id, caseName)}`
       );
+      log.info(`Found existing case with ID: ${existingCase[0].id}, name: ${caseName}`);
       return existingCase[0].id;
     }
 
@@ -248,7 +252,7 @@ const processStatementAndEOD = async (
   fileIndex
 ) => {
   try {
-    const validCaseId = await getOrCreateCase(caseName);
+    const validCaseId = await getOrCreateCase(caseName, fileDetail.userId);
     let statementId = null;
     let processedTransactions = 0;
 
@@ -403,7 +407,7 @@ const processStatementAndEOD = async (
 
 const processSummaryData = async (parsedData, caseName) => {
   try {
-    const validCaseId = await getOrCreateCase(caseName);
+    const validCaseId = await getOrCreateCase(caseName, parsedData.userId);
 
     log.info({ parsedDataFromProcessSummary: parsedData });
 
@@ -499,7 +503,7 @@ const processOpportunityToEarnData = async (
     }
 
     // Get the case ID for this specific report
-    const validCaseId = await getOrCreateCase(caseName);
+    const validCaseId = await getOrCreateCase(caseName, opportunityToEarnData.userId);
 
     // Initialize sums for each category
     let homeLoanValue = 0;
@@ -584,7 +588,7 @@ function preprocessPayload(payload) {
     );
   }
 
-  // 3) Double-check that arrays aren’t undefined
+  // 3) Double-check that arrays aren't undefined
   payload.bank_names = Array.isArray(payload.bank_names)
     ? payload.bank_names
     : [];
@@ -595,7 +599,7 @@ function preprocessPayload(payload) {
     : [];
   payload.end_dates = Array.isArray(payload.end_dates) ? payload.end_dates : [];
 
-  // 4) Ensure `ca_id` is a string if that’s what FastAPI expects
+  // 4) Ensure `ca_id` is a string if that's what FastAPI expects
   if (payload.ca_id != null) {
     payload.ca_id = String(payload.ca_id);
   }
@@ -987,7 +991,7 @@ function generateReportIpc(tmpdir_path) {
       if (response.data?.["pdf_paths_not_extracted"]?.paths?.length > 0) {
         await updateCaseStatus(caseId, "Failed");
         // Get the case ID
-        const validCaseId = await getOrCreateCase(caseName);
+        const validCaseId = await getOrCreateCase(caseName, result.userId);
 
         // Store failed statements in the database
         await db.insert(failedStatements).values({
@@ -1167,7 +1171,7 @@ function generateReportIpc(tmpdir_path) {
       // If there's a specific PDF paths not extracted data, store it
       if (error.response?.data?.["pdf_paths_not_extracted"]) {
         try {
-          const validCaseId = await getOrCreateCase(caseName);
+          const validCaseId = await getOrCreateCase(caseName, result.userId);
 
           await db.insert(failedStatements).values({
             caseId: validCaseId,
