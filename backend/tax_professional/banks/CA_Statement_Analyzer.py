@@ -66,8 +66,8 @@ def save_to_excel(df, name_n_num_df, account_number):
     bank_avg_balance_df = calculate_fixed_day_average(eod_sheet_df)
     loan_value_df = process_avg_last_6_months(bank_avg_balance_df, eod_sheet_df)
     
-    os.makedirs(os.path.join(BASE_DIR, "saved_excel"), exist_ok=True)    
-    filename = os.path.join(BASE_DIR,
+    os.makedirs(os.path.join(TEMP_SAVED_PDF_DIR, "saved_excel"), exist_ok=True)    
+    filename = os.path.join(TEMP_SAVED_PDF_DIR,
         "saved_excel",
         f"Bank_{account_number}_Extracted_statements_file.xlsx",
     )
