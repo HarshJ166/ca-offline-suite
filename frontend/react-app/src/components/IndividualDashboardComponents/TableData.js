@@ -32,6 +32,7 @@ import {
   PaginationPrevious,
 } from "../ui/pagination";
 import { Label } from "../ui/label";
+import { useToast } from "../../hooks/use-toast";
 
 const DataTable = ({ data = [], source, title, subtitle }) => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,6 +57,7 @@ const DataTable = ({ data = [], source, title, subtitle }) => {
   const [batchModalOpen, setBatchModalOpen] = useState(false);
   const [batchEntityValue, setBatchEntityValue] = useState("");
 
+  const { toast } = useToast();
 
   // Get dynamic columns from first data item
   let columns = data.length > 0 ? Object.keys(data[0]) : [];
@@ -197,7 +199,30 @@ const DataTable = ({ data = [], source, title, subtitle }) => {
     console.log(payload);
 
     try {
-      await window.electron.editEntity(payload);
+      const response = await window.electron.editEntity(payload);
+      console.log({entityUpdateIpc:response});
+      if(response.success) {
+        console.log("Entity updated successfully");
+        // Show a success toast
+        toast({
+          id: "entity-update-success",
+          title: "Entity Update",
+          description: "Entities updated successfully",
+          type: "success",
+          duration:3000
+        });
+      }else{
+        // Show an error toast
+        toast({
+          id: "entity-update-error",
+          title: "Entity Update",
+          description: "Entity update failed",
+          type: "error",
+          duration:3000
+          
+        });
+        console.log("Entity update failed");
+      }
     }
     catch (err) {
       console.log(err);
@@ -215,6 +240,20 @@ const DataTable = ({ data = [], source, title, subtitle }) => {
 
       const payload = [{ entity: newValue, transactionId: row.transactionId }]
       entityUpdateIpc(payload);
+
+      // Update the local state so the UI immediately reflects the new value.
+    setFilteredData((prevData) => {
+      const updatedData = [...prevData];
+      // Determine the correct key (e.g., "Entity" or "entity")
+      const entityKey = Object.keys(updatedData[globalIndex]).find(
+        (key) => key.toLowerCase() === "entity"
+      );
+      updatedData[globalIndex] = {
+        ...updatedData[globalIndex],
+        [entityKey]: newValue,
+      };
+      return updatedData;
+    });
 
       // Clear the edit state for this row.
       setEditedEntities((prev) => {
