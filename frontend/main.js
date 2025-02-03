@@ -519,19 +519,19 @@ app.setName("CypherSol Dev");
 app.whenReady().then(async () => {
   log.info("App is ready", app.getPath("userData"));
   try {
-    try {
-      sessionManager.init();
-    } catch (error) {
-      log.error("SessionManager initialization failed:", error);
-      throw error;
-    }
+    // try {
+    //   sessionManager.init();
+    // } catch (error) {
+    //   log.error("SessionManager initialization failed:", error);
+    //   throw error;
+    // }
 
-    try {
-      licenseManager.init();
-    } catch (error) {
-      log.error("LicenseManager initialization failed:", error);
-      throw error;
-    }
+    // try {
+    //   licenseManager.init();
+    // } catch (error) {
+    //   log.error("LicenseManager initialization failed:", error);
+    //   throw error;
+    // }
 
     try {
       sessionManager.init();
