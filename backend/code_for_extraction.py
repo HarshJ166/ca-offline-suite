@@ -331,6 +331,97 @@ def unlock_and_add_margins_to_pdf(pdf_path, pdf_password, timestamp, CA_ID):
         if os.path.exists("combined_temp.pdf"):
             os.remove("combined_temp.pdf")
 
+def get_table_column_coordinates(pdf_path):
+    page_num = 0
+    with pdfplumber.open(pdf_path) as pdf:
+        page = pdf.pages[page_num]
+
+        table_settings = {
+            "vertical_strategy": "lines",
+            "horizontal_strategy": "lines",
+            "edge_min_length": 20,
+        }
+
+        # Get table structure exactly like debug_tablefinder()
+        table_finder = page.debug_tablefinder(table_settings)
+        # print(table_finder.tables)
+
+        if not table_finder.tables:
+            return []
+
+        # Extract ALL vertical edges (before filtering)
+        column_all_coords = sorted(set(edge["x0"] for edge in table_finder.edges if edge["orientation"] == "v"))
+
+        # Find the largest table based on area (width × height)
+        largest_table = max(
+            table_finder.tables,
+            key=lambda t: (t.bbox[2] - t.bbox[0]) * (t.bbox[3] - t.bbox[1])
+        )
+
+        # Extract vertical edges within the largest table's bounding box with a tolerance
+        table_xmin, table_ymin, table_xmax, table_ymax = largest_table.bbox
+        tolerance = 5  # Allow a small tolerance for alignment issues
+
+        column_x_coords = sorted(set(
+            edge["x0"] for edge in table_finder.edges
+            if edge["orientation"] == "v" and
+            (table_xmin - tolerance) <= edge["x0"] <= (table_xmax + tolerance) and
+            "top" in edge and "bottom" in edge and
+            (table_ymin - tolerance) <= edge["top"] <= (table_ymax + tolerance) and
+            (table_ymin - tolerance) <= edge["bottom"] <= (table_ymax + tolerance) and
+            (edge["bottom"] - edge["top"]) > 0.5 * (table_ymax - table_ymin)  # Ensure significant edge length
+        ))
+
+        if not column_x_coords and len(table_finder.tables) == 1:
+            return column_all_coords
+
+        return column_x_coords\
+
+def get_table_column_coordinates_by_text(pdf_path):
+    page_num = 0
+    with pdfplumber.open(pdf_path) as pdf:
+        page = pdf.pages[page_num]
+
+        table_settings = {
+            "vertical_strategy": "text",
+            "horizontal_strategy": "lines",
+            "edge_min_length": 20,
+        }
+
+        # Get table structure exactly like debug_tablefinder()
+        table_finder = page.debug_tablefinder(table_settings)
+
+        if not table_finder.tables:
+            return []
+
+        # Extract ALL vertical edges (before filtering)
+        column_all_coords = sorted(set(edge["x0"] for edge in table_finder.edges if edge["orientation"] == "v"))
+
+        # Find the largest table based on area (width × height)
+        largest_table = max(
+            table_finder.tables,
+            key=lambda t: (t.bbox[2] - t.bbox[0]) * (t.bbox[3] - t.bbox[1])
+        )
+
+        # Extract vertical edges within the largest table's bounding box with a tolerance
+        table_xmin, table_ymin, table_xmax, table_ymax = largest_table.bbox
+        tolerance = 1  # Allow a small tolerance for alignment issues
+
+        column_x_coords = sorted(set(
+            edge["x0"] for edge in table_finder.edges
+            if edge["orientation"] == "v" and
+            (table_xmin - tolerance) <= edge["x0"] <= (table_xmax + tolerance) and
+            "top" in edge and "bottom" in edge and
+            (table_ymin - tolerance) <= edge["top"] <= (table_ymax + tolerance) and
+            (table_ymin - tolerance) <= edge["bottom"] <= (table_ymax + tolerance) and
+            (edge["bottom"] - edge["top"]) > 0.5 * (table_ymax - table_ymin)  # Ensure significant edge length
+        ))
+
+        if not column_x_coords and len(table_finder.tables) == 1:
+            return column_all_coords
+
+        return column_x_coords
+
 ##____________AFTER EXTRACTION (cleaning)_________________
 def parse_date(date_string):
     formats_to_try = [
@@ -919,10 +1010,6 @@ def check_balance_consistency(df):
     :param tolerance: Allowed error range for balance comparison (default is 1.0)
     :return: List of rows with balance inconsistencies
     """
-    if df.empty:
-        raise ValueError(
-            "Empty DF returned from extraction"
-        )
 
     df.reset_index(inplace=True)
     tolerance = 1.0
@@ -953,6 +1040,7 @@ def model_for_pdf(df):
     # numeric_columns_list = extract_numeric_col_from_df(df)
     # print(numeric_columns_list)
     description_column = find_desc_column(df, [f"{date_column}"])
+    description_column = [description_column[0]]
     # description_column = [3]
     print("Description Column is:", description_column)
 
@@ -997,8 +1085,14 @@ def model_for_pdf(df):
     else:
         final_df = cleaning(new_df)
 
+    if final_df.empty:
+        raise ValueError(
+            "Empty DF returned from extraction"
+        )
+
     print(final_df.head(10))
-    # bal = check_balance_consistency(final_df)
+
+    bal = check_balance_consistency(final_df)
     return final_df, lists
 
 def new_mode_for_pdf(df, lists):
@@ -1054,32 +1148,53 @@ def add_column_separators_with_coordinates(pdf_path, coordinates):
     pdf_document.save(processed_pdf_path)
     return processed_pdf_path, llama_2
 
+
 # Optimized test case A
-def run_test_case_A(page):
+def run_test_case_A(page, explicit_lines):
     try:
-        df = extract_dataframe_from_pdf(page, table_settings={
-            "vertical_strategy": "lines",
-            "horizontal_strategy": "lines",
-            "edge_min_length": 20,
-            # "intersection_y_tolerance": 40,
-        })
-        model_df, lists = model_for_pdf(df)  # Process the DataFrame
-        return model_df, lists  # No coordinates for Test Case A
+        if explicit_lines == 0:
+            df = extract_dataframe_from_pdf(page, table_settings={
+                "vertical_strategy": "lines",
+                "horizontal_strategy": "lines",
+                "edge_min_length": 20,
+            })
+            model_df, lists = model_for_pdf(df)  # Process the DataFrame
+            return model_df, lists  # No coordinates for Test Case A
+        else:
+            df = extract_dataframe_from_pdf(page, table_settings={
+                "vertical_strategy": "explicit",
+                "explicit_vertical_lines": explicit_lines,
+                "horizontal_strategy": "lines",
+                "intersection_x_tolerance": 20,
+            })
+            model_df, lists = model_for_pdf(df)  # Process the DataFrame
+            return model_df, lists  # No coordinates for Test Case A
+
     except Exception as e:
         print(f"Test Case A failed: {e}")
         return None, None
 
 # Optimized test case B
-def run_test_case_B(page_with_rows_added):
+def run_test_case_B(page_with_rows_added, explicit_lines):
     try:
-        df = extract_dataframe_from_pdf(page_with_rows_added, table_settings={
-            "vertical_strategy": "lines",
-            "horizontal_strategy": "text",
-            "edge_min_length": 30,
-            "intersection_x_tolerance": 120,
-        })
-        model_df, lists = model_for_pdf(df)
-        return model_df, lists  # No coordinates for Test Case B
+        if explicit_lines == 0:
+            df = extract_dataframe_from_pdf(page_with_rows_added, table_settings={
+                "vertical_strategy": "lines",
+                "horizontal_strategy": "text",
+                "edge_min_length": 20,
+                "intersection_x_tolerance": 120
+            })
+            model_df, lists = model_for_pdf(df)  # Process the DataFrame
+            return model_df, lists  # No coordinates for Test Case A
+        else:
+            df = extract_dataframe_from_pdf(page_with_rows_added, table_settings={
+                "vertical_strategy": "explicit",
+                "explicit_vertical_lines": explicit_lines,
+                "horizontal_strategy": "text",
+                "intersection_x_tolerance": 120
+            })
+            model_df, lists = model_for_pdf(df)
+            return model_df, lists  # No coordinates for Test Case B
     except Exception as e:
         print(f"Test Case B failed: {e}")
         return None, None
@@ -1125,19 +1240,45 @@ def process_pdf_with_test_cases(pdf_path):
 
     # Load the first page of the PDF into memory once
     page = load_first_page_into_memory(pdf_path)
+    reader = PdfReader(page)
+    writer = PdfWriter()
+    age = reader.pages[0]
+    rotate_obj = age.get(NameObject("/Rotate"), NumberObject(0))
+    rotation = int(rotate_obj)  # Convert to plain int
+    coordinates_A = get_table_column_coordinates(page)
 
-    # Test Case A
-    model_df_A, lists = run_test_case_A(page)
-    if model_df_A is not None:
-        print("Test Case A passed")
-        return ["A", 0, lists, 0]  # Test Case A passed
+    if rotation != 0:
+        print("-----------------------PDF IS ROTATED--------------------------")
+        # Test Case A
+        model_df_A, lists = run_test_case_A(page, 0)
+        if model_df_A is not None:
+            print("Test Case A passed")
+            return ["A", 0, lists, 0]  # Test Case A passed
 
-    # Test Case B
-    # page_with_rows = add_row_separators_in_memory(page)
-    model_df_B, lists = run_test_case_B(page)
-    if model_df_B is not None:
-        print("Test Case B passed")
-        return ["B", 0, lists, 0]  # Test Case B passed
+        model_df_B, lists = run_test_case_B(page, 0)
+        if model_df_B is not None:
+            print("Test Case B passed")
+            return ["B", 0, lists, 0]  # Test Case B passed
+
+    else:
+        # Test Case A
+        model_df_A, lists = run_test_case_A(page, coordinates_A)
+        if model_df_A is not None:
+            print("Test Case A passed")
+            return ["A", 0, lists, coordinates_A]  # Test Case A passed
+
+        model_df_B, lists = run_test_case_B(page, coordinates_A)
+        if model_df_B is not None:
+            print("Test Case B passed")
+            return ["B", 0, lists, coordinates_A]  # Test Case B passed
+
+    # Test Case C1
+    # page_with_columns, coordinates_C, explicit_lines = self.add_column_separators_in_memory(page)
+    explicit_lines_x = get_table_column_coordinates_by_text(page)
+    model_df_C, lists = run_test_case_C(page, explicit_lines_x)
+    if model_df_C is not None:
+        print("Test Case C2 passed")
+        return ["C", 0, lists, explicit_lines_x]  # Test Case C passed
 
     # Test Case C
     page_with_columns, coordinates_C, explicit_lines = add_column_separators_in_memory(page)
@@ -1147,12 +1288,19 @@ def process_pdf_with_test_cases(pdf_path):
         return ["C", coordinates_C, lists, explicit_lines]  # Test Case C passed
 
     # Test Case D
-    # page_with_rows = add_row_separators_in_memory(page)
-    page_with_columns_n_rows, explicit_lines = add_column_separators_with_coordinates(page, coordinates_C)
-    model_df_D, lists = run_test_case_D(page_with_columns_n_rows, explicit_lines)
+    # page_with_rows = self.add_row_separators_in_memory(page)
+    # page_with_columns_n_rows, explicit_lines = self.add_column_separators_with_coordinates(page, coordinates_C)
+    model_df_D, lists = run_test_case_D(page_with_columns, explicit_lines)
     if model_df_D is not None:
         print("Test Case D passed")
         return ["D", coordinates_C, lists, explicit_lines]  # Test Case D passed
+
+    # Test Case D2
+    model_df_D, lists = run_test_case_D(page, explicit_lines_x)
+    if model_df_D is not None:
+        print("Test Case D2 passed")
+        return ["D", 0, lists, explicit_lines_x]  # Test Case D passed
+
     else:
         # Test Case E
         lists = 0
@@ -1168,35 +1316,54 @@ def run_test_output_on_whole_pdf(list_a, pdf_in_saved_pdf, bank_name, timestamp,
     if test_case == "A":
         # Run `extract_dataframe_from_pdf()` for Test Case A
         print("Running extract_dataframe_from_pdf() for Test Case A")
-        df = extract_dataframe_from_pdf(pdf_in_saved_pdf, table_settings={
-            "vertical_strategy": "lines",
-            "horizontal_strategy": "lines",
-            # "edge_min_length": 30,
-            # "intersection_y_tolerance": 30,
-        })
-        model_df = new_mode_for_pdf(df, lists_of_columns)
+        if explicit_lines == 0:
+            df = extract_dataframe_from_pdf(pdf_in_saved_pdf, table_settings={
+                "vertical_strategy": "lines",
+                "horizontal_strategy": "lines",
+                "edge_min_length": 20,
+            })
+            model_df = new_mode_for_pdf(df, lists_of_columns)
+            return model_df, None
+        else:
+            df = extract_dataframe_from_pdf(pdf_in_saved_pdf, table_settings={
+                "vertical_strategy": "explicit",
+                "explicit_vertical_lines": explicit_lines,
+                "horizontal_strategy": "lines",
+                "intersection_x_tolerance": 20,
+            })
+            model_df = new_mode_for_pdf(df, lists_of_columns)
+            return model_df, None
 
-        return model_df, None
 
     elif test_case == "B":
         # Run `row_separators_addition()` for Test Case B
         print("Running row_separators_addition() for Test Case B")
-        # pdf_in_rows_saved_pdf = add_row_separators_in_memory(pdf_in_saved_pdf)
-        df = extract_dataframe_from_pdf(pdf_in_saved_pdf, table_settings={
-            "vertical_strategy": "lines",
-            "horizontal_strategy": "text",
-            "edge_min_length": 40,
-            "intersection_x_tolerance": 120,
-        })
-        model_df = new_mode_for_pdf(df, lists_of_columns)
-        return model_df, None
+        # pdf_in_rows_saved_pdf = self.add_row_separators_in_memory(pdf_in_saved_pdf)
+        if explicit_lines == 0:
+            df = extract_dataframe_from_pdf(pdf_in_saved_pdf, table_settings={
+                "vertical_strategy": "lines",
+                "horizontal_strategy": "text",
+                "edge_min_length": 20,
+                "intersection_x_tolerance": 120
+            })
+            model_df = new_mode_for_pdf(df, lists_of_columns)
+            return model_df, None
+        else:
+            df = extract_dataframe_from_pdf(pdf_in_saved_pdf, table_settings={
+                "vertical_strategy": "explicit",
+                "explicit_vertical_lines": explicit_lines,
+                "horizontal_strategy": "text",
+                "intersection_x_tolerance": 120
+            })
+            model_df = new_mode_for_pdf(df, lists_of_columns)
+            return model_df, None
+
 
     elif test_case == "C":
         # Run `add_column_separators_with_coordinates()` for Test Case C
         print(f"Running add_column_separators_with_coordinates() for Test Case C with coordinates {coordinates_C}")
-        pdf_in_columns_saved_pdf, explicit_lines = add_column_separators_with_coordinates(pdf_in_saved_pdf,
-                                                                                               coordinates_C)
-        df = extract_dataframe_from_pdf(pdf_in_columns_saved_pdf, table_settings={
+        # pdf_in_columns_saved_pdf, explicit_lines = self.add_column_separators_with_coordinates(pdf_in_saved_pdf, coordinates_C)
+        df = extract_dataframe_from_pdf(pdf_in_saved_pdf, table_settings={
             "vertical_strategy": "explicit",
             "explicit_vertical_lines": explicit_lines,
             "horizontal_strategy": "lines",
@@ -1208,10 +1375,9 @@ def run_test_output_on_whole_pdf(list_a, pdf_in_saved_pdf, bank_name, timestamp,
     elif test_case == "D":
         # First add row separators, then column separators with coordinates for Test Case D
         print("Running add_row_separators and add_column_separators_with_coordinates() for Test Case D")
-        # pdf_in_rows_saved_pdf = add_row_separators_in_memory(pdf_in_saved_pdf)
-        pdf_in_columns_saved_pdf, explicit_lines = add_column_separators_with_coordinates(pdf_in_saved_pdf,
-                                                                                               coordinates_C)
-        df = extract_dataframe_from_pdf(pdf_in_columns_saved_pdf, table_settings={
+        # pdf_in_rows_saved_pdf = self.add_row_separators_in_memory(pdf_in_saved_pdf)
+        # pdf_in_columns_saved_pdf, explicit_lines = self.add_column_separators_with_coordinates(pdf_in_saved_pdf, coordinates_C)
+        df = extract_dataframe_from_pdf(pdf_in_saved_pdf, table_settings={
             "vertical_strategy": "explicit",
             "explicit_vertical_lines": explicit_lines,
             "horizontal_strategy": "text",
@@ -1219,6 +1385,7 @@ def run_test_output_on_whole_pdf(list_a, pdf_in_saved_pdf, bank_name, timestamp,
         })
         model_df = new_mode_for_pdf(df, lists_of_columns)
         return model_df, None
+
 
     else:
         # Handle Test Case E

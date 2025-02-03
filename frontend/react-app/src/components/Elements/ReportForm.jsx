@@ -104,6 +104,7 @@ const GenerateReportForm = ({
     "CBI",
     "SURAT",
     "JANKALYAN",
+    "Other"
   ];
 
   // Add this useEffect after your other useEffect declarations
